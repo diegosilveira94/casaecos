@@ -1,0 +1,8 @@
+node_modules
+dist
+build
+coverage
+apps/api/src/generated
+**/prisma/migrations
+package-lock.json
+apps/api/.claude/skills

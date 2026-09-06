@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: casaecos-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-casaecos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-casaecos}
+      POSTGRES_DB: ${POSTGRES_DB:-casaecos}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - casaecos-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-casaecos} -d ${POSTGRES_DB:-casaecos}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  casaecos-pgdata:

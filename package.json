@@ -1,0 +1,45 @@
+{
+  "name": "casaecos",
+  "version": "0.1.0",
+  "private": true,
+  "description": "EcoAgenda — sistema de gestao para a Associacao Ecos da Esperanca",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n shared,api,web -c gray,cyan,magenta \"npm run dev -w @casaecos/shared-types\" \"npm run dev -w @casaecos/api\" \"npm run dev -w @casaecos/web\"",
+    "dev:api": "npm run dev -w @casaecos/api",
+    "dev:web": "npm run dev -w @casaecos/web",
+    "build": "npm run build -w @casaecos/shared-types && npm run build -w @casaecos/api && npm run build -w @casaecos/web",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:migrate": "npm run db:migrate -w @casaecos/api",
+    "db:studio": "npm run db:studio -w @casaecos/api",
+    "prepare": "npm run build -w @casaecos/shared-types"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "concurrently": "^10.0.5",
+    "eslint": "^10.10.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.6",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.6",
+    "tsx": "^4.23.13",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.69.0",
+    "vitest": "^5.0.0"
+  }
+}

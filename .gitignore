@@ -1,0 +1,29 @@
+# dependências
+node_modules/
+
+# build
+dist/
+build/
+*.tsbuildinfo
+
+# ambiente
+.env
+.env.*
+!.env.example
+
+# testes
+coverage/
+
+# prisma
+apps/api/src/generated/
+
+# logs
+*.log
+npm-debug.log*
+
+# editores / SO
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

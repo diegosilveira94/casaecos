@@ -1,0 +1,10 @@
+// Os modelos entram na ECOS-5. Convenções de modelagem: ver CLAUDE.md.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
