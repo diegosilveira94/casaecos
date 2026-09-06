@@ -1,0 +1,2 @@
+# LF no repositório e no working tree, independente do core.autocrlf de cada máquina.
+* text=auto eol=lf
