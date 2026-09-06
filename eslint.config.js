@@ -34,7 +34,11 @@ export default tseslint.config(
       parserOptions: {
         projectService: {
           // Configs de ferramenta, fora de qualquer tsconfig.
-          allowDefaultProject: ['apps/api/vitest.config.ts', 'apps/api/prisma7.config.ts'],
+          allowDefaultProject: [
+            'apps/api/vitest.config.ts',
+            'apps/api/prisma7.config.ts',
+            'apps/api/prisma/seed.ts',
+          ],
         },
         tsconfigRootDir: import.meta.dirname,
       },

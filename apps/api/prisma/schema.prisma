@@ -1,4 +1,5 @@
-// Os modelos entram na ECOS-5. Convenções de modelagem: ver CLAUDE.md.
+// Modelo físico da ECOS-5. Convenções de modelagem: ver CLAUDE.md.
+// Models em PascalCase, tabelas e colunas em snake_case via @@map/@map.
 
 generator client {
   provider = "prisma-client"
@@ -7,4 +8,147 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Lookups
+// ---------------------------------------------------------------------------
+
+model Role {
+  id          Int    @id @default(autoincrement())
+  description String @db.VarChar(45)
+
+  people Person[]
+
+  @@map("role")
+}
+
+model EventType {
+  id   Int    @id @default(autoincrement())
+  name String @db.VarChar(45)
+
+  events Event[]
+
+  @@map("event_type")
+}
+
+model ParticipationType {
+  id          Int    @id @default(autoincrement())
+  description String @db.VarChar(45)
+
+  personEvents PersonEvent[]
+
+  @@map("participation_type")
+}
+
+// ---------------------------------------------------------------------------
+// Entidades principais
+// ---------------------------------------------------------------------------
+
+model Organization {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(150)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  homes Home[]
+
+  @@map("organization")
+}
+
+model Person {
+  id                     Int      @id @default(autoincrement())
+  name                   String   @db.VarChar(45)
+  roleId                 Int      @map("role_id")
+  individualRegistration String?  @map("individual_registration") @db.VarChar(14)
+  phone                  String?  @unique @db.VarChar(20)
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  role             Role          @relation(fields: [roleId], references: [id])
+  userAccount      UserAccount?
+  homeLinks        HomePerson[]
+  eventLinks       PersonEvent[]
+  homesUnderCharge Home[]        @relation("HomeResponsible")
+
+  @@map("person")
+}
+
+model Home {
+  id             Int      @id @default(autoincrement())
+  organizationId Int      @map("organization_id")
+  name           String   @db.VarChar(100)
+  responsibleId  Int      @map("responsible_id")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  responsible  Person       @relation("HomeResponsible", fields: [responsibleId], references: [id])
+  personLinks  HomePerson[]
+  events       Event[]
+
+  @@map("home")
+}
+
+model Event {
+  id          Int       @id @default(autoincrement())
+  title       String    @db.VarChar(45)
+  description String?   @db.VarChar(300)
+  startDate   DateTime  @map("start_date") @db.Timestamptz(6)
+  endDate     DateTime? @map("end_date") @db.Timestamptz(6)
+  eventTypeId Int       @map("event_type_id")
+  homeId      Int       @map("home_id")
+  address     String?   @db.VarChar(100)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  eventType   EventType     @relation(fields: [eventTypeId], references: [id])
+  home        Home          @relation(fields: [homeId], references: [id])
+  personLinks PersonEvent[]
+
+  @@index([homeId, startDate])
+  @@map("event")
+}
+
+// Autenticação fica fora de person: acolhidos não logam, e credencial é dado sensível.
+model UserAccount {
+  id           Int       @id @default(autoincrement())
+  personId     Int       @unique @map("person_id")
+  email        String    @unique @db.VarChar(255)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz(6)
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@map("user_account")
+}
+
+// ---------------------------------------------------------------------------
+// Junções
+// ---------------------------------------------------------------------------
+
+model HomePerson {
+  homeId   Int @map("home_id")
+  personId Int @map("person_id")
+
+  home   Home   @relation(fields: [homeId], references: [id], onDelete: Cascade)
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([homeId, personId])
+  @@map("home_person")
+}
+
+model PersonEvent {
+  personId            Int @map("person_id")
+  eventId             Int @map("event_id")
+  participationTypeId Int @map("participation_type_id")
+
+  person            Person            @relation(fields: [personId], references: [id], onDelete: Cascade)
+  event             Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  participationType ParticipationType @relation(fields: [participationTypeId], references: [id])
+
+  @@id([personId, eventId])
+  @@map("person_event")
 }
