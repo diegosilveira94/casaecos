@@ -184,6 +184,96 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
 - **Notion** é a fonte da verdade para decisões e requisitos. O registro de
   decisões (com justificativa numerada) vive lá — ao tomar uma decisão técnica
   relevante, ela deve ser registrada nesse formato.
+- **Figma** para o protótipo das telas. Acesso via Figma MCP (ver abaixo).
+
+### Ao fechar uma task: atualizar Jira e Notion
+
+**Toda task concluída termina com Jira e Notion atualizados** — código entregue sem
+isso é task pela metade. Não é opcional nem precisa ser pedido a cada vez.
+
+O que significa na prática, avaliando caso a caso o que faz sentido:
+
+- **Jira** — mover o card para o status certo, atribuir o responsável e comentar o
+  que foi entregue: o que mudou, o hash do commit e o que ficou de fora. Se a
+  descrição da story virou mentira, corrigir a descrição.
+- **Notion** — registrar em Decisões e Direcionamentos toda decisão técnica que a
+  task produziu, no formato numerado da tabela (# | Decisão | Justificativa | Data
+  | Status), e atualizar o rodapé de versão. Fechar no checklist de "Decisões ainda
+  em aberto" o que a task resolveu.
+- **CLAUDE.md** — se a task mudou convenção, estado do projeto ou pendência, ajustar
+  aqui também. As três fontes precisam contar a mesma história.
+
+Antes de escrever que algo está pendente, **conferir no Notion** — ele é a fonte da
+verdade e costuma estar à frente deste arquivo.
+
+### Acessos (para retomar em qualquer sessão)
+
+**Jira** — via Atlassian Rovo MCP, com leitura e escrita
+(`read:jira-work`, `write:jira-work`).
+
+- Site: `diegosilveira.atlassian.net`
+- `cloudId`: `7770c8f6-39b8-4a88-90ab-4db17bdee2ed`
+- Projeto: **ECOS** ("Casa Ecos", id `10000`)
+- Fluxo do board: Tarefas pendentes → Em andamento → Em análise → Concluído
+- Épicos: ECOS-1 (Medicamentos), ECOS-2 (Prestação de Contas), ECOS-3 (Relatórios),
+  ECOS-4 (Agenda). Stories da Agenda: ECOS-5 a ECOS-9.
+
+**Notion** — espaço **Ecos da Esperança**, com leitura e escrita.
+
+- [Decisões e Direcionamentos](https://app.notion.com/p/3281b5b5a8558028984df510b6cef572)
+  — o registro numerado. Page id `3281b5b5-a855-8028-984d-f510b6cef572`.
+- Páginas irmãs: Requisitos, Contexto do projeto, Arquitetura e Técnico,
+  Documentações, Reuniões e Atas, Prestação de Contas — Análise do Documento.
+
+**Figma** — ver a seção abaixo.
+
+## Protótipo Figma
+
+**Arquivo:** [Protótipo Ecos](https://www.figma.com/design/tC73sILOTujQPnjAe5NNmP/Prot%C3%B3tipo-Ecos?node-id=0-1)
+
+- `fileKey`: `tC73sILOTujQPnjAe5NNmP`
+- Página única: `0:1` ("Page 1") — passe esse nodeId nas ferramentas do Figma MCP.
+- Conta: `diego.silveira@alunos.sc.senac.br` (times Senac, assento Full).
+
+### O que tem dentro (levantado em 06/09/2026)
+
+O canvas tem **duas versões da mesma tela de agenda, lado a lado**:
+
+- **Esquerda** — o protótipo editável. Camadas soltas (`Rectangle 101`, `image 13`…),
+  sem componentes, sem auto-layout e sem variáveis/tokens do Figma. É um wireframe
+  de alta fidelidade, não um design system.
+- **Direita** (nodeId `22:5`, "image 11") — **é um PNG achatado de 1536×1024**, não
+  design em camadas. Provavelmente a exploração feita no Stitch (decisão #12 no
+  Notion). Serve de referência visual; não dá para extrair token nenhum dela.
+
+Estrutura da tela: sidebar de navegação (Agenda, Medicamentos, Relatórios, Prestação
+de Contas, Configurações, Ajuda) + seletor de organização ("Núcleo Esperança"),
+header com usuário e papel ("Maria Silva / Secretária"), barra de ações (Filtros,
+Exportar, + Novo Compromisso), grade mensal com troca de visão (Mês/Semana/Dia) e
+painel lateral "Próximos Compromissos". Na versão da direita os compromissos
+aparecem como chips coloridos por tipo, com hora, título e pessoa.
+
+### Valores já extraídos
+
+| O quê                                       | Valor no Figma                         |
+| ------------------------------------------- | -------------------------------------- |
+| Verde primário (botão "+ Novo Compromisso") | `#186949`                              |
+| Título de página ("Agenda")                 | Google Sans Flex SemiBold, 32px, preto |
+| Largura da sidebar                          | 228px                                  |
+| Canvas                                      | 1440×1024 (desktop)                    |
+
+### Divergências a resolver antes da ECOS-8
+
+1. **O verde não bate.** O protótipo usa `#186949`; o `apps/web/src/index.css` usa
+   `--cor-primaria: #1f7a5a`. Alinhar antes de espalhar a cor pelas telas.
+2. **O protótipo é só desktop.** Não existe frame mobile no arquivo, o que contraria
+   o princípio mobile-first do projeto. A tela de agenda precisa de uma decisão de
+   layout para celular — ou um frame no Figma, ou definida direto no código.
+3. **Tokens não existem no Figma.** Nenhuma variável está definida no arquivo, então
+   a fonte da verdade dos tokens vai ser o CSS do `apps/web`, não o Figma. Ao
+   importar uma tela, extrair os valores e nomeá-los no código.
+4. **A tagline já aparece no protótipo** ("Cuidando de hoje, transformando o
+   amanhã."), mas a decisão #16 no Notion ainda marca a tagline como em aberto.
 
 ## Estado atual / próximos passos
 
