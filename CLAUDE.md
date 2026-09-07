@@ -108,7 +108,8 @@ casaecos/
 
 ## Modelo de dados (entidades principais)
 
-Modelagem física já finalizada. Entidades centrais:
+Modelagem física finalizada e **já implementada** em `apps/api/prisma/schema.prisma`
+(migração `20260906232840_init`, ECOS-5). Entidades centrais:
 
 - `organization` — a ONG. Toda `home` pertence a uma organization (FK not null).
 - `home` — casa de acolhimento.
@@ -127,6 +128,25 @@ Modelagem física já finalizada. Entidades centrais:
 - **Tabelas de lookup separadas** em vez de enum inline (ex: `role`,
   `event_type`, `participation_type`). Favorece extensibilidade.
 - `user_account` é separada de `person` por segurança e porque acolhidos não logam.
+- **Models em PascalCase, tabelas e colunas em snake_case** via `@@map`/`@map`.
+- **Todo timestamp é `timestamptz`** (`@db.Timestamptz(6)`), inclusive
+  `start_date`/`end_date` do evento.
+- **`created_at`/`updated_at` nas entidades principais** (person, home, event,
+  organization). Lookups e tabelas de junção não têm.
+- **Delete em cascata** nas junções (`home_person`, `person_event`) e em
+  `user_account`; FKs para lookups ficam restritas, para não órfanar eventos.
+- `event.end_date` é opcional de propósito — evento sem hora de término é caso real.
+
+### Banco local
+
+```
+npm run db:up       # sobe o Postgres do docker-compose
+npm run db:migrate  # prisma migrate dev
+npm run db:seed     # popula role, event_type e participation_type
+```
+
+O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não no
+`package.json` — o Prisma 7 não lê mais o bloco `prisma > seed` de lá.
 
 ## Convenções de código
 
@@ -170,19 +190,25 @@ Modelagem física já finalizada. Entidades centrais:
 - **Scaffold do monorepo concluído em 06/09/2026**: workspaces npm, API Express 5 +
   Prisma 7, Web Vite + React 19, `packages/shared-types`, ESLint 10 flat +
   Prettier, Vitest nas duas pontas, docker-compose com Postgres 16.
+- **ECOS-5 concluída em 06/09/2026**: schema Prisma das 10 tabelas, migração
+  inicial aplicada e seed idempotente dos lookups.
 - Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-9.
 - Ordem de desenvolvimento: schema Prisma → API → telas React.
-  - ECOS-5: Schema Prisma e migração inicial
-  - ECOS-6: API CRUD de eventos
+  - ECOS-5: Schema Prisma e migração inicial — ✅ concluída
+  - ECOS-6: API CRUD de eventos — **próxima**
   - ECOS-7: API de associação de pessoas a eventos (person_event)
   - ECOS-8: Tela de visualização da agenda
   - ECOS-9: Formulário de criação/edição de evento
 
 ## Pendências que afetam o desenvolvimento
 
-- **Matriz de permissões de plantão** ainda não definida. Isso afeta quem vê o quê
-  na tela de agenda (ECOS-8) e nos endpoints (ECOS-6/7). Resolver antes de fechar ECOS-8.
-- **RF-31** (estrutura de participation_type) ainda em aberto — confirmar antes de
-  fechar o schema de person_event.
+- **Permissões: abordagem definida, implementação pendente.** RBAC por papel
+  (`role`) + escopo por casa (`home_person`), sem tabela de permissões dedicada
+  (decisão #28 no Notion). A lógica vive na aplicação, não no schema — ou seja,
+  ela entra nos endpoints (ECOS-6/7) e na tela (ECOS-8). O refinamento fino da
+  matriz por ação segue opcional.
 - Vínculo org-wide para pessoal não ligado a uma casa específica (ex:
   `person_organization`) só será modelado se surgir uma segunda ONG.
+
+> O RF-31 (estrutura de `participation_type`) foi resolvido: lookup separado com
+> FK not null em `person_event`, seguindo a decisão #11. Já está no schema.
