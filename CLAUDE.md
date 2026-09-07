@@ -165,6 +165,8 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
 
 ### Contrato da API
 
+> Decisões #42 a #44 no Notion.
+
 - **Sucesso devolve o payload cru** — o recurso direto no corpo, ou `Paginated<T>`
   em listagens. Sem envelope `{ data }`: o status HTTP já separa sucesso de erro.
 - **Erro devolve sempre `ApiError`** (`{ message, details? }`), em qualquer 4xx/5xx.
