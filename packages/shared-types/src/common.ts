@@ -1,3 +1,12 @@
+/**
+ * Contrato de resposta da API.
+ *
+ * Sucesso devolve o payload cru: o recurso direto no corpo, ou `Paginated<T>`
+ * em listagens. Sem envelope `{ data }` — o status HTTP já separa sucesso de
+ * erro, e o cliente consome sem desembrulhar.
+ *
+ * Erro (qualquer 4xx/5xx) devolve sempre `ApiError`.
+ */
 export interface ApiError {
   message: string;
   details?: unknown;

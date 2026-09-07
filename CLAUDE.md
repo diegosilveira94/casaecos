@@ -74,8 +74,9 @@ casaecos/
 │   │   │   │   ├── prestacao-contas/
 │   │   │   │   ├── relatorios/
 │   │   │   │   └── shared/            # person, role, user_account, auth — cross-módulo
-│   │   │   ├── config/               # env.ts (zod) e prisma.ts (client singleton)
-│   │   │   ├── middlewares/           # error-handler, HttpError
+│   │   │   ├── config/                # env.ts (zod) e prisma.ts (client singleton)
+│   │   │   ├── middlewares/           # error-handler, HttpError, RequestValidator
+│   │   │   ├── shared/                # utilitários cross-módulo (ex: prisma-error)
 │   │   │   ├── generated/prisma/      # client gerado — fora do versionamento
 │   │   │   ├── routes.ts              # monta os routers de cada módulo
 │   │   │   ├── app.ts                 # cria o Express (sem subir o servidor)
@@ -161,6 +162,19 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
 - **Comentário só onde for necessário** — para o que o código não diz sozinho
   (motivo, restrição, decisão). Curto e direto. Nada de comentário que repete o nome.
 - Prettier cuida da formatação; não brigue manualmente com estilo.
+
+### Contrato da API
+
+- **Sucesso devolve o payload cru** — o recurso direto no corpo, ou `Paginated<T>`
+  em listagens. Sem envelope `{ data }`: o status HTTP já separa sucesso de erro.
+- **Erro devolve sempre `ApiError`** (`{ message, details? }`), em qualquer 4xx/5xx.
+  `message` é texto para o usuário final, em português.
+- **Validação de entrada** por rota com `RequestValidator` (zod). O `ZodError` sobe
+  para o `errorHandler`, que responde 400 com as issues em `details` — não capture
+  o erro no controller.
+- **Erro do Prisma vira `HttpError`** em `shared/prisma-error.ts` (P2002 → 409,
+  P2003 → 400, P2025 → 404). Código sem tradução cai em 500 com log: erro sem
+  tradução é defeito nosso, não do usuário.
 
 ## Padrão de idioma
 
@@ -282,13 +296,24 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
   Prettier, Vitest nas duas pontas, docker-compose com Postgres 16.
 - **ECOS-5 concluída em 06/09/2026**: schema Prisma das 10 tabelas, migração
   inicial aplicada e seed idempotente dos lookups.
-- Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-9.
-- Ordem de desenvolvimento: schema Prisma → API → telas React.
+- **ECOS-10 concluída em 07/09/2026**: `RequestValidator` (zod), tradução dos erros
+  do Prisma para `HttpError` e contrato de resposta definido (payload cru no
+  sucesso, `ApiError` no erro).
+- Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-21.
+- Ordem de desenvolvimento: schema Prisma → infra da API → API → telas React.
   - ECOS-5: Schema Prisma e migração inicial — ✅ concluída
+  - ECOS-10: Infraestrutura base da API — ✅ concluída
   - ECOS-6: API CRUD de eventos — **próxima**
+  - ECOS-15: API de listagem de eventos com filtros (data, casa, tipo)
   - ECOS-7: API de associação de pessoas a eventos (person_event)
+  - ECOS-11/12: API de casas e pessoas (home, home_person, person, role)
+  - ECOS-13/14: autenticação (JWT) e autorização (RBAC + escopo por casa)
+  - ECOS-16/17: camada de integração frontend-API e tela de login
   - ECOS-8: Tela de visualização da agenda
   - ECOS-9: Formulário de criação/edição de evento
+  - ECOS-18: testes automatizados do módulo
+  - ECOS-19/20: telas de design no Figma (formulário de compromisso, login)
+  - ECOS-21: exportar agenda — adiada (decisão #38)
 
 ## Pendências que afetam o desenvolvimento
 
