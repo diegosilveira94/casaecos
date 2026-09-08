@@ -1,10 +1,17 @@
-// Casca: as telas de agenda entram nas ECOS-8 e ECOS-9.
+import { Navigate, Route, Routes } from 'react-router-dom';
+
+import { AgendaPage } from './modules/agenda/pages/AgendaPage.js';
+import { LoginPage } from './modules/auth/pages/LoginPage.js';
+import { ProtectedRoute } from './modules/auth/routes/ProtectedRoute.js';
+
 export function App(): React.JSX.Element {
   return (
-    <main className="app">
-      <h1>EcoAgenda</h1>
-      <p>Sistema de gestão da Associação Ecos da Esperança.</p>
-      <p className="app__hint">Módulo de Agenda em desenvolvimento.</p>
-    </main>
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route element={<ProtectedRoute />}>
+        <Route path="/agenda" element={<AgendaPage />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/agenda" replace />} />
+    </Routes>
   );
 }

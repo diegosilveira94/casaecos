@@ -264,8 +264,8 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
 
 ### Divergências a resolver antes da ECOS-8
 
-1. **O verde não bate.** O protótipo usa `#186949`; o `apps/web/src/index.css` usa
-   `--cor-primaria: #1f7a5a`. Alinhar antes de espalhar a cor pelas telas.
+1. **Verde alinhado.** O protótipo e o `apps/web/src/index.css` usam `#186949` como
+   cor primária desde a ECOS-17.
 2. **O protótipo é só desktop.** Não existe frame mobile no arquivo, o que contraria
    o princípio mobile-first do projeto. A tela de agenda precisa de uma decisão de
    layout para celular — ou um frame no Figma, ou definida direto no código.
@@ -282,6 +282,11 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
   Prettier, Vitest nas duas pontas, docker-compose com Postgres 16.
 - **ECOS-5 concluída em 06/09/2026**: schema Prisma das 10 tabelas, migração
   inicial aplicada e seed idempotente dos lookups.
+- **ECOS-17 implementada em 08/09/2026**: tela de login mobile-first, persistência
+  exclusiva do token, feedback de erro/carregamento, rota protegida e redirecionamento
+  para `/agenda`. A integração usa `POST /auth/login` com resposta `{ token }`; a
+  validação ponta a ponta aguarda ECOS-13. O design específico da tela (ECOS-20) ainda
+  está pendente, então a implementação usa os tokens visuais já extraídos da agenda.
 - Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-9.
 - Ordem de desenvolvimento: schema Prisma → API → telas React.
   - ECOS-5: Schema Prisma e migração inicial — ✅ concluída
