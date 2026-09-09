@@ -88,6 +88,21 @@ describe('App', () => {
     expect(window.localStorage.getItem('casaecos.authToken')).toBeNull();
   });
 
+  it('valida o formato do e-mail antes de chamar a API', async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn<typeof fetch>();
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderApp();
+
+    await user.type(screen.getByLabelText('E-mail'), 'email-invalido');
+    await user.type(screen.getByLabelText('Senha'), 'segredo');
+    await user.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Informe um e-mail válido.');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('mostra feedback de carregamento durante a autenticação', async () => {
     const user = userEvent.setup();
     let finishRequest: ((response: Response) => void) | undefined;

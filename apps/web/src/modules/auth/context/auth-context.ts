@@ -1,10 +1,10 @@
 import { createContext } from 'react';
 
-import type { LoginCredentials } from '../services/auth-service.js';
+import type { LoginRequest } from '@casaecos/shared-types';
 
 export interface AuthContextValue {
   isAuthenticated: boolean;
-  login: (credentials: LoginCredentials) => Promise<void>;
+  login: (credentials: LoginRequest) => Promise<void>;
   logout: () => void;
 }
 

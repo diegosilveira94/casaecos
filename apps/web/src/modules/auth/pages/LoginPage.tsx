@@ -10,6 +10,8 @@ interface LocationState {
   };
 }
 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function BrandMark(): React.JSX.Element {
   return (
     <svg className="brand-mark" viewBox="0 0 48 48" aria-hidden="true">
@@ -49,10 +51,18 @@ export function LoginPage(): React.JSX.Element {
   async function handleSubmit(event: SyntheticEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setError(null);
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!EMAIL_PATTERN.test(normalizedEmail)) {
+      setError('Informe um e-mail válido.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      await login({ email: email.trim(), password });
+      await login({ email: normalizedEmail, password });
       void navigate(destination, { replace: true });
     } catch (requestError) {
       setError(

@@ -20,3 +20,21 @@ describe('rota inexistente', () => {
     expect(response.body).toMatchObject({ message: 'Rota não encontrada' });
   });
 });
+
+describe('autenticação', () => {
+  it('protege as rotas da agenda', async () => {
+    const response = await request(createApp()).get('/agenda');
+
+    expect(response.status).toBe(401);
+    expect(response.body).toMatchObject({ message: 'Não autenticado' });
+  });
+
+  it('valida o formato dos dados de login', async () => {
+    const response = await request(createApp())
+      .post('/auth/login')
+      .send({ email: 'email-invalido', password: '' });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toMatchObject({ message: 'Dados inválidos' });
+  });
+});

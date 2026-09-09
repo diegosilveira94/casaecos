@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import type { LoginRequest } from '@casaecos/shared-types';
+
 import { tokenStorage } from '../../shared/auth/token-storage.js';
 import { httpClient } from '../../shared/http/http-client.js';
-import { authService, type LoginCredentials } from '../services/auth-service.js';
+import { authService } from '../services/auth-service.js';
 import { AuthContext } from './auth-context.js';
 
 interface AuthProviderProps {
@@ -28,7 +30,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
     };
   }, [logout]);
 
-  const login = useCallback(async (credentials: LoginCredentials) => {
+  const login = useCallback(async (credentials: LoginRequest) => {
     const response = await authService.login(credentials);
     tokenStorage.set(response.token);
     setToken(response.token);

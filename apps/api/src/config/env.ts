@@ -11,6 +11,10 @@ const envSchema = z.object({
   API_PORT: z.coerce.number().int().positive().default(3333),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL é obrigatória'),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
+  JWT_SECRET: z.string().min(32, 'JWT_SECRET deve ter pelo menos 32 caracteres'),
+  JWT_EXPIRES_IN_SECONDS: z.coerce.number().int().positive().default(28_800),
+  SEED_ADMIN_EMAIL: z.email().optional(),
+  SEED_ADMIN_PASSWORD: z.string().min(8).optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
