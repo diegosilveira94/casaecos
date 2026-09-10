@@ -82,13 +82,12 @@ export function LoginPage(): React.JSX.Element {
           <div className="brand-lockup brand-lockup--light">
             <BrandMark />
             <div>
-              <strong>EcoAgenda</strong>
+              <strong>Casa Ecos</strong>
               <span>Ecos da Esperança</span>
             </div>
           </div>
           <div className="login-brand__message">
-            <p>Organização que acolhe.</p>
-            <h2>Cuidando de hoje, transformando o amanhã.</h2>
+            <h2>Cuidando de quem cuida.</h2>
           </div>
         </div>
       </section>
@@ -106,7 +105,6 @@ export function LoginPage(): React.JSX.Element {
           <div className="login-heading">
             <span className="login-heading__eyebrow">Bem-vindo de volta</span>
             <h1>Acesse sua conta</h1>
-            <p>Entre com seus dados para acessar a agenda.</p>
           </div>
 
           <form
