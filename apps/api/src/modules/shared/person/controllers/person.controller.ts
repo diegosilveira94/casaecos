@@ -1,7 +1,7 @@
 import type { RequestHandler } from 'express';
 import { z } from 'zod';
 
-import type { CreatePersonRequest, UpdatePersonRequest } from '@casaecos/shared-types';
+import type { ApiMessage, CreatePersonRequest, UpdatePersonRequest } from '@casaecos/shared-types';
 
 import type { PersonFilters } from '../repositories/person.repository.js';
 import { personService } from '../services/person.service.js';
@@ -74,7 +74,8 @@ export class PersonController {
   delete: RequestHandler = async (request, response) => {
     const id = idSchema.parse(request.params.id);
     await personService.delete(id);
-    response.status(204).send();
+    const body: ApiMessage = { message: 'Pessoa excluída com sucesso' };
+    response.json(body);
   };
 
   listRoles: RequestHandler = async (_request, response) => {

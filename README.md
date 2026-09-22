@@ -83,11 +83,11 @@ Módulos: `agenda` (em desenvolvimento), `medicamentos`, `prestacao-contas`,
 
 ## API de pessoas
 
-| Método           | Rota          | Descrição                                        |
-| ---------------- | ------------- | ------------------------------------------------ |
-| `POST`           | `/people`     | Cria uma pessoa                                  |
-| `GET`            | `/people`     | Lista; aceita os filtros `roleId` e `name`       |
-| `GET`            | `/people/:id` | Busca uma pessoa por id                          |
-| `PUT` ou `PATCH` | `/people/:id` | Edita os campos informados                       |
-| `DELETE`         | `/people/:id` | Exclui uma pessoa sem vínculos com casas/eventos |
-| `GET`            | `/roles`      | Lista os papéis disponíveis                      |
+| Método           | Rota          | Descrição                                  |
+| ---------------- | ------------- | ------------------------------------------ |
+| `POST`           | `/people`     | Cria uma pessoa                            |
+| `GET`            | `/people`     | Lista; aceita os filtros `roleId` e `name` |
+| `GET`            | `/people/:id` | Busca uma pessoa por id                    |
+| `PUT` ou `PATCH` | `/people/:id` | Edita os campos informados                 |
+| `DELETE`         | `/people/:id` | Exclui e confirma uma pessoa sem vínculos  |
+| `GET`            | `/roles`      | Lista os papéis disponíveis                |
