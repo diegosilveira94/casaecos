@@ -81,6 +81,24 @@ Módulos: `agenda` (em desenvolvimento), `medicamentos`, `prestacao-contas`,
 - `apps/api/.claude/skills/` traz as skills oficiais do Prisma, instaladas pelo
   `prisma init`.
 
+## API de autenticação
+
+| Método | Rota             | Descrição                                                    |
+| ------ | ---------------- | ------------------------------------------------------------ |
+| `POST` | `/auth/login`    | E-mail + senha; devolve `{ token, expiresInSeconds, user }`  |
+| `POST` | `/auth/accounts` | Cria credencial para uma pessoa (exige token de Coordenador) |
+| `GET`  | `/auth/me`       | Devolve o usuário do token                                   |
+
+Nas rotas protegidas, envie `Authorization: Bearer <token>`. O token é um JWT
+HS256 de 8 horas, sem refresh token.
+
+O primeiro coordenador é criado fora da API — `POST /auth/accounts` exige um
+Coordenador autenticado:
+
+```
+npm run db:seed:admin   # lê ADMIN_NAME, ADMIN_EMAIL e ADMIN_PASSWORD do .env
+```
+
 ## API de pessoas
 
 | Método           | Rota          | Descrição                                  |

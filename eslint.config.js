@@ -38,6 +38,7 @@ export default tseslint.config(
             'apps/api/vitest.config.ts',
             'apps/api/prisma7.config.ts',
             'apps/api/prisma/seed.ts',
+            'apps/api/prisma/seed-admin.ts',
           ],
         },
         tsconfigRootDir: import.meta.dirname,

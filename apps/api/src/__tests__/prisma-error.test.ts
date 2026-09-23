@@ -22,6 +22,37 @@ describe('toHttpError', () => {
     expect(httpError?.message).toBe('Já existe um registro com este e-mail');
   });
 
+  // Formato real do Prisma 7 com driver adapter: `target` não vem, a constraint
+  // chega em driverAdapterError.cause. Sem ler daqui o 409 nunca nomeia o campo.
+  it('nomeia o campo quando o alvo vem do driver adapter, não de target', () => {
+    const httpError = toHttpError(
+      knownError('P2002', {
+        driverAdapterError: {
+          cause: {
+            kind: 'UniqueConstraintViolation',
+            constraint: { index: 'user_account_email_key' },
+            table: 'user_account',
+          },
+        },
+      }),
+    );
+
+    expect(httpError?.status).toBe(409);
+    expect(httpError?.message).toBe('Já existe um registro com este e-mail');
+  });
+
+  it('cai na mensagem genérica quando a constraint não tem rótulo conhecido', () => {
+    const httpError = toHttpError(
+      knownError('P2002', {
+        driverAdapterError: {
+          cause: { constraint: { index: 'home_person_pkey' }, table: 'home_person' },
+        },
+      }),
+    );
+
+    expect(httpError?.message).toBe('Já existe um registro com estes dados');
+  });
+
   it('traduz violação de FK para 400', () => {
     expect(toHttpError(knownError('P2003'))?.status).toBe(400);
   });

@@ -10,6 +10,12 @@ import { apiRouter } from './routes.js';
 export function createApp(): Express {
   const app = express();
 
+  // Atrás do proxy da hospedagem (Railway/Render) o IP real vem em X-Forwarded-For;
+  // sem isto o rate limit do login contaria todo mundo como o mesmo cliente.
+  if (env.NODE_ENV === 'production') {
+    app.set('trust proxy', 1);
+  }
+
   app.use(helmet());
   app.use(cors({ origin: env.CORS_ORIGIN }));
   app.use(express.json());
