@@ -91,3 +91,17 @@ Módulos: `agenda` (em desenvolvimento), `medicamentos`, `prestacao-contas`,
 | `PUT` ou `PATCH` | `/people/:id` | Edita os campos informados                 |
 | `DELETE`         | `/people/:id` | Exclui e confirma uma pessoa sem vínculos  |
 | `GET`            | `/roles`      | Lista os papéis disponíveis                |
+
+## API de casas
+
+| Método           | Rota                              | Descrição                               |
+| ---------------- | --------------------------------- | --------------------------------------- |
+| `POST`           | `/homes`                          | Cria uma casa                           |
+| `GET`            | `/homes`                          | Lista; aceita o filtro `organizationId` |
+| `GET`            | `/homes/:id`                      | Busca uma casa por id                   |
+| `PUT` ou `PATCH` | `/homes/:id`                      | Edita os campos informados              |
+| `DELETE`         | `/homes/:id`                      | Exclui uma casa sem eventos vinculados  |
+| `GET`            | `/homes/:homeId/people`           | Lista as pessoas vinculadas a uma casa  |
+| `POST`           | `/homes/:homeId/people/:personId` | Vincula uma pessoa a uma casa           |
+| `DELETE`         | `/homes/:homeId/people/:personId` | Desvincula uma pessoa de uma casa       |
+| `GET`            | `/people/:personId/homes`         | Lista as casas vinculadas a uma pessoa  |

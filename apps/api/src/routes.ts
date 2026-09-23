@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import { agendaRouter } from './modules/agenda/routes/agenda.routes.js';
+import { homeRouter, personHomeRouter } from './modules/shared/home/routes/home.routes.js';
 import { personRouter, roleRouter } from './modules/shared/person/routes/person.routes.js';
 
 export const apiRouter: Router = Router();
@@ -10,5 +11,7 @@ apiRouter.get('/health', (_req, res) => {
 });
 
 apiRouter.use('/agenda', agendaRouter);
+apiRouter.use('/homes', homeRouter);
+apiRouter.use('/people', personHomeRouter);
 apiRouter.use('/people', personRouter);
 apiRouter.use('/roles', roleRouter);
