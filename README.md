@@ -80,3 +80,14 @@ Módulos: `agenda` (em desenvolvimento), `medicamentos`, `prestacao-contas`,
 - **Um único `.env`**, na raiz, consumido pela API, pelo Vite e pelo docker compose.
 - `apps/api/.claude/skills/` traz as skills oficiais do Prisma, instaladas pelo
   `prisma init`.
+
+## API de pessoas
+
+| Método           | Rota          | Descrição                                  |
+| ---------------- | ------------- | ------------------------------------------ |
+| `POST`           | `/people`     | Cria uma pessoa                            |
+| `GET`            | `/people`     | Lista; aceita os filtros `roleId` e `name` |
+| `GET`            | `/people/:id` | Busca uma pessoa por id                    |
+| `PUT` ou `PATCH` | `/people/:id` | Edita os campos informados                 |
+| `DELETE`         | `/people/:id` | Exclui e confirma uma pessoa sem vínculos  |
+| `GET`            | `/roles`      | Lista os papéis disponíveis                |

@@ -282,6 +282,9 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
   Prettier, Vitest nas duas pontas, docker-compose com Postgres 16.
 - **ECOS-5 concluída em 06/09/2026**: schema Prisma das 10 tabelas, migração
   inicial aplicada e seed idempotente dos lookups.
+- **ECOS-12 implementada em 22/09/2026**: CRUD de pessoas em `/people`, filtros
+  por papel e nome, lookup em `/roles`, telefone opcional e único e bloqueio da
+  exclusão de pessoas vinculadas a casas ou eventos.
 - Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-9.
 - Ordem de desenvolvimento: schema Prisma → API → telas React.
   - ECOS-5: Schema Prisma e migração inicial — ✅ concluída
