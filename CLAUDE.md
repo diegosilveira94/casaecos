@@ -183,6 +183,8 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
 
 ### Autenticação (ECOS-13)
 
+> Decisões #45 a #51 no Notion.
+
 - **`POST /auth/login`** — e-mail + senha, devolve `{ token, expiresInSeconds, user }`.
   Falha sempre com 401 e a mesma mensagem (`E-mail ou senha inválidos`), para não
   revelar quais e-mails existem. Rate limit por IP na rota.
