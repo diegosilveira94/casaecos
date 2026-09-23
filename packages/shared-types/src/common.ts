@@ -12,6 +12,10 @@ export interface ApiError {
   details?: unknown;
 }
 
+export interface ApiMessage {
+  message: string;
+}
+
 export interface Paginated<T> {
   items: T[];
   page: number;

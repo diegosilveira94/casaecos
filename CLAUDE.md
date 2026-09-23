@@ -301,10 +301,14 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
 - **ECOS-10 concluída em 07/09/2026**: `RequestValidator` (zod), tradução dos erros
   do Prisma para `HttpError` e contrato de resposta definido (payload cru no
   sucesso, `ApiError` no erro).
+- **ECOS-12 implementada em 22/09/2026**: CRUD de pessoas em `/people`, filtros
+  por papel e nome, lookup em `/roles`, telefone opcional e único e bloqueio da
+  exclusão de pessoas vinculadas a casas ou eventos.
 - Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-21.
 - Ordem de desenvolvimento: schema Prisma → infra da API → API → telas React.
   - ECOS-5: Schema Prisma e migração inicial — ✅ concluída
   - ECOS-10: Infraestrutura base da API — ✅ concluída
+  - ECOS-12: API de pessoas e papéis — ✅ implementada
   - ECOS-6: API CRUD de eventos — **próxima**
   - ECOS-15: API de listagem de eventos com filtros (data, casa, tipo)
   - ECOS-7: API de associação de pessoas a eventos (person_event)
