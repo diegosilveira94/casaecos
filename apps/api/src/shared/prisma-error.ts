@@ -1,7 +1,7 @@
 import { Prisma } from '../generated/prisma/client.js';
 import { HttpError } from '../middlewares/http-error.js';
 
-// Nomes de coluna do banco traduzidos para o vocabulário da tela.
+// Database column names translated into the vocabulary of the screen.
 const FIELD_LABELS: Record<string, string> = {
   email: 'e-mail',
   name: 'nome',
@@ -29,13 +29,13 @@ function readObject(source: unknown, key: string): unknown {
 }
 
 /**
- * Colunas do índice único violado no P2002.
+ * Columns of the unique index violated by a P2002.
  *
- * Com o driver adapter do Prisma 7 o `meta.target` não vem preenchido: o que chega é
- * `meta.driverAdapterError.cause.constraint.index` com o nome da constraint do
- * Postgres (ex: `user_account_person_id_key`). Daí a coluna sai tirando o prefixo da
- * tabela e o sufixo `_key`. O caminho do `target` fica por primeiro para o dia em que
- * o Prisma voltar a preenchê-lo.
+ * With the Prisma 7 driver adapter `meta.target` is never filled: what arrives is
+ * `meta.driverAdapterError.cause.constraint.index`, the Postgres constraint name
+ * (e.g. `user_account_person_id_key`), so the column comes from stripping the table
+ * prefix and the `_key` suffix. The `target` path is tried first, for the day Prisma
+ * starts filling it again.
  */
 export function uniqueConstraintColumns(error: unknown): string[] | null {
   if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') {
@@ -58,7 +58,7 @@ export function uniqueConstraintColumns(error: unknown): string[] | null {
   return [withoutTable.replace(/_key$/, '')];
 }
 
-// Só descreve o que tem tradução: nome cru de constraint na tela não ajuda ninguém.
+// Only what has a translation: a raw constraint name on screen helps nobody.
 function describeColumns(columns: string[]): string | null {
   const labels = columns
     .map((column) => FIELD_LABELS[column])
@@ -68,11 +68,11 @@ function describeColumns(columns: string[]): string | null {
 }
 
 /**
- * Traduz erro do Prisma para HttpError com mensagem em português.
+ * Translates a Prisma error into an HttpError carrying a message in Portuguese.
  *
- * Devolve `null` quando o erro não é do Prisma ou não tem tradução conhecida —
- * nesse caso o errorHandler registra no log e responde 500, porque erro sem
- * tradução é defeito nosso, não erro do usuário.
+ * Returns `null` when the error is not from Prisma or has no known translation. The
+ * errorHandler then logs it and answers 500, because an untranslated error is a
+ * defect of ours, not something the user can fix.
  */
 export function toHttpError(error: unknown): HttpError | null {
   if (error instanceof Prisma.PrismaClientValidationError) {
@@ -93,9 +93,9 @@ export function toHttpError(error: unknown): HttpError | null {
           : 'Já existe um registro com estes dados',
       );
     }
-    // Vale para os dois sentidos: FK apontando para registro inexistente e
-    // remoção de lookup ainda em uso. O service deve barrar antes e dar uma
-    // mensagem precisa; isto aqui é a rede de segurança.
+    // Covers both directions: a FK pointing at a missing row, and removing a lookup
+    // still in use. The service should catch it earlier with a precise message; this
+    // is the safety net.
     case 'P2003': {
       return HttpError.badRequest('Referência inválida entre registros');
     }

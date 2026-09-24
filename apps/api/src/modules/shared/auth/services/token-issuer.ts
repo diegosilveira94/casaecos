@@ -3,15 +3,14 @@ import { z } from 'zod';
 
 import { env } from '../../../../config/env.js';
 import { HttpError } from '../../../../middlewares/http-error.js';
+import { EXPIRED_OR_INVALID_SESSION } from '../auth-messages.js';
 
-const ALGORITHM = 'HS256';
-
-const EXPIRED_OR_INVALID_MESSAGE = 'Sessão expirada ou inválida. Faça login novamente.';
+const SIGNING_ALGORITHM = 'HS256';
 
 /**
- * O que o token carrega. `role` entra para o RBAC (ECOS-14); o escopo por casa
- * (`home_person`) fica fora de propósito — vínculo de casa muda, e token não se
- * atualiza: serviria escopo vencido até expirar.
+ * What the token carries. The house scope (`home_person`) is left out on purpose:
+ * a person changes houses and the token does not follow, so it would hand out a
+ * stale scope until it expired.
  */
 export interface AuthTokenClaims {
   personId: number;
@@ -26,54 +25,63 @@ export interface IssuedToken {
 
 export interface TokenIssuer {
   issue(claims: AuthTokenClaims): Promise<IssuedToken>;
-  read(token: string): Promise<AuthTokenClaims>;
+  verify(token: string): Promise<AuthTokenClaims>;
 }
 
-// `sub` é o person_id: identificador da pessoa em todo o resto do sistema.
-const claimsSchema = z.object({
+const tokenPayloadSchema = z.object({
   sub: z.coerce.number().int().positive(),
   email: z.string().min(1),
   roleId: z.number().int().positive(),
 });
+
+function toClaims(payload: unknown): AuthTokenClaims {
+  const parsedPayload = tokenPayloadSchema.safeParse(payload);
+
+  // Valid signature but unexpected payload means a token from an older version of
+  // the system. For the client that is the same case as an expired token.
+  if (!parsedPayload.success) throw HttpError.unauthorized(EXPIRED_OR_INVALID_SESSION);
+
+  return {
+    personId: parsedPayload.data.sub,
+    email: parsedPayload.data.email,
+    roleId: parsedPayload.data.roleId,
+  };
+}
+
+function currentTimeInSeconds(): number {
+  return Math.floor(Date.now() / 1000);
+}
 
 export class JwtTokenIssuer implements TokenIssuer {
   private readonly secret = new TextEncoder().encode(env.JWT_SECRET);
   private readonly expiresInSeconds = env.JWT_EXPIRES_IN_SECONDS;
 
   async issue(claims: AuthTokenClaims): Promise<IssuedToken> {
-    const issuedAtSeconds = Math.floor(Date.now() / 1000);
+    const issuedAt = currentTimeInSeconds();
 
     const token = await new SignJWT({ email: claims.email, roleId: claims.roleId })
-      .setProtectedHeader({ alg: ALGORITHM })
+      .setProtectedHeader({ alg: SIGNING_ALGORITHM })
       .setSubject(String(claims.personId))
-      .setIssuedAt(issuedAtSeconds)
-      .setExpirationTime(issuedAtSeconds + this.expiresInSeconds)
+      .setIssuedAt(issuedAt)
+      .setExpirationTime(issuedAt + this.expiresInSeconds)
       .sign(this.secret);
 
     return { token, expiresInSeconds: this.expiresInSeconds };
   }
 
-  async read(token: string): Promise<AuthTokenClaims> {
-    let payload: unknown;
+  async verify(token: string): Promise<AuthTokenClaims> {
+    return toClaims(await this.verifySignature(token));
+  }
 
+  private async verifySignature(token: string): Promise<unknown> {
     try {
-      // `algorithms` fixo: sem isso um token forjado poderia pedir outro algoritmo.
-      ({ payload } = await jwtVerify(token, this.secret, { algorithms: [ALGORITHM] }));
+      // Pinning the algorithm: otherwise a forged token could ask for another one.
+      const { payload } = await jwtVerify(token, this.secret, {
+        algorithms: [SIGNING_ALGORITHM],
+      });
+      return payload;
     } catch {
-      throw HttpError.unauthorized(EXPIRED_OR_INVALID_MESSAGE);
+      throw HttpError.unauthorized(EXPIRED_OR_INVALID_SESSION);
     }
-
-    const claims = claimsSchema.safeParse(payload);
-    if (!claims.success) {
-      // Assinatura válida mas payload fora do formato: token de uma versão antiga
-      // do sistema. Para o cliente é o mesmo caso de token expirado.
-      throw HttpError.unauthorized(EXPIRED_OR_INVALID_MESSAGE);
-    }
-
-    return {
-      personId: claims.data.sub,
-      email: claims.data.email,
-      roleId: claims.data.roleId,
-    };
   }
 }

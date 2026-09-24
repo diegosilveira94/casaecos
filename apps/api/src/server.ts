@@ -8,7 +8,7 @@ const server = app.listen(env.API_PORT, () => {
   console.log(`API do EcoAgenda ouvindo em http://localhost:${String(env.API_PORT)}`);
 });
 
-// Sem isto, cada restart do watch deixa a conexão anterior pendurada no Postgres.
+// Without this, every watch restart leaves the previous connection open on Postgres.
 function shutdown(signal: string): void {
   console.log(`Recebido ${signal}, encerrando...`);
   server.close(() => {

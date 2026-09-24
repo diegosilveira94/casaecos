@@ -2,15 +2,26 @@ import type { AuthenticatedUserResponse, UserAccountResponse } from '@casaecos/s
 
 import type { Role } from '../../person/domain/person.js';
 
-/** O usuário por trás da requisição autenticada. Carrega o papel para o RBAC. */
+export interface AuthenticatedUserProperties {
+  personId: number;
+  name: string;
+  email: string;
+  role: Role;
+}
+
+/** The user behind an authenticated request. Carries the role for the RBAC. */
 export class AuthenticatedUser {
-  constructor(
-    readonly accountId: number,
-    readonly personId: number,
-    readonly name: string,
-    readonly email: string,
-    readonly role: Role,
-  ) {}
+  readonly personId: number;
+  readonly name: string;
+  readonly email: string;
+  readonly role: Role;
+
+  constructor(properties: AuthenticatedUserProperties) {
+    this.personId = properties.personId;
+    this.name = properties.name;
+    this.email = properties.email;
+    this.role = properties.role;
+  }
 
   toResponse(): AuthenticatedUserResponse {
     return {
@@ -58,10 +69,15 @@ export class UserAccount {
   }
 
   toAuthenticatedUser(): AuthenticatedUser {
-    return new AuthenticatedUser(this.id, this.personId, this.personName, this.email, this.role);
+    return new AuthenticatedUser({
+      personId: this.personId,
+      name: this.personName,
+      email: this.email,
+      role: this.role,
+    });
   }
 
-  // passwordHash fica fora de propósito: hash de senha não sai da API.
+  // passwordHash is left out on purpose: a password hash never leaves the API.
   toResponse(): UserAccountResponse {
     return {
       id: this.id,

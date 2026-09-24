@@ -28,21 +28,21 @@ describe('JwtTokenIssuer', () => {
     const issued = await issuer.issue(claims);
 
     expect(issued.expiresInSeconds).toBe(env.JWT_EXPIRES_IN_SECONDS);
-    await expect(issuer.read(issued.token)).resolves.toEqual(claims);
+    await expect(issuer.verify(issued.token)).resolves.toEqual(claims);
   });
 
   it('recusa token adulterado ou fora do formato', async () => {
     const issued = await issuer.issue({ personId: 7, email: 'maria@ecos.org', roleId: 2 });
 
-    await expect(issuer.read(`${issued.token}x`)).rejects.toMatchObject(EXPIRED_OR_INVALID);
-    await expect(issuer.read('nem-parece-um-jwt')).rejects.toMatchObject(EXPIRED_OR_INVALID);
+    await expect(issuer.verify(`${issued.token}x`)).rejects.toMatchObject(EXPIRED_OR_INVALID);
+    await expect(issuer.verify('nem-parece-um-jwt')).rejects.toMatchObject(EXPIRED_OR_INVALID);
   });
 
   it('recusa token expirado', async () => {
     const expiredAt = Math.floor(Date.now() / 1000) - 60;
     const token = await signWith({ email: 'maria@ecos.org', roleId: 2 }, expiredAt);
 
-    await expect(issuer.read(token)).rejects.toMatchObject(EXPIRED_OR_INVALID);
+    await expect(issuer.verify(token)).rejects.toMatchObject(EXPIRED_OR_INVALID);
   });
 
   it('recusa token assinado com outro segredo', async () => {
@@ -53,13 +53,13 @@ describe('JwtTokenIssuer', () => {
       .setExpirationTime(Math.floor(Date.now() / 1000) + 60)
       .sign(otherSecret);
 
-    await expect(issuer.read(token)).rejects.toMatchObject(EXPIRED_OR_INVALID);
+    await expect(issuer.verify(token)).rejects.toMatchObject(EXPIRED_OR_INVALID);
   });
 
   it('recusa token válido cujo payload não carrega o papel', async () => {
     const validUntil = Math.floor(Date.now() / 1000) + 60;
     const token = await signWith({ email: 'maria@ecos.org' }, validUntil);
 
-    await expect(issuer.read(token)).rejects.toMatchObject(EXPIRED_OR_INVALID);
+    await expect(issuer.verify(token)).rejects.toMatchObject(EXPIRED_OR_INVALID);
   });
 });

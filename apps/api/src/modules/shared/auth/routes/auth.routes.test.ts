@@ -43,8 +43,8 @@ describe('rotas de autenticação', () => {
   });
 
   it('limita tentativas de login por IP', async () => {
-    // Limitador próprio com teto 1: o da aplicação usa o teto do ambiente, que a
-    // suíte deixa alto para não derrubar os testes de validação acima.
+    // Own limiter with a ceiling of 1: the application one uses the environment
+    // ceiling, which the suite keeps high so the validation tests above survive.
     const app = express();
     app.use(express.json());
     app.post('/auth/login', createLoginRateLimiter(1), (_httpRequest, response) => {

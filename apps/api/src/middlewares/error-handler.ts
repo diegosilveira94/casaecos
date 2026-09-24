@@ -12,7 +12,7 @@ export const notFoundHandler: RequestHandler = (_req, res) => {
   res.status(404).json(body);
 };
 
-// Express 5 encaminha rejeições de handlers async para cá automaticamente.
+// Express 5 forwards rejections from async handlers here on its own.
 export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   if (err instanceof ZodError) {
     const body: ApiError = { message: 'Dados inválidos', details: err.issues };

@@ -6,12 +6,12 @@ import { BcryptPasswordHasher } from '../src/modules/shared/auth/services/passwo
 import { PASSWORD_MIN_LENGTH } from '../src/modules/shared/auth/services/password-hasher.js';
 
 /**
- * Cria o primeiro coordenador com credencial de acesso.
+ * Creates the first coordinator, credential included.
  *
- * Existe porque `POST /auth/accounts` exige token de Coordenador: sem um usuário
- * inicial criado fora da API, ninguém consegue criar o primeiro. Rodar de novo não
- * sobrescreve nada — se já existe conta com o e-mail informado, o script avisa e sai
- * sem tocar na senha.
+ * It exists because `POST /auth/accounts` requires a coordinator token: without an
+ * initial user created outside the API, nobody can create the first one. Running it
+ * again overwrites nothing — if an account already uses the e-mail, it says so and
+ * leaves the password alone.
  */
 const adminSchema = z.object({
   ADMIN_NAME: z.string().trim().min(1).max(45).default('Coordenação'),

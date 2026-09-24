@@ -29,13 +29,12 @@ function appWithUser(user: AuthenticatedUser | null): Express {
 }
 
 function makeUser(roleId: number, description: string): AuthenticatedUser {
-  return new AuthenticatedUser(
-    5,
-    7,
-    'Maria Silva',
-    'maria@ecos.org',
-    new Role(roleId, description),
-  );
+  return new AuthenticatedUser({
+    personId: 7,
+    name: 'Maria Silva',
+    email: 'maria@ecos.org',
+    role: new Role(roleId, description),
+  });
 }
 
 describe('authorizeRoles', () => {

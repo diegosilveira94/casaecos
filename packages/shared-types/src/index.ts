@@ -1,4 +1,4 @@
-// Só tipos e contratos: nada de lógica, nada de Prisma. Um arquivo por módulo.
+// Types and contracts only: no logic, no Prisma. One file per module.
 
 export * from './auth.js';
 export * from './common.js';

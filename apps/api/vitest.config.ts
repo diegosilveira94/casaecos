@@ -5,8 +5,8 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/*.test.ts'],
     exclude: ['src/generated/**'],
-    // A suíte não depende do .env da máquina: segredo fixo de teste, e teto de
-    // login alto para o rate limit não derrubar os testes de validação.
+    // The suite does not depend on the machine's .env: a fixed test secret, and a
+    // high login ceiling so the rate limit does not knock the validation tests down.
     env: {
       NODE_ENV: 'test',
       JWT_SECRET: 'segredo-apenas-para-a-suite-de-testes-do-casaecos',

@@ -1,6 +1,7 @@
 import type { Request, RequestHandler } from 'express';
 
 import { HttpError } from '../../../../middlewares/http-error.js';
+import { EXPIRED_OR_INVALID_SESSION, MISSING_ACCESS_TOKEN } from '../auth-messages.js';
 import type { AuthenticatedUser } from '../domain/user-account.js';
 import {
   PrismaUserAccountRepository,
@@ -9,10 +10,10 @@ import {
 import { JwtTokenIssuer, type TokenIssuer } from '../services/token-issuer.js';
 
 declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace -- forma que o Express expõe para aumentar o Request
+  // eslint-disable-next-line @typescript-eslint/no-namespace -- how Express exposes Request for augmentation
   namespace Express {
     interface Request {
-      /** Preenchido só pelo AuthenticationMiddleware. Use `currentUser` para ler. */
+      /** Written only by AuthenticationMiddleware. Read it with `currentUser`. */
       user?: AuthenticatedUser;
     }
   }
@@ -20,8 +21,13 @@ declare global {
 
 const BEARER_PREFIX = 'Bearer ';
 
-const MISSING_TOKEN_MESSAGE = 'Envie o token de acesso no cabeçalho Authorization';
-const EXPIRED_OR_INVALID_MESSAGE = 'Sessão expirada ou inválida. Faça login novamente.';
+function readBearerToken(request: Request): string | null {
+  const authorization = request.get('authorization');
+  if (!authorization?.startsWith(BEARER_PREFIX)) return null;
+
+  const token = authorization.slice(BEARER_PREFIX.length).trim();
+  return token.length > 0 ? token : null;
+}
 
 export class AuthenticationMiddleware {
   constructor(
@@ -30,22 +36,22 @@ export class AuthenticationMiddleware {
   ) {}
 
   readonly handle: RequestHandler = async (request, _response, next) => {
-    const header = request.get('authorization');
+    const token = readBearerToken(request);
 
-    if (!header?.startsWith(BEARER_PREFIX)) {
-      next(HttpError.unauthorized(MISSING_TOKEN_MESSAGE));
+    if (!token) {
+      next(HttpError.unauthorized(MISSING_ACCESS_TOKEN));
       return;
     }
 
-    const claims = await this.tokenIssuer.read(header.slice(BEARER_PREFIX.length).trim());
+    const claims = await this.tokenIssuer.verify(token);
 
-    // Relê a conta a cada requisição em vez de confiar no payload: sem refresh
-    // token não há revogação, e assim desligar um usuário ou trocar seu papel
-    // vale na hora, não só quando o token expirar.
+    // Reloaded on every request instead of trusting the payload: there is no
+    // refresh token and therefore no revocation, so disabling a user or changing
+    // their role has to take effect now, not whenever the token expires.
     const account = await this.repository.findByPersonId(claims.personId);
 
     if (!account) {
-      next(HttpError.unauthorized(EXPIRED_OR_INVALID_MESSAGE));
+      next(HttpError.unauthorized(EXPIRED_OR_INVALID_SESSION));
       return;
     }
 
@@ -55,9 +61,9 @@ export class AuthenticationMiddleware {
 }
 
 /**
- * Usuário autenticado da requisição. Só pode ser chamado em handler que roda
- * depois do `AuthenticationMiddleware` — o 401 aqui é rede de segurança para
- * uma rota registrada sem ele.
+ * The authenticated user of the request. Only valid in a handler that runs after
+ * AuthenticationMiddleware — the 401 here is a safety net for a route registered
+ * without it.
  */
 export function currentUser(request: Request): AuthenticatedUser {
   if (!request.user) throw HttpError.unauthorized();

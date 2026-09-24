@@ -1,15 +1,9 @@
 import type { RequestHandler } from 'express';
 
 import { HttpError } from '../../../../middlewares/http-error.js';
+import { ROLE_NOT_ALLOWED } from '../auth-messages.js';
 
-/**
- * Gate por papel. É a semente do RBAC da ECOS-14: aqui só barra por `role_id`,
- * o escopo por casa (`home_person`, decisão #28) entra lá.
- *
- * Sempre depois do `AuthenticationMiddleware`: sem usuário na requisição a
- * resposta é 401, não 403 — o cliente precisa saber que falta autenticar.
- */
-export class RoleAuthorizationMiddleware {
+class RoleAuthorizationMiddleware {
   private readonly allowedRoleIds: ReadonlySet<number>;
 
   constructor(allowedRoleIds: readonly number[]) {
@@ -19,13 +13,15 @@ export class RoleAuthorizationMiddleware {
   readonly handle: RequestHandler = (request, _response, next) => {
     const user = request.user;
 
+    // Missing user means the route skipped authentication, which is a 401 and not
+    // a 403: the client needs to know it has to log in first.
     if (!user) {
       next(HttpError.unauthorized());
       return;
     }
 
     if (!this.allowedRoleIds.has(user.role.id)) {
-      next(HttpError.forbidden('Seu papel não permite esta ação'));
+      next(HttpError.forbidden(ROLE_NOT_ALLOWED));
       return;
     }
 
@@ -33,6 +29,10 @@ export class RoleAuthorizationMiddleware {
   };
 }
 
+/**
+ * Role gate, to be registered after `authenticate`. Seed of the ECOS-14 RBAC: it
+ * only filters by role, while the house scope (`home_person`) belongs there.
+ */
 export function authorizeRoles(...allowedRoleIds: number[]): RequestHandler {
   return new RoleAuthorizationMiddleware(allowedRoleIds).handle;
 }
