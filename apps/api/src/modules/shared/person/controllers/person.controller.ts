@@ -1,79 +1,80 @@
 import type { RequestHandler } from 'express';
 import { z } from 'zod';
 
-import type { ApiMessage, CreatePersonRequest, UpdatePersonRequest } from '@casaecos/shared-types';
+import type { ApiMessage } from '@casaecos/shared-types';
 
-import type { PersonFilters } from '../repositories/person.repository.js';
+import { RequestValidator } from '../../../../middlewares/validate.js';
 import { personService } from '../services/person.service.js';
 
-const idSchema = z.coerce.number().int().positive();
+// Opcionais com exactOptional: a saída fica `campo?: T`, sem `| undefined`, que é o
+// que os DTOs pedem sob exactOptionalPropertyTypes. JSON e query string nunca
+// trazem `undefined` explícito, então a entrada aceita continua a mesma.
+const nameSchema = z.string().trim().min(1).max(45);
+const roleIdSchema = z.number().int().positive();
 
-const nullableOptionalText = (maximumLength: number) =>
-  z.union([z.string().trim().max(maximumLength), z.null()]).optional();
+const nullableText = (maximumLength: number) =>
+  z.union([z.string().trim().max(maximumLength), z.null()]);
+
+const personIdParamsSchema = z.object({ id: z.coerce.number().int().positive() });
 
 const createPersonSchema = z
   .object({
-    name: z.string().trim().min(1).max(45),
-    roleId: z.number().int().positive(),
-    individualRegistration: nullableOptionalText(14),
-    phone: nullableOptionalText(20),
+    name: nameSchema,
+    roleId: roleIdSchema,
+    individualRegistration: nullableText(14).exactOptional(),
+    phone: nullableText(20).exactOptional(),
   })
   .strict();
 
-const updatePersonSchema = createPersonSchema
-  .partial()
+// Campos listados um a um em vez de `createPersonSchema.partial()`: o partial
+// embrulha cada campo em optional comum e devolve o `| undefined` à saída.
+const updatePersonSchema = z
+  .object({
+    name: nameSchema.exactOptional(),
+    roleId: roleIdSchema.exactOptional(),
+    individualRegistration: nullableText(14).exactOptional(),
+    phone: nullableText(20).exactOptional(),
+  })
+  .strict()
   .refine((body) => Object.keys(body).length > 0, { message: 'Informe ao menos um campo' });
 
 const personFiltersSchema = z.object({
-  roleId: z.coerce.number().int().positive().optional(),
-  name: z.string().trim().min(1).max(45).optional(),
+  roleId: z.coerce.number().int().positive().exactOptional(),
+  name: nameSchema.exactOptional(),
 });
 
 export class PersonController {
-  list: RequestHandler = async (request, response) => {
-    const query = personFiltersSchema.parse(request.query);
-    const filters: PersonFilters = {
-      ...(query.roleId === undefined ? {} : { roleId: query.roleId }),
-      ...(query.name === undefined ? {} : { name: query.name }),
-    };
-    response.json(await personService.list(filters));
+  readonly listValidator = new RequestValidator({ query: personFiltersSchema });
+  readonly personIdValidator = new RequestValidator({ params: personIdParamsSchema });
+  readonly createValidator = new RequestValidator({ body: createPersonSchema });
+  readonly updateValidator = new RequestValidator({
+    params: personIdParamsSchema,
+    body: updatePersonSchema,
+  });
+
+  list: RequestHandler = async (_request, response) => {
+    const { query } = this.listValidator.data(response);
+    response.json(await personService.list(query));
   };
 
-  getById: RequestHandler = async (request, response) => {
-    const id = idSchema.parse(request.params.id);
-    response.json(await personService.getById(id));
+  getById: RequestHandler = async (_request, response) => {
+    const { params } = this.personIdValidator.data(response);
+    response.json(await personService.getById(params.id));
   };
 
-  create: RequestHandler = async (request, response) => {
-    const parsedBody = createPersonSchema.parse(request.body);
-    const body: CreatePersonRequest = {
-      name: parsedBody.name,
-      roleId: parsedBody.roleId,
-      ...(parsedBody.individualRegistration === undefined
-        ? {}
-        : { individualRegistration: parsedBody.individualRegistration }),
-      ...(parsedBody.phone === undefined ? {} : { phone: parsedBody.phone }),
-    };
+  create: RequestHandler = async (_request, response) => {
+    const { body } = this.createValidator.data(response);
     response.status(201).json(await personService.create(body));
   };
 
-  update: RequestHandler = async (request, response) => {
-    const id = idSchema.parse(request.params.id);
-    const parsedBody = updatePersonSchema.parse(request.body);
-    const body: UpdatePersonRequest = {
-      ...(parsedBody.name === undefined ? {} : { name: parsedBody.name }),
-      ...(parsedBody.roleId === undefined ? {} : { roleId: parsedBody.roleId }),
-      ...(parsedBody.individualRegistration === undefined
-        ? {}
-        : { individualRegistration: parsedBody.individualRegistration }),
-      ...(parsedBody.phone === undefined ? {} : { phone: parsedBody.phone }),
-    };
-    response.json(await personService.update(id, body));
+  update: RequestHandler = async (_request, response) => {
+    const { params, body } = this.updateValidator.data(response);
+    response.json(await personService.update(params.id, body));
   };
 
-  delete: RequestHandler = async (request, response) => {
-    const id = idSchema.parse(request.params.id);
-    await personService.delete(id);
+  delete: RequestHandler = async (_request, response) => {
+    const { params } = this.personIdValidator.data(response);
+    await personService.delete(params.id);
     const body: ApiMessage = { message: 'Pessoa excluída com sucesso' };
     response.json(body);
   };

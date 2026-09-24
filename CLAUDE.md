@@ -177,6 +177,10 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
 - **Validação de entrada** por rota com `RequestValidator` (zod). O `ZodError` sobe
   para o `errorHandler`, que responde 400 com as issues em `details` — não capture
   o erro no controller.
+- **Campo opcional no schema é `.exactOptional()`**, não `.optional()` nem
+  `.partial()`: sob `exactOptionalPropertyTypes` só ele gera `campo?: T` sem
+  `| undefined`, que é o que os DTOs de `shared-types` aceitam. Assim o dado do
+  validador vai direto ao service, sem remontar objeto campo a campo e sem cast.
 - **Erro do Prisma vira `HttpError`** em `shared/prisma-error.ts` (P2002 → 409,
   P2003 → 400, P2025 → 404). Código sem tradução cai em 500 com log: erro sem
   tradução é defeito nosso, não do usuário.
@@ -337,6 +341,9 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
   (`jose`, HS256, 8h), senha em hash `bcryptjs` (12 rounds), criação de credencial
   restrita a Coordenador, middleware que injeta o usuário na requisição e rate
   limit na rota de login.
+- **ECOS-22 concluída em 23/09/2026**: o módulo `person` passou a validar com
+  `RequestValidator` nas rotas, como o `auth`. Não há mais `schema.parse()` em
+  controller.
 - Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-21.
 - Ordem de desenvolvimento: schema Prisma → infra da API → API → telas React.
   - ECOS-5: Schema Prisma e migração inicial — ✅ concluída
@@ -365,9 +372,6 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
   matriz por ação segue opcional.
 - Vínculo org-wide para pessoal não ligado a uma casa específica (ex:
   `person_organization`) só será modelado se surgir uma segunda ONG.
-- **Dívida: `person.controller.ts` valida com `schema.parse()` dentro do controller**
-  em vez do `RequestValidator` da decisão #44. O módulo `auth` já segue a decisão;
-  alinhar o `person` quando alguém mexer nele (card ECOS-22).
 - **Sem refresh token** (decisão da própria ECOS-13). Se 8h virar atrito na prática,
   aí sim vira card.
 - **Recuperação de senha e troca de senha pelo próprio usuário não existem.** Hoje só
