@@ -177,7 +177,7 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
 - **Validação de entrada** por rota com `RequestValidator` (zod). O `ZodError` sobe
   para o `errorHandler`, que responde 400 com as issues em `details` — não capture
   o erro no controller.
-- **Campo opcional no schema é `.exactOptional()`**, não `.optional()` nem
+- **Campo opcional no schema é `.exactOptional()`** (decisão #52), não `.optional()` nem
   `.partial()`: sob `exactOptionalPropertyTypes` só ele gera `campo?: T` sem
   `| undefined`, que é o que os DTOs de `shared-types` aceitam. Assim o dado do
   validador vai direto ao service, sem remontar objeto campo a campo e sem cast.
