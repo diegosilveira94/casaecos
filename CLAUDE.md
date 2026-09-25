@@ -270,7 +270,8 @@ verdade e costuma estar à frente deste arquivo.
 - Projeto: **ECOS** ("Casa Ecos", id `10000`)
 - Fluxo do board: Tarefas pendentes → Em andamento → Em análise → Concluído
 - Épicos: ECOS-1 (Medicamentos), ECOS-2 (Prestação de Contas), ECOS-3 (Relatórios),
-  ECOS-4 (Agenda). Stories da Agenda: ECOS-5 a ECOS-9.
+  ECOS-4 (Agenda). Stories da Agenda: ECOS-5 a ECOS-9, mais ECOS-11 (casas) e
+  ECOS-12 (pessoas), base compartilhada do módulo.
 
 **Notion** — espaço **Ecos da Esperança**, com leitura e escrita.
 
@@ -348,6 +349,12 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
   limit na rota de login.
 - Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-21.
 - Ordem de desenvolvimento: schema Prisma → infra da API → API → telas React.
+- **ECOS-11 implementada em 23/09/2026**: CRUD de casas em `/homes`, filtro por
+  organização, validação de organização e responsável, vínculo `home_person`,
+  consultas nas duas direções e bloqueio da exclusão de casas com eventos.
+- Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-9, com ECOS-11 e
+  ECOS-12 como base compartilhada (casas e pessoas).
+- Ordem de desenvolvimento: schema Prisma → API → telas React.
   - ECOS-5: Schema Prisma e migração inicial — ✅ concluída
   - ECOS-10: Infraestrutura base da API — ✅ concluída
   - ECOS-12: API de pessoas e papéis — ✅ implementada
