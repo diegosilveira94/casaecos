@@ -6,9 +6,9 @@ import type { ApiMessage } from '@casaecos/shared-types';
 import { RequestValidator } from '../../../../middlewares/validate.js';
 import { personService } from '../services/person.service.js';
 
-// Opcionais com exactOptional: a saída fica `campo?: T`, sem `| undefined`, que é o
-// que os DTOs pedem sob exactOptionalPropertyTypes. JSON e query string nunca
-// trazem `undefined` explícito, então a entrada aceita continua a mesma.
+// Optional fields use exactOptional: the output is `field?: T` without `| undefined`,
+// which is what the DTOs require under exactOptionalPropertyTypes. JSON and query
+// strings never carry an explicit `undefined`, so the accepted input is unchanged.
 const nameSchema = z.string().trim().min(1).max(45);
 const roleIdSchema = z.number().int().positive();
 
@@ -26,8 +26,8 @@ const createPersonSchema = z
   })
   .strict();
 
-// Campos listados um a um em vez de `createPersonSchema.partial()`: o partial
-// embrulha cada campo em optional comum e devolve o `| undefined` à saída.
+// Fields listed one by one instead of `createPersonSchema.partial()`: partial wraps
+// each field in a plain optional and brings `| undefined` back to the output.
 const updatePersonSchema = z
   .object({
     name: nameSchema.exactOptional(),

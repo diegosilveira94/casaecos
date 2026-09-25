@@ -184,7 +184,7 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
 - **Validação de entrada** por rota com `RequestValidator` (zod). O `ZodError` sobe
   para o `errorHandler`, que responde 400 com as issues em `details` — não capture
   o erro no controller.
-- **Campo opcional no schema é `.exactOptional()`** (decisão #52), não `.optional()` nem
+- **Campo opcional no schema é `.exactOptional()`** (decisão #67), não `.optional()` nem
   `.partial()`: sob `exactOptionalPropertyTypes` só ele gera `campo?: T` sem
   `| undefined`, que é o que os DTOs de `shared-types` aceitam. Assim o dado do
   validador vai direto ao service, sem remontar objeto campo a campo e sem cast.
@@ -352,8 +352,8 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
   restrita a Coordenador, middleware que injeta o usuário na requisição e rate
   limit na rota de login.
 - **ECOS-22 concluída em 23/09/2026**: o módulo `person` passou a validar com
-  `RequestValidator` nas rotas, como o `auth`. Não há mais `schema.parse()` em
-  controller.
+  `RequestValidator` nas rotas, como o `auth`, e os opcionais passaram a
+  `.exactOptional()` (decisão #67).
 - Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-21.
 - Ordem de desenvolvimento: schema Prisma → infra da API → API → telas React.
 - **ECOS-11 implementada em 23/09/2026**: CRUD de casas em `/homes`, filtro por
@@ -388,6 +388,9 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
   matriz por ação segue opcional.
 - Vínculo org-wide para pessoal não ligado a uma casa específica (ex:
   `person_organization`) só será modelado se surgir uma segunda ONG.
+- **Dívida: `home.controller.ts` (ECOS-11) valida com `schema.parse()` dentro do
+  controller** e remonta os opcionais campo a campo — o mesmo caso que a ECOS-22
+  resolveu no `person`. Alinhar ao `RequestValidator` com `.exactOptional()`.
 - **Sem refresh token** (decisão da própria ECOS-13). Se 8h virar atrito na prática,
   aí sim vira card.
 - **Recuperação de senha e troca de senha pelo próprio usuário não existem.** Hoje só
