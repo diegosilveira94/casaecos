@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import type { ApiMessage, CreateHomeRequest, UpdateHomeRequest } from '@casaecos/shared-types';
 
+import { currentUser } from '../../auth/middlewares/authenticate.js';
 import type { HomeFilters } from '../repositories/home.repository.js';
 import { homeService } from '../services/home.service.js';
 
@@ -35,12 +36,12 @@ export class HomeController {
     const filters: HomeFilters = {
       ...(query.organizationId === undefined ? {} : { organizationId: query.organizationId }),
     };
-    response.json(await homeService.list(filters));
+    response.json(await homeService.list(filters, currentUser(request).scope));
   };
 
   getById: RequestHandler = async (request, response) => {
     const id = idSchema.parse(request.params.id);
-    response.json(await homeService.getById(id));
+    response.json(await homeService.getById(id, currentUser(request).scope));
   };
 
   create: RequestHandler = async (request, response) => {
@@ -86,7 +87,7 @@ export class HomeController {
 
   listPeople: RequestHandler = async (request, response) => {
     const homeId = idSchema.parse(request.params.homeId);
-    response.json(await homeService.listPeople(homeId));
+    response.json(await homeService.listPeople(homeId, currentUser(request).scope));
   };
 
   listHomes: RequestHandler = async (request, response) => {

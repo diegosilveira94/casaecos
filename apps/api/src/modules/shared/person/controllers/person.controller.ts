@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import type { ApiMessage, CreatePersonRequest, UpdatePersonRequest } from '@casaecos/shared-types';
 
+import { currentUser } from '../../auth/middlewares/authenticate.js';
 import type { PersonFilters } from '../repositories/person.repository.js';
 import { personService } from '../services/person.service.js';
 
@@ -54,7 +55,7 @@ export class PersonController {
         : { individualRegistration: parsedBody.individualRegistration }),
       ...(parsedBody.phone === undefined ? {} : { phone: parsedBody.phone }),
     };
-    response.status(201).json(await personService.create(body));
+    response.status(201).json(await personService.create(body, currentUser(request)));
   };
 
   update: RequestHandler = async (request, response) => {
@@ -68,12 +69,12 @@ export class PersonController {
         : { individualRegistration: parsedBody.individualRegistration }),
       ...(parsedBody.phone === undefined ? {} : { phone: parsedBody.phone }),
     };
-    response.json(await personService.update(id, body));
+    response.json(await personService.update(id, body, currentUser(request)));
   };
 
   delete: RequestHandler = async (request, response) => {
     const id = idSchema.parse(request.params.id);
-    await personService.delete(id);
+    await personService.delete(id, currentUser(request));
     const body: ApiMessage = { message: 'Pessoa excluída com sucesso' };
     response.json(body);
   };

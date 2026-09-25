@@ -24,6 +24,7 @@ export interface UpdatePersonData {
 export interface PersonLinks {
   events: boolean;
   homes: boolean;
+  account: boolean;
 }
 
 export interface PersonRepository {
@@ -142,6 +143,7 @@ export class PrismaPersonRepository implements PersonRepository {
         _count: {
           select: { eventLinks: true, homeLinks: true, homesUnderCharge: true },
         },
+        userAccount: { select: { id: true } },
       },
     });
 
@@ -150,6 +152,7 @@ export class PrismaPersonRepository implements PersonRepository {
     return {
       events: person._count.eventLinks > 0,
       homes: person._count.homeLinks > 0 || person._count.homesUnderCharge > 0,
+      account: person.userAccount !== null,
     };
   }
 

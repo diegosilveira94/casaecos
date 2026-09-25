@@ -2,13 +2,10 @@ import type { RequestHandler } from 'express';
 
 import { HttpError } from '../../../../middlewares/http-error.js';
 import { ROLE_NOT_ALLOWED } from '../auth-messages.js';
+import type { Permission } from '../domain/permissions.js';
 
-class RoleAuthorizationMiddleware {
-  private readonly allowedRoleIds: ReadonlySet<number>;
-
-  constructor(allowedRoleIds: readonly number[]) {
-    this.allowedRoleIds = new Set(allowedRoleIds);
-  }
+class PermissionMiddleware {
+  constructor(private readonly permission: Permission) {}
 
   readonly handle: RequestHandler = (request, _response, next) => {
     const user = request.user;
@@ -20,7 +17,7 @@ class RoleAuthorizationMiddleware {
       return;
     }
 
-    if (!this.allowedRoleIds.has(user.role.id)) {
+    if (!user.can(this.permission)) {
       next(HttpError.forbidden(ROLE_NOT_ALLOWED));
       return;
     }
@@ -29,10 +26,6 @@ class RoleAuthorizationMiddleware {
   };
 }
 
-/**
- * Role gate, to be registered after `authenticate`. Seed of the ECOS-14 RBAC: it
- * only filters by role, while the house scope (`home_person`) belongs there.
- */
-export function authorizeRoles(...allowedRoleIds: number[]): RequestHandler {
-  return new RoleAuthorizationMiddleware(allowedRoleIds).handle;
+export function authorize(permission: Permission): RequestHandler {
+  return new PermissionMiddleware(permission).handle;
 }

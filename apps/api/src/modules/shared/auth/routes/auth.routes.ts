@@ -4,11 +4,10 @@ import rateLimit, { type RateLimitRequestHandler } from 'express-rate-limit';
 import type { ApiError } from '@casaecos/shared-types';
 
 import { env } from '../../../../config/env.js';
-import { ROLE_IDS } from '../../person/domain/role-ids.js';
 import { TOO_MANY_LOGIN_ATTEMPTS } from '../auth-messages.js';
 import { authController } from '../controllers/auth.controller.js';
 import { authenticate } from '../middlewares/authenticate.js';
-import { authorizeRoles } from '../middlewares/authorize.js';
+import { authorize } from '../middlewares/authorize.js';
 
 /**
  * Attempt ceiling per IP on the login route. The generic error hides which e-mail
@@ -46,7 +45,7 @@ authRouter.post(
 authRouter.post(
   '/accounts',
   authenticate.handle,
-  authorizeRoles(ROLE_IDS.coordinator),
+  authorize('account:manage'),
   authController.createAccountValidator.handle,
   authController.createAccount,
 );

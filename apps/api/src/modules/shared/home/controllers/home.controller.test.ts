@@ -1,11 +1,16 @@
 import request from 'supertest';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { deleteHome, linkPerson, unlinkPerson } = vi.hoisted(() => ({
   deleteHome: vi.fn<(id: number) => Promise<void>>(),
   linkPerson: vi.fn<(homeId: number, personId: number) => Promise<void>>(),
   unlinkPerson: vi.fn<(homeId: number, personId: number) => Promise<void>>(),
 }));
+
+vi.mock('../../auth/middlewares/authenticate.js', async (importOriginal) => {
+  const { fakeAuthentication } = await import('../../../../test/fake-authentication.js');
+  return { ...(await importOriginal<object>()), authenticate: fakeAuthentication };
+});
 
 vi.mock('../services/home.service.js', () => ({
   homeService: {
@@ -22,8 +27,14 @@ vi.mock('../services/home.service.js', () => ({
 }));
 
 import { createApp } from '../../../../app.js';
+import { fakeAuthentication } from '../../../../test/fake-authentication.js';
+import { ROLE_IDS } from '../../person/domain/role-ids.js';
 
 describe('ações de casas', () => {
+  beforeEach(() => {
+    fakeAuthentication.signInAs(ROLE_IDS.coordinator);
+  });
+
   it('confirma a exclusão da casa', async () => {
     deleteHome.mockResolvedValueOnce();
 

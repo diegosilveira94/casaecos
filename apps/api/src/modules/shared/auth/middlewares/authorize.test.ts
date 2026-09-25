@@ -6,7 +6,7 @@ import { errorHandler } from '../../../../middlewares/error-handler.js';
 import { Role } from '../../person/domain/person.js';
 import { ROLE_IDS } from '../../person/domain/role-ids.js';
 import { AuthenticatedUser } from '../domain/user-account.js';
-import { authorizeRoles } from './authorize.js';
+import { authorize } from './authorize.js';
 
 function appWithUser(user: AuthenticatedUser | null): Express {
   const injectUser: RequestHandler = (httpRequest, _response, next) => {
@@ -15,14 +15,9 @@ function appWithUser(user: AuthenticatedUser | null): Express {
   };
 
   const app = express();
-  app.get(
-    '/restrito',
-    injectUser,
-    authorizeRoles(ROLE_IDS.coordinator),
-    (_httpRequest, response) => {
-      response.json({ message: 'ok' });
-    },
-  );
+  app.get('/restrito', injectUser, authorize('account:manage'), (_httpRequest, response) => {
+    response.json({ message: 'ok' });
+  });
   app.use(errorHandler);
 
   return app;
@@ -34,18 +29,19 @@ function makeUser(roleId: number, description: string): AuthenticatedUser {
     name: 'Maria Silva',
     email: 'maria@ecos.org',
     role: new Role(roleId, description),
+    homeIds: [],
   });
 }
 
-describe('authorizeRoles', () => {
-  it('libera o papel permitido', async () => {
+describe('authorize', () => {
+  it('libera o papel que tem a permissão', async () => {
     const app = appWithUser(makeUser(ROLE_IDS.coordinator, 'Coordenador'));
 
     await expect(request(app).get('/restrito')).resolves.toMatchObject({ status: 200 });
   });
 
-  it('barra papel fora da lista com 403', async () => {
-    const app = appWithUser(makeUser(ROLE_IDS.caregiver, 'Cuidador/Monitor'));
+  it('barra papel sem a permissão com 403', async () => {
+    const app = appWithUser(makeUser(ROLE_IDS.secretary, 'Secretário'));
 
     await expect(request(app).get('/restrito')).resolves.toMatchObject({
       status: 403,

@@ -23,6 +23,7 @@ function makeAccount(): UserAccount {
     email: 'maria@ecos.org',
     passwordHash: 'irrelevante',
     role: new Role(2, 'Secretário'),
+    homeIds: [],
     lastLoginAt: null,
     createdAt: new Date('2026-09-01T10:00:00.000Z'),
     updatedAt: new Date('2026-09-01T10:00:00.000Z'),

@@ -79,6 +79,7 @@ casaecos/
 │   │   │   ├── config/                # env.ts (zod) e prisma.ts (client singleton)
 │   │   │   ├── middlewares/           # error-handler, HttpError, RequestValidator
 │   │   │   ├── shared/                # utilitários cross-módulo (ex: prisma-error)
+│   │   │   ├── test/                  # helpers de teste (ex: fake-authentication)
 │   │   │   ├── generated/prisma/      # client gerado — fora do versionamento
 │   │   │   ├── routes.ts              # monta os routers de cada módulo
 │   │   │   ├── app.ts                 # cria o Express (sem subir o servidor)
@@ -207,12 +208,41 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
 - **Middleware**: `authenticate.handle` relê a conta no banco a cada requisição —
   sem refresh token não há revogação, então desligar um usuário ou trocar seu papel
   precisa valer na hora. O usuário vai para `request.user`; leia com `currentUser(req)`.
-- **Gate por papel**: `authorizeRoles(ROLE_IDS.coordinator)`. É a semente da ECOS-14;
-  o escopo por casa entra lá.
+- **Permissão na rota**: `authorize('account:manage')` — ver "Autorização" abaixo.
 - **Primeiro usuário**: `npm run db:seed:admin` cria o coordenador inicial a partir de
   `ADMIN_NAME`/`ADMIN_EMAIL`/`ADMIN_PASSWORD` no `.env`. Existe porque `POST
 /auth/accounts` exige Coordenador — sem ele não haveria como criar o primeiro.
   É idempotente: se já houver conta com o e-mail, não mexe na senha.
+
+### Autorização (ECOS-14)
+
+> Decisões #58 a #66 no Notion.
+
+- **Duas camadas**: papel na rota (`authorize('recurso:ação')`) e escopo no service
+  (`AccessScope`). Ambas em `modules/shared/auth/domain/`; nada de `if` de papel em
+  controller.
+- **Política num arquivo só** (`permissions.ts`): o mapa papel → permissão
+  (`account:manage`, `person:read|write`, `home:read|write`, `event:read|write`) e o
+  papel → tipo de escopo (`scopeKindForRole`). O que não está no mapa é negado; papel
+  sem escopo próprio cai no escopo por casa.
+- **Matriz**: Coordenador pode tudo; Secretário pode tudo menos mexer no acesso de quem
+  usa o sistema; Cuidador só lê (casas e eventos das casas dele); Motorista só lê os
+  eventos em que está no `person_event`; Acolhido não tem acesso.
+- **Acesso de usuários** (`account:manage`, só Coordenador): criar credencial,
+  cadastrar ou promover alguém a Coordenador, trocar o papel de quem tem credencial e
+  excluir pessoa com credencial. As três últimas são checadas no `PersonService`.
+- **Escopo** (`AccessScope`, em `currentUser(req).scope`): irrestrito (coordenação e
+  secretaria), por casa (cuidador, via `home_person`) ou por participação (motorista).
+  As casas vêm na mesma consulta do `authenticate`, não no token (decisão #48).
+- **Uso no service**: `scope.assertCanAccessHome(id)` / `scope.assertCanAccessEvent(evento)`
+  respondem 403; em listagens, `scope.accessibleHomeIds()` e `scope.eventFilter()`
+  viram filtro no repositório. `eventFilter()` é união discriminada por `kind`
+  (`all` | `homes` | `participant`): trate cada caso, nunca "sem campo = sem filtro".
+  Fora do escopo é 403, checado antes da existência.
+- **Rotas protegidas**: `/homes`, `/people` e `/roles` exigem login e permissão.
+  Os eventos (ECOS-6/7/15) devem seguir o mesmo contrato.
+- **Testes de rota** simulam o login com `src/test/fake-authentication.ts`
+  (`vi.mock` do `authenticate`).
 
 ## Padrão de idioma
 
@@ -349,6 +379,10 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
   limit na rota de login.
 - Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-21.
 - Ordem de desenvolvimento: schema Prisma → infra da API → API → telas React.
+- **ECOS-14 implementada em 25/09/2026**: autorização por permissão (`authorize`) +
+  escopo por casa/participação (`AccessScope`); `/homes`, `/people` e `/roles`
+  passaram a exigir login; índice em `home_person(person_id)` (migração
+  `20260925220000_home_person_person_id_index`).
 - **ECOS-11 implementada em 23/09/2026**: CRUD de casas em `/homes`, filtro por
   organização, validação de organização e responsável, vínculo `home_person`,
   consultas nas duas direções e bloqueio da exclusão de casas com eventos.
@@ -363,8 +397,8 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
   - ECOS-15: API de listagem de eventos com filtros (data, casa, tipo)
   - ECOS-7: API de associação de pessoas a eventos (person_event)
   - ECOS-11: API de casas (home, home_person)
-  - ECOS-14: autorização (RBAC + escopo por casa) — o gate por papel já existe em
-    `modules/shared/auth/middlewares/authorize.ts`; falta o escopo por casa
+  - ECOS-14: autorização (RBAC + escopo por casa) — ✅ implementada (falta aplicar nos
+    eventos quando a ECOS-6 existir)
   - ECOS-16/17: camada de integração frontend-API e tela de login
   - ECOS-8: Tela de visualização da agenda
   - ECOS-9: Formulário de criação/edição de evento
@@ -374,11 +408,9 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
 
 ## Pendências que afetam o desenvolvimento
 
-- **Permissões: abordagem definida, implementação pendente.** RBAC por papel
-  (`role`) + escopo por casa (`home_person`), sem tabela de permissões dedicada
-  (decisão #28 no Notion). A lógica vive na aplicação, não no schema — ou seja,
-  ela entra nos endpoints (ECOS-6/7) e na tela (ECOS-8). O refinamento fino da
-  matriz por ação segue opcional.
+- **Permissões: implementadas na ECOS-14** (ver "Autorização"). As rotas de eventos
+  (ECOS-6/7/15) precisam usar `authorize('event:*')` e o `AccessScope`; a tela
+  (ECOS-8) ainda precisa esconder o que o papel não pode fazer.
 - Vínculo org-wide para pessoal não ligado a uma casa específica (ex:
   `person_organization`) só será modelado se surgir uma segunda ONG.
 - **Dívida: `person.controller.ts` valida com `schema.parse()` dentro do controller**
