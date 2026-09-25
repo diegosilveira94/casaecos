@@ -6,9 +6,15 @@ import { env } from './config/env.js';
 import { errorHandler, notFoundHandler } from './middlewares/error-handler.js';
 import { apiRouter } from './routes.js';
 
-// Separado de server.ts para os testes montarem o app sem abrir porta.
+// Separate from server.ts so tests can mount the app without opening a port.
 export function createApp(): Express {
   const app = express();
+
+  // Behind the hosting proxy (Railway/Render) the real IP arrives in X-Forwarded-For;
+  // without this the login rate limit would count every client as the same one.
+  if (env.NODE_ENV === 'production') {
+    app.set('trust proxy', 1);
+  }
 
   app.use(helmet());
   app.use(cors({ origin: env.CORS_ORIGIN }));

@@ -1,4 +1,4 @@
-// Casca: as telas de agenda entram nas ECOS-8 e ECOS-9.
+// Shell: the agenda screens land in ECOS-8 and ECOS-9.
 export function App(): React.JSX.Element {
   return (
     <main className="app">

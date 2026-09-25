@@ -26,6 +26,7 @@
     "db:down": "docker compose down",
     "db:migrate": "npm run db:migrate -w @casaecos/api",
     "db:seed": "npm run db:seed -w @casaecos/api",
+    "db:seed:admin": "npm run db:seed:admin -w @casaecos/api",
     "db:studio": "npm run db:studio -w @casaecos/api",
     "prepare": "npm run build -w @casaecos/shared-types"
   },
