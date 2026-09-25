@@ -7,6 +7,13 @@ import type {
 
 import { HttpError } from '../../../../middlewares/http-error.js';
 import {
+  EMAIL_IN_USE,
+  INVALID_CREDENTIALS,
+  PERSON_ALREADY_HAS_ACCOUNT,
+  PERSON_NOT_FOUND,
+} from '../auth-messages.js';
+import type { UserAccount } from '../domain/user-account.js';
+import {
   DuplicateEmailError,
   PersonAlreadyHasAccountError,
   PrismaUserAccountRepository,
@@ -15,16 +22,11 @@ import {
 import { BcryptPasswordHasher, type PasswordHasher } from './password-hasher.js';
 import { JwtTokenIssuer, type TokenIssuer } from './token-issuer.js';
 
-// Mesma mensagem para e-mail inexistente e senha errada: dizer qual dos dois
-// falhou entregaria a lista de quem tem acesso ao sistema.
-const INVALID_CREDENTIALS_MESSAGE = 'E-mail ou senha inválidos';
-
-const PERSON_ALREADY_HAS_ACCOUNT_MESSAGE = 'Esta pessoa já possui credencial de acesso';
-
 /**
- * Hash de uma senha aleatória que ninguém conhece, comparado quando o e-mail não
- * existe. Sem isso o login de e-mail inexistente responderia na hora e o de senha
- * errada depois do bcrypt — e a diferença de tempo revelaria os e-mails cadastrados.
+ * Hash of a random password nobody knows, compared when the e-mail does not exist.
+ * Without it a login for an unknown e-mail would answer right away while a wrong
+ * password would answer after bcrypt, and the gap would reveal which e-mails are
+ * registered.
  */
 const UNUSABLE_PASSWORD_HASH = '$2b$12$SPMF.GsrV2HNE4Emcl8l1.MqJQWIJusTz7olp/seU7y/7cfKoRvM.';
 
@@ -39,44 +41,27 @@ export class AuthService {
     private readonly tokenIssuer: TokenIssuer,
   ) {}
 
-  async login(request: LoginRequest): Promise<LoginResponse> {
-    const account = await this.repository.findByEmail(normalizeEmail(request.email));
-
-    const passwordMatches = await this.passwordHasher.matches(
-      request.password,
-      account?.passwordHash ?? UNUSABLE_PASSWORD_HASH,
-    );
-
-    if (!account || !passwordMatches) {
-      throw HttpError.unauthorized(INVALID_CREDENTIALS_MESSAGE);
-    }
+  async login(credentials: LoginRequest): Promise<LoginResponse> {
+    const account = await this.findAccountMatching(credentials);
 
     await this.repository.registerLogin(account.id, new Date());
 
     const user = account.toAuthenticatedUser();
-    const issued = await this.tokenIssuer.issue({
+    const issuedToken = await this.tokenIssuer.issue({
       personId: user.personId,
       email: user.email,
       roleId: user.role.id,
     });
 
     return {
-      token: issued.token,
-      expiresInSeconds: issued.expiresInSeconds,
+      token: issuedToken.token,
+      expiresInSeconds: issuedToken.expiresInSeconds,
       user: user.toResponse(),
     };
   }
 
   async createAccount(request: CreateUserAccountRequest): Promise<UserAccountResponse> {
-    if (!(await this.repository.personExists(request.personId))) {
-      throw HttpError.badRequest('Pessoa informada não existe');
-    }
-
-    // Checa antes de gravar para a mensagem não depender de qual índice único o
-    // banco acusou primeiro; o erro do repositório cobre a corrida entre requisições.
-    if (await this.repository.findByPersonId(request.personId)) {
-      throw HttpError.conflict(PERSON_ALREADY_HAS_ACCOUNT_MESSAGE);
-    }
+    await this.ensurePersonCanReceiveCredential(request.personId);
 
     const passwordHash = await this.passwordHasher.hash(request.password);
 
@@ -89,14 +74,42 @@ export class AuthService {
 
       return account.toResponse();
     } catch (error: unknown) {
-      if (error instanceof DuplicateEmailError) {
-        throw HttpError.conflict('Este e-mail já está em uso');
-      }
-      if (error instanceof PersonAlreadyHasAccountError) {
-        throw HttpError.conflict(PERSON_ALREADY_HAS_ACCOUNT_MESSAGE);
-      }
-      throw error;
+      this.translatePersistenceError(error);
     }
+  }
+
+  /** Answers the same 401 for unknown e-mail and wrong password. */
+  private async findAccountMatching(credentials: LoginRequest): Promise<UserAccount> {
+    const account = await this.repository.findByEmail(normalizeEmail(credentials.email));
+
+    const passwordMatches = await this.passwordHasher.matches(
+      credentials.password,
+      account?.passwordHash ?? UNUSABLE_PASSWORD_HASH,
+    );
+
+    if (!account || !passwordMatches) throw HttpError.unauthorized(INVALID_CREDENTIALS);
+
+    return account;
+  }
+
+  private async ensurePersonCanReceiveCredential(personId: number): Promise<void> {
+    if (!(await this.repository.personExists(personId))) {
+      throw HttpError.badRequest(PERSON_NOT_FOUND);
+    }
+
+    // Checked before writing so the message does not depend on which unique index
+    // the database happened to report; the repository error covers the race.
+    if (await this.repository.findByPersonId(personId)) {
+      throw HttpError.conflict(PERSON_ALREADY_HAS_ACCOUNT);
+    }
+  }
+
+  private translatePersistenceError(error: unknown): never {
+    if (error instanceof DuplicateEmailError) throw HttpError.conflict(EMAIL_IN_USE);
+    if (error instanceof PersonAlreadyHasAccountError) {
+      throw HttpError.conflict(PERSON_ALREADY_HAS_ACCOUNT);
+    }
+    throw error;
   }
 }
 

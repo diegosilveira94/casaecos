@@ -5,7 +5,7 @@ export interface LoginRequest {
   password: string;
 }
 
-/** Identidade do usuário logado: o mínimo que a tela precisa para montar o menu e o RBAC. */
+/** Who is logged in: the least the screen needs for its menu and the RBAC. */
 export interface AuthenticatedUserResponse {
   personId: number;
   name: string;
@@ -15,7 +15,7 @@ export interface AuthenticatedUserResponse {
 
 export interface LoginResponse {
   token: string;
-  /** Segundos até o token expirar — evita o frontend decodificar o JWT para saber. */
+  /** Seconds until the token expires, so the frontend never decodes the JWT. */
   expiresInSeconds: number;
   user: AuthenticatedUserResponse;
 }
@@ -26,7 +26,7 @@ export interface CreateUserAccountRequest {
   password: string;
 }
 
-/** Nunca carrega o hash da senha: ele não sai do banco para a API. */
+/** Never carries the password hash: it does not leave the database. */
 export interface UserAccountResponse {
   id: number;
   personId: number;

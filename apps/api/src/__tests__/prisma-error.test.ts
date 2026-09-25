@@ -22,8 +22,8 @@ describe('toHttpError', () => {
     expect(httpError?.message).toBe('Já existe um registro com este e-mail');
   });
 
-  // Formato real do Prisma 7 com driver adapter: `target` não vem, a constraint
-  // chega em driverAdapterError.cause. Sem ler daqui o 409 nunca nomeia o campo.
+  // Real shape of Prisma 7 with a driver adapter: no `target`, the constraint arrives
+  // in driverAdapterError.cause. Without reading it the 409 never names the field.
   it('nomeia o campo quando o alvo vem do driver adapter, não de target', () => {
     const httpError = toHttpError(
       knownError('P2002', {

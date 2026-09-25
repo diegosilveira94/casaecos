@@ -14,10 +14,10 @@ type ValidatedData<S extends RequestSchemas> = {
 const LOCALS_KEY = 'validated';
 
 /**
- * Valida body, params e query de uma rota e devolve os dados já tipados ao controller.
+ * Validates body, params and query of a route and hands the controller typed data.
  *
- * O ZodError sobe para o errorHandler, que responde 400 com as issues — por isso
- * o middleware não trata erro aqui.
+ * The ZodError travels up to the errorHandler, which answers 400 with the issues, so
+ * nothing is caught here.
  */
 export class RequestValidator<S extends RequestSchemas> {
   constructor(private readonly schemas: S) {}
@@ -26,7 +26,7 @@ export class RequestValidator<S extends RequestSchemas> {
     const validated: Record<string, unknown> = {};
 
     if (this.schemas.body) {
-      // req.body é gravável; params e query no Express 5 só expõem getter.
+      // req.body is writable; in Express 5 params and query only expose a getter.
       req.body = this.schemas.body.parse(req.body);
       validated.body = req.body;
     }
@@ -44,9 +44,9 @@ export class RequestValidator<S extends RequestSchemas> {
   };
 
   /**
-   * Dados validados desta requisição. Só pode ser chamado em handler que roda
-   * depois de `handle` — a asserção fica confinada aqui porque `handle` é o
-   * único ponto que escreve essa chave.
+   * Validated data of this request. Only valid in a handler that runs after
+   * `handle` — the assertion stays confined here because `handle` is the only
+   * place that writes this key.
    */
   data(res: Response): ValidatedData<S> {
     return (res.locals as Record<string, unknown>)[LOCALS_KEY] as ValidatedData<S>;

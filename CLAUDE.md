@@ -161,9 +161,16 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   ver "Padrão de idioma" abaixo.
 - `strict-type-checked` do typescript-eslint está ligado — respeite tipagem estrita,
   nada de `any` solto.
-- **Nomes explícitos**: variáveis, funções e classes devem falar por si.
+- **Nomes explícitos**: variáveis, funções e classes devem falar por si. Nome que
+  revela a intenção vale mais que comentário explicando o nome.
+- **Um nível de abstração por função.** Se um método mistura parsing de string com
+  regra de negócio, extraia — foi o que gerou `readBearerToken` no `authenticate`.
 - **Comentário só onde for necessário** — para o que o código não diz sozinho
   (motivo, restrição, decisão). Curto e direto. Nada de comentário que repete o nome.
+- **Comentário em inglês** (decisão #52). Só o texto que o usuário final lê fica em
+  português — e, no módulo `auth`, esse texto está reunido em `auth-messages.ts`.
+- **Sem código morto**: campo que ninguém lê, export que ninguém importa e sobra de
+  versão anterior saem no mesmo commit que os descobre.
 - Prettier cuida da formatação; não brigue manualmente com estilo.
 
 ### Contrato da API
@@ -221,8 +228,10 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
 - **Texto voltado ao usuário final em português**: labels da UI, mensagens de erro
   exibidas ao usuário, conteúdo de relatórios. O usuário final (cuidadoras,
   secretária) é brasileiro e a interface é em português.
-- **Comentários e documentação do time em português** (CLAUDE.md, Notion, docs internas).
-- **Português no código é acentuado normalmente**, em comentário e em string. Arquivos em UTF-8.
+- **Comentários de código em inglês** (decisão #52, que revisa a #26). A documentação
+  do time segue em português (CLAUDE.md, Notion, docs internas, descrições de teste).
+- **Português no código é acentuado normalmente**, nas strings voltadas ao usuário.
+  Arquivos em UTF-8.
 - **Termos de domínio sem equivalente claro em inglês podem permanecer em português**
   quando traduzir perderia precisão (ex: um conceito específico da ONG ou da
   prefeitura). Nesses casos, manter o termo em PT é preferível a uma tradução que engana.
@@ -265,7 +274,8 @@ verdade e costuma estar à frente deste arquivo.
 - Projeto: **ECOS** ("Casa Ecos", id `10000`)
 - Fluxo do board: Tarefas pendentes → Em andamento → Em análise → Concluído
 - Épicos: ECOS-1 (Medicamentos), ECOS-2 (Prestação de Contas), ECOS-3 (Relatórios),
-  ECOS-4 (Agenda). Stories da Agenda: ECOS-5 a ECOS-9.
+  ECOS-4 (Agenda). Stories da Agenda: ECOS-5 a ECOS-9, mais ECOS-11 (casas) e
+  ECOS-12 (pessoas), base compartilhada do módulo.
 
 **Notion** — espaço **Ecos da Esperança**, com leitura e escrita.
 
@@ -346,6 +356,12 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
   controller.
 - Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-21.
 - Ordem de desenvolvimento: schema Prisma → infra da API → API → telas React.
+- **ECOS-11 implementada em 23/09/2026**: CRUD de casas em `/homes`, filtro por
+  organização, validação de organização e responsável, vínculo `home_person`,
+  consultas nas duas direções e bloqueio da exclusão de casas com eventos.
+- Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-9, com ECOS-11 e
+  ECOS-12 como base compartilhada (casas e pessoas).
+- Ordem de desenvolvimento: schema Prisma → API → telas React.
   - ECOS-5: Schema Prisma e migração inicial — ✅ concluída
   - ECOS-10: Infraestrutura base da API — ✅ concluída
   - ECOS-12: API de pessoas e papéis — ✅ implementada

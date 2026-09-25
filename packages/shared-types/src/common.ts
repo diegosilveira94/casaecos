@@ -1,11 +1,12 @@
 /**
- * Contrato de resposta da API.
+ * API response contract.
  *
- * Sucesso devolve o payload cru: o recurso direto no corpo, ou `Paginated<T>`
- * em listagens. Sem envelope `{ data }` — o status HTTP já separa sucesso de
- * erro, e o cliente consome sem desembrulhar.
+ * Success returns the raw payload: the resource itself, or `Paginated<T>` for
+ * listings. No `{ data }` envelope — the HTTP status already separates success from
+ * error, and the client consumes it without unwrapping.
  *
- * Erro (qualquer 4xx/5xx) devolve sempre `ApiError`.
+ * Any 4xx/5xx returns an `ApiError`, whose `message` is written in Portuguese
+ * because it reaches the end user.
  */
 export interface ApiError {
   message: string;
@@ -23,5 +24,5 @@ export interface Paginated<T> {
   total: number;
 }
 
-// Ponto único de troca se o schema deixar de usar uuid.
+// Single place to change if the schema stops using uuid.
 export type Id = string;

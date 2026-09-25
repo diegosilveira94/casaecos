@@ -1,6 +1,6 @@
 import { prisma } from '../src/config/prisma.js';
 
-// Conteúdo de domínio: fica em português porque é o que a ONG vê na tela.
+// Domain content stays in Portuguese: it is what the NGO reads on screen.
 const roles = ['Coordenador', 'Secretário', 'Cuidador/Monitor', 'Motorista', 'Acolhido'];
 
 const eventTypes = [
@@ -14,8 +14,8 @@ const eventTypes = [
 
 const participationTypes = ['Organizador', 'Participante', 'Responsável', 'Motorista'];
 
-// id fixo pela posição na lista: o seed é reexecutável e os ids ficam estáveis
-// entre ambientes, o que importa porque outras tabelas referenciam esses lookups.
+// Id fixed by position in the list: the seed is re-runnable and the ids stay stable
+// across environments, which matters because other tables reference these lookups.
 async function seedLookups(): Promise<void> {
   await prisma.$transaction([
     ...roles.map((description, index) =>
@@ -42,8 +42,8 @@ async function seedLookups(): Promise<void> {
   ]);
 }
 
-// Upsert com id explícito não move a sequence do Postgres; sem isto o primeiro
-// insert sem id colidiria com as linhas do seed.
+// An upsert with an explicit id does not advance the Postgres sequence; without this
+// the first insert without an id would collide with the seeded rows.
 async function syncLookupSequences(): Promise<void> {
   for (const table of ['role', 'event_type', 'participation_type']) {
     await prisma.$executeRawUnsafe(

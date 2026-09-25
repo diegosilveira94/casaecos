@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { config as loadEnv } from 'dotenv';
 import { z } from 'zod';
 
-// .env único, na raiz do monorepo.
+// Single .env, at the root of the monorepo.
 loadEnv({ path: fileURLToPath(new URL('../../../../.env', import.meta.url)) });
 
 const envSchema = z.object({
@@ -12,13 +12,13 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL é obrigatória'),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
 
-  // Segredo de assinatura do JWT: nunca no código. 32 caracteres é o mínimo para
-  // HS256 não ficar mais fraco que o próprio algoritmo.
+  // JWT signing secret, never in the code. 32 characters is the minimum for HS256
+  // not to be weaker than the algorithm itself.
   JWT_SECRET: z.string().min(32, 'JWT_SECRET precisa de ao menos 32 caracteres'),
-  // Em segundos: cobre um turno de trabalho (8h). Sem refresh token nesta fase,
-  // expirar antes disso jogaria a cuidadora para a tela de login no meio do plantão.
+  // In seconds: covers a work shift (8h). With no refresh token in this phase,
+  // expiring sooner would throw the caregiver back to the login screen mid-shift.
   JWT_EXPIRES_IN_SECONDS: z.coerce.number().int().positive().default(28_800),
-  // Tentativas de login por IP na janela do rate limit.
+  // Login attempts per IP inside the rate limit window.
   LOGIN_RATE_LIMIT_MAX_ATTEMPTS: z.coerce.number().int().positive().default(10),
   LOGIN_RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().int().positive().default(15),
 });

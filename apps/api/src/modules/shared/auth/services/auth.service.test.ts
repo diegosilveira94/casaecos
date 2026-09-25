@@ -32,7 +32,7 @@ function makeAccount(): UserAccount {
 }
 
 class FakeUserAccountRepository implements UserAccountRepository {
-  account: UserAccount | null = makeAccount();
+  accountByEmail: UserAccount | null = makeAccount();
   accountByPersonId: UserAccount | null = null;
   personAvailable = true;
   writeError: Error | null = null;
@@ -42,7 +42,7 @@ class FakeUserAccountRepository implements UserAccountRepository {
 
   findByEmail(email: string): Promise<UserAccount | null> {
     this.searchedEmail = email;
-    return Promise.resolve(this.account);
+    return Promise.resolve(this.accountByEmail);
   }
 
   findByPersonId(_personId: number): Promise<UserAccount | null> {
@@ -65,8 +65,8 @@ class FakeUserAccountRepository implements UserAccountRepository {
   }
 }
 
-// Hash falso: bcrypt real a 12 rounds deixaria a suíte lenta sem testar nada além
-// da própria biblioteca.
+// Fake hash: real bcrypt at 12 rounds would slow the suite down without testing
+// anything beyond the library itself.
 class FakePasswordHasher implements PasswordHasher {
   comparedHashes: string[] = [];
 
@@ -88,7 +88,7 @@ class FakeTokenIssuer implements TokenIssuer {
     return Promise.resolve({ token: 'token-de-teste', expiresInSeconds: 28_800 });
   }
 
-  read(_token: string): Promise<AuthTokenClaims> {
+  verify(_token: string): Promise<AuthTokenClaims> {
     return Promise.resolve({ personId: 7, email: 'maria@ecos.org', roleId: 2 });
   }
 }
@@ -140,7 +140,7 @@ describe('AuthService', () => {
       service.login({ email: 'maria@ecos.org', password: 'senha-errada' }),
     ).rejects.toMatchObject(expected);
 
-    repository.account = null;
+    repository.accountByEmail = null;
     await expect(
       service.login({ email: 'ninguem@ecos.org', password: CORRECT_PASSWORD }),
     ).rejects.toMatchObject(expected);
@@ -149,7 +149,7 @@ describe('AuthService', () => {
   });
 
   it('compara a senha mesmo sem conta, para o tempo de resposta não revelar o e-mail', async () => {
-    repository.account = null;
+    repository.accountByEmail = null;
 
     await expect(service.login({ email: 'ninguem@ecos.org', password: 'x' })).rejects.toThrow();
 

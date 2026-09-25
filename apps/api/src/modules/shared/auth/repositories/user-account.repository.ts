@@ -92,19 +92,24 @@ export class PrismaUserAccountRepository implements UserAccountRepository {
       const account = await prisma.userAccount.create({ data, select: userAccountSelection });
       return toUserAccount(account);
     } catch (error: unknown) {
-      const columns = uniqueConstraintColumns(error);
-      if (columns) {
-        // O 1:1 com person (decisão #20) e o e-mail único são dois conflitos
-        // diferentes, e a tela precisa de mensagens diferentes para cada um.
-        throw columns.includes('person_id')
-          ? new PersonAlreadyHasAccountError()
-          : new DuplicateEmailError();
-      }
-      throw error;
+      throw this.toWriteError(error);
     }
   }
 
   async registerLogin(id: number, at: Date): Promise<void> {
     await prisma.userAccount.update({ where: { id }, data: { lastLoginAt: at } });
+  }
+
+  /**
+   * The 1:1 with person and the unique e-mail are two different conflicts, and the
+   * screen needs a different message for each.
+   */
+  private toWriteError(error: unknown): unknown {
+    const columns = uniqueConstraintColumns(error);
+    if (!columns) return error;
+
+    return columns.includes('person_id')
+      ? new PersonAlreadyHasAccountError()
+      : new DuplicateEmailError();
   }
 }

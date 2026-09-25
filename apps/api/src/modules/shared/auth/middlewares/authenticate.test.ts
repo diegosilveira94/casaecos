@@ -60,8 +60,8 @@ class StubTokenIssuer implements TokenIssuer {
     return Promise.resolve({ token: VALID_TOKEN, expiresInSeconds: 60 });
   }
 
-  read(token: string): Promise<AuthTokenClaims> {
-    // Mesmo erro que o JwtTokenIssuer levanta, para o teste exercitar o caminho real.
+  verify(token: string): Promise<AuthTokenClaims> {
+    // Same error the JwtTokenIssuer raises, so the test walks the real path.
     if (token !== VALID_TOKEN) {
       return Promise.reject(
         HttpError.unauthorized('Sessão expirada ou inválida. Faça login novamente.'),
