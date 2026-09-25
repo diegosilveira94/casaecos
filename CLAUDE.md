@@ -285,6 +285,9 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
 - **ECOS-12 implementada em 22/09/2026**: CRUD de pessoas em `/people`, filtros
   por papel e nome, lookup em `/roles`, telefone opcional e único e bloqueio da
   exclusão de pessoas vinculadas a casas ou eventos.
+- **ECOS-11 implementada em 23/09/2026**: CRUD de casas em `/homes`, filtro por
+  organização, validação de organização e responsável, vínculo `home_person`,
+  consultas nas duas direções e bloqueio da exclusão de casas com eventos.
 - Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-9.
 - Ordem de desenvolvimento: schema Prisma → API → telas React.
   - ECOS-5: Schema Prisma e migração inicial — ✅ concluída
