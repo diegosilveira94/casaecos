@@ -90,9 +90,12 @@ casaecos/
 │   │   └── package.json
 │   └── web/                          # Frontend React (Vite)
 │       ├── index.html
-│       ├── vite.config.ts
+│       ├── vite.config.ts            # envDir aponta para o .env da raiz
 │       ├── src/
+│       │   ├── config/               # env.ts (VITE_API_URL obrigatória)
+│       │   ├── shared/http/          # HttpClient, ApiRequestError e o apiClient
 │       │   ├── modules/              # mesmos módulos + shared
+│       │   │   └── shared/auth/      # SessionStore, AuthService, AuthProvider/useAuth
 │       │   ├── App.tsx
 │       │   └── main.tsx
 │       └── package.json
@@ -217,6 +220,28 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   `ADMIN_NAME`/`ADMIN_EMAIL`/`ADMIN_PASSWORD` no `.env`. Existe porque `POST
 /auth/accounts` exige Coordenador — sem ele não haveria como criar o primeiro.
   É idempotente: se já houver conta com o e-mail, não mexe na senha.
+
+### Integração frontend-API (ECOS-16)
+
+> Decisões #68 a #72 no Notion.
+
+- **Toda chamada à API passa pelo `apiClient`** (`src/shared/http/api-client.ts`),
+  sempre por um service do módulo (ex: `AuthService`). Componente não chama `fetch`.
+- **`HttpClient` é um wrapper de `fetch`**, sem axios: injeta o `Bearer`, devolve o
+  payload cru e tipa a resposta com os DTOs de `shared-types`, sem validar em runtime.
+- **Erro vira `ApiRequestError`** (`status`, `message` em PT, `details`). Servidor
+  fora do ar dá `status: null`; corpo que não é `ApiError` cai em mensagem genérica.
+- **401 encerra a sessão via `apiClient.onUnauthorized`**, que o `AuthProvider`
+  escuta. Chamada anterior à sessão (o login) passa `{ authenticated: false }`: sem
+  token, e o 401 dela é senha errada. 403 e 429 não derrubam a sessão.
+- **Sessão**: `SessionStore` guarda só token + expiração no `localStorage`; token
+  vencido é descartado sem ir à API. O usuário não é guardado — volta do
+  `GET /auth/me` ao recarregar. Leia o estado com `useAuth()`
+  (`restoring | anonymous | authenticated`).
+- **O cliente não conhece o router.** Redirecionar para o login é da rota protegida,
+  que reage ao estado `anonymous`.
+- **`VITE_API_URL` vem do `.env` da raiz** (`envDir: '../..'`) e é obrigatória: sem
+  ela o app não sobe. Nos testes o valor é fixo em `http://api.test`.
 
 ## Padrão de idioma
 
@@ -359,6 +384,11 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
 - **ECOS-11 implementada em 23/09/2026**: CRUD de casas em `/homes`, filtro por
   organização, validação de organização e responsável, vínculo `home_person`,
   consultas nas duas direções e bloqueio da exclusão de casas com eventos.
+- **ECOS-16 implementada em 29/09/2026**: camada de integração do `apps/web` —
+  `HttpClient` sobre `fetch`, `ApiRequestError`, sessão no `localStorage` com
+  restauração via `/auth/me`, `AuthProvider`/`useAuth` e 401 encerrando a sessão.
+  O serviço de eventos do front ficou para a ECOS-6, que cria o contrato em
+  `shared-types`.
 - Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-9, com ECOS-11 e
   ECOS-12 como base compartilhada (casas e pessoas).
 - Ordem de desenvolvimento: schema Prisma → API → telas React.
@@ -366,13 +396,16 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
   - ECOS-10: Infraestrutura base da API — ✅ concluída
   - ECOS-12: API de pessoas e papéis — ✅ implementada
   - ECOS-13: Autenticação e login (JWT) — ✅ concluída
-  - ECOS-6: API CRUD de eventos — **próxima**
+  - ECOS-6: API CRUD de eventos — **próxima**; inclui o `event.ts` em `shared-types`
+    e o `EventService` do web sobre o `apiClient`
   - ECOS-15: API de listagem de eventos com filtros (data, casa, tipo)
   - ECOS-7: API de associação de pessoas a eventos (person_event)
   - ECOS-11: API de casas (home, home_person)
   - ECOS-14: autorização (RBAC + escopo por casa) — o gate por papel já existe em
     `modules/shared/auth/middlewares/authorize.ts`; falta o escopo por casa
-  - ECOS-16/17: camada de integração frontend-API e tela de login
+  - ECOS-16: camada de integração frontend-API — ✅ implementada
+  - ECOS-17: tela de login — a branch original é anterior à ECOS-13 e será
+    refatorada sobre a ECOS-16 (rota protegida + tela, usando `useAuth`)
   - ECOS-8: Tela de visualização da agenda
   - ECOS-9: Formulário de criação/edição de evento
   - ECOS-18: testes automatizados do módulo
