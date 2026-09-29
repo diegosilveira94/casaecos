@@ -7,15 +7,29 @@ import type {
   UpdatePersonRequest,
 } from '@casaecos/shared-types';
 
+import type { AuthenticatedUser } from '../../auth/domain/user-account.js';
 import type { PersonFilters } from '../repositories/person.repository.js';
 
 const { listPeople, getPerson, createPerson, updatePerson, deletePerson } = vi.hoisted(() => ({
   listPeople: vi.fn<(filters: PersonFilters) => Promise<PersonResponse[]>>(),
   getPerson: vi.fn<(id: number) => Promise<PersonResponse>>(),
-  createPerson: vi.fn<(request: CreatePersonRequest) => Promise<PersonResponse>>(),
-  updatePerson: vi.fn<(id: number, request: UpdatePersonRequest) => Promise<PersonResponse>>(),
-  deletePerson: vi.fn<(id: number) => Promise<void>>(),
+  createPerson:
+    vi.fn<(request: CreatePersonRequest, actor: AuthenticatedUser) => Promise<PersonResponse>>(),
+  updatePerson:
+    vi.fn<
+      (
+        id: number,
+        request: UpdatePersonRequest,
+        actor: AuthenticatedUser,
+      ) => Promise<PersonResponse>
+    >(),
+  deletePerson: vi.fn<(id: number, actor: AuthenticatedUser) => Promise<void>>(),
 }));
+
+vi.mock('../../auth/middlewares/authenticate.js', async (importOriginal) => {
+  const { fakeAuthentication } = await import('../../../../test/fake-authentication.js');
+  return { ...(await importOriginal<object>()), authenticate: fakeAuthentication };
+});
 
 vi.mock('../services/person.service.js', () => ({
   personService: {
@@ -28,6 +42,8 @@ vi.mock('../services/person.service.js', () => ({
 }));
 
 import { createApp } from '../../../../app.js';
+import { fakeAuthentication } from '../../../../test/fake-authentication.js';
+import { ROLE_IDS } from '../domain/role-ids.js';
 
 const maria: PersonResponse = {
   id: 7,
@@ -41,6 +57,7 @@ const maria: PersonResponse = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  fakeAuthentication.signInAs(ROLE_IDS.coordinator);
 });
 
 describe('GET /people', () => {
@@ -96,7 +113,7 @@ describe('PATCH /people/:id', () => {
     const response = await request(createApp()).patch('/people/7').send({ phone: null });
 
     expect(response.status).toBe(200);
-    expect(updatePerson.mock.calls[0]).toStrictEqual([7, { phone: null }]);
+    expect(updatePerson.mock.calls[0]?.slice(0, 2)).toStrictEqual([7, { phone: null }]);
   });
 });
 
@@ -108,6 +125,6 @@ describe('DELETE /people/:id', () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ message: 'Pessoa excluída com sucesso' });
-    expect(deletePerson).toHaveBeenCalledWith(7);
+    expect(deletePerson).toHaveBeenCalledWith(7, expect.anything());
   });
 });

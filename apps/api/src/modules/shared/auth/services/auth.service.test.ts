@@ -25,6 +25,7 @@ function makeAccount(): UserAccount {
     email: 'maria@ecos.org',
     passwordHash: `hashed:${CORRECT_PASSWORD}`,
     role: new Role(2, 'Secretário'),
+    homeIds: [],
     lastLoginAt: null,
     createdAt,
     updatedAt,

@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { AccessScope } from '../../auth/domain/access-scope.js';
 import { Person, Role } from '../../person/domain/person.js';
+import { ROLE_IDS } from '../../person/domain/role-ids.js';
 import { Home, OrganizationSummary } from '../domain/home.js';
 import {
   DuplicateHomePersonError,
@@ -14,6 +16,17 @@ import { HomeService } from './home.service.js';
 
 const createdAt = new Date('2026-09-01T10:00:00.000Z');
 const updatedAt = new Date('2026-09-02T10:00:00.000Z');
+
+const coordinationScope = AccessScope.forOwner({
+  personId: 1,
+  roleId: ROLE_IDS.coordinator,
+  homeIds: [],
+});
+const caregiverScope = AccessScope.forOwner({
+  personId: 9,
+  roleId: ROLE_IDS.caregiver,
+  homeIds: [1],
+});
 
 function makePerson(id = 2): Person {
   return new Person({
@@ -118,7 +131,7 @@ describe('HomeService', () => {
   });
 
   it('lista casas por organização e serializa seus relacionamentos', async () => {
-    const result = await service.list({ organizationId: 3 });
+    const result = await service.list({ organizationId: 3 }, coordinationScope);
 
     expect(repository.receivedFilters).toEqual({ organizationId: 3 });
     expect(result[0]).toMatchObject({
@@ -130,11 +143,26 @@ describe('HomeService', () => {
   });
 
   it('busca uma casa por id e informa quando ela não existe', async () => {
-    await expect(service.getById(1)).resolves.toMatchObject({ id: 1 });
-    await expect(service.getById(99)).rejects.toMatchObject({
+    await expect(service.getById(1, coordinationScope)).resolves.toMatchObject({ id: 1 });
+    await expect(service.getById(99, coordinationScope)).rejects.toMatchObject({
       status: 404,
       message: 'Casa não encontrada',
     });
+  });
+
+  it('restringe a listagem do cuidador às casas às quais está vinculado', async () => {
+    await service.list({ organizationId: 3 }, caregiverScope);
+
+    expect(repository.receivedFilters).toEqual({ organizationId: 3, ids: [1] });
+  });
+
+  it('recusa com 403 casa fora do escopo do cuidador', async () => {
+    await expect(service.getById(1, caregiverScope)).resolves.toMatchObject({ id: 1 });
+    await expect(service.getById(2, caregiverScope)).rejects.toMatchObject({
+      status: 403,
+      message: 'Você não tem acesso a esta casa',
+    });
+    await expect(service.listPeople(2, caregiverScope)).rejects.toMatchObject({ status: 403 });
   });
 
   it('cria uma casa vinculada à organização e ao responsável', async () => {
@@ -216,7 +244,7 @@ describe('HomeService', () => {
   });
 
   it('lista pessoas de uma casa e casas de uma pessoa', async () => {
-    await expect(service.listPeople(1)).resolves.toMatchObject([{ id: 2 }]);
+    await expect(service.listPeople(1, coordinationScope)).resolves.toMatchObject([{ id: 2 }]);
     await expect(service.listHomes(2)).resolves.toMatchObject([{ id: 1 }]);
   });
 });

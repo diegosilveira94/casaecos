@@ -1,12 +1,15 @@
 import type { AuthenticatedUserResponse, UserAccountResponse } from '@casaecos/shared-types';
 
 import type { Role } from '../../person/domain/person.js';
+import { AccessScope } from './access-scope.js';
+import { roleHasPermission, type Permission } from './permissions.js';
 
 export interface AuthenticatedUserProperties {
   personId: number;
   name: string;
   email: string;
   role: Role;
+  homeIds: readonly number[];
 }
 
 /** The user behind an authenticated request. Carries the role for the RBAC. */
@@ -15,12 +18,22 @@ export class AuthenticatedUser {
   readonly name: string;
   readonly email: string;
   readonly role: Role;
+  readonly scope: AccessScope;
 
   constructor(properties: AuthenticatedUserProperties) {
     this.personId = properties.personId;
     this.name = properties.name;
     this.email = properties.email;
     this.role = properties.role;
+    this.scope = AccessScope.forOwner({
+      personId: properties.personId,
+      roleId: properties.role.id,
+      homeIds: properties.homeIds,
+    });
+  }
+
+  can(permission: Permission): boolean {
+    return roleHasPermission(this.role.id, permission);
   }
 
   toResponse(): AuthenticatedUserResponse {
@@ -40,6 +53,7 @@ export interface UserAccountProperties {
   email: string;
   passwordHash: string;
   role: Role;
+  homeIds: readonly number[];
   lastLoginAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -52,6 +66,7 @@ export class UserAccount {
   readonly email: string;
   readonly passwordHash: string;
   readonly role: Role;
+  readonly homeIds: readonly number[];
   readonly lastLoginAt: Date | null;
   readonly createdAt: Date;
   readonly updatedAt: Date;
@@ -63,6 +78,7 @@ export class UserAccount {
     this.email = properties.email;
     this.passwordHash = properties.passwordHash;
     this.role = properties.role;
+    this.homeIds = properties.homeIds;
     this.lastLoginAt = properties.lastLoginAt;
     this.createdAt = properties.createdAt;
     this.updatedAt = properties.updatedAt;
@@ -74,6 +90,7 @@ export class UserAccount {
       name: this.personName,
       email: this.email,
       role: this.role,
+      homeIds: this.homeIds,
     });
   }
 

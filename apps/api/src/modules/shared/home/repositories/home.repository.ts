@@ -5,6 +5,7 @@ import { Home, OrganizationSummary } from '../domain/home.js';
 
 export interface HomeFilters {
   organizationId?: number;
+  ids?: readonly number[];
 }
 
 export interface CreateHomeData {
@@ -100,9 +101,10 @@ function isPrismaError(error: unknown, code: string): boolean {
 export class PrismaHomeRepository implements HomeRepository {
   async findAll(filters: HomeFilters): Promise<Home[]> {
     const homes = await prisma.home.findMany({
-      ...(filters.organizationId === undefined
-        ? {}
-        : { where: { organizationId: filters.organizationId } }),
+      where: {
+        ...(filters.organizationId === undefined ? {} : { organizationId: filters.organizationId }),
+        ...(filters.ids === undefined ? {} : { id: { in: [...filters.ids] } }),
+      },
       select: homeSelection,
       orderBy: [{ name: 'asc' }, { id: 'asc' }],
     });
