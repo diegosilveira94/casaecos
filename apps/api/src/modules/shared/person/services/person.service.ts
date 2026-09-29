@@ -6,6 +6,9 @@ import type {
 } from '@casaecos/shared-types';
 
 import { HttpError } from '../../../../middlewares/http-error.js';
+import { ACCESS_MANAGEMENT_NOT_ALLOWED } from '../../auth/auth-messages.js';
+import type { AuthenticatedUser } from '../../auth/domain/user-account.js';
+import { ROLE_IDS } from '../domain/role-ids.js';
 import {
   DuplicatePhoneError,
   PrismaPersonRepository,
@@ -40,7 +43,8 @@ export class PersonService {
     return person.toResponse();
   }
 
-  async create(request: CreatePersonRequest): Promise<PersonResponse> {
+  async create(request: CreatePersonRequest, actor: AuthenticatedUser): Promise<PersonResponse> {
+    if (request.roleId === ROLE_IDS.coordinator) this.ensureCanManageAccess(actor);
     await this.ensureRoleExists(request.roleId);
 
     const phone = normalizeOptionalValue(request.phone) ?? null;
@@ -60,9 +64,16 @@ export class PersonService {
     }
   }
 
-  async update(id: number, request: UpdatePersonRequest): Promise<PersonResponse> {
-    if (!(await this.repository.findById(id))) {
-      throw HttpError.notFound('Pessoa não encontrada');
+  async update(
+    id: number,
+    request: UpdatePersonRequest,
+    actor: AuthenticatedUser,
+  ): Promise<PersonResponse> {
+    const person = await this.repository.findById(id);
+    if (!person) throw HttpError.notFound('Pessoa não encontrada');
+
+    if (request.roleId !== undefined && request.roleId !== person.role.id) {
+      await this.ensureCanChangeRole(actor, id, request.roleId);
     }
 
     if (request.roleId !== undefined) await this.ensureRoleExists(request.roleId);
@@ -85,9 +96,10 @@ export class PersonService {
     }
   }
 
-  async delete(id: number): Promise<void> {
+  async delete(id: number, actor: AuthenticatedUser): Promise<void> {
     const links = await this.repository.findLinks(id);
     if (!links) throw HttpError.notFound('Pessoa não encontrada');
+    if (links.account) this.ensureCanManageAccess(actor);
 
     const linkedResources = [
       ...(links.events ? ['eventos'] : []),
@@ -106,6 +118,25 @@ export class PersonService {
   async listRoles(): Promise<RoleResponse[]> {
     const roles = await this.repository.listRoles();
     return roles.map((role) => role.toResponse());
+  }
+
+  private async ensureCanChangeRole(
+    actor: AuthenticatedUser,
+    personId: number,
+    newRoleId: number,
+  ): Promise<void> {
+    const grantsCoordination = newRoleId === ROLE_IDS.coordinator;
+    if (grantsCoordination || (await this.personHasAccount(personId))) {
+      this.ensureCanManageAccess(actor);
+    }
+  }
+
+  private ensureCanManageAccess(actor: AuthenticatedUser): void {
+    if (!actor.can('account:manage')) throw HttpError.forbidden(ACCESS_MANAGEMENT_NOT_ALLOWED);
+  }
+
+  private async personHasAccount(personId: number): Promise<boolean> {
+    return (await this.repository.findLinks(personId))?.account === true;
   }
 
   private async ensureRoleExists(roleId: number): Promise<void> {

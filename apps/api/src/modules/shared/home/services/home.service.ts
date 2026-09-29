@@ -6,6 +6,7 @@ import type {
 } from '@casaecos/shared-types';
 
 import { HttpError } from '../../../../middlewares/http-error.js';
+import type { AccessScope } from '../../auth/domain/access-scope.js';
 import {
   DuplicateHomePersonError,
   HomeHasEventsError,
@@ -21,12 +22,16 @@ const HOME_HAS_EVENTS_MESSAGE = 'Não é possível excluir uma casa com eventos 
 export class HomeService {
   constructor(private readonly repository: HomeRepository) {}
 
-  async list(filters: HomeFilters): Promise<HomeResponse[]> {
-    const homes = await this.repository.findAll(filters);
+  async list(filters: HomeFilters, scope: AccessScope): Promise<HomeResponse[]> {
+    const accessibleHomeIds = scope.accessibleHomeIds();
+    const scopedFilters: HomeFilters =
+      accessibleHomeIds === null ? filters : { ...filters, ids: accessibleHomeIds };
+    const homes = await this.repository.findAll(scopedFilters);
     return homes.map((home) => home.toResponse());
   }
 
-  async getById(id: number): Promise<HomeResponse> {
+  async getById(id: number, scope: AccessScope): Promise<HomeResponse> {
+    scope.assertCanAccessHome(id);
     const home = await this.repository.findById(id);
     if (!home) throw HttpError.notFound('Casa não encontrada');
     return home.toResponse();
@@ -100,7 +105,8 @@ export class HomeService {
     }
   }
 
-  async listPeople(homeId: number): Promise<PersonResponse[]> {
+  async listPeople(homeId: number, scope: AccessScope): Promise<PersonResponse[]> {
+    scope.assertCanAccessHome(homeId);
     await this.ensureHomeExists(homeId);
     return (await this.repository.listPeople(homeId)).map((person) => person.toResponse());
   }

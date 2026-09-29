@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { ApiMessage } from '@casaecos/shared-types';
 
 import { RequestValidator } from '../../../../middlewares/validate.js';
+import { currentUser } from '../../auth/middlewares/authenticate.js';
 import { personService } from '../services/person.service.js';
 
 // Optional fields use exactOptional: the output is `field?: T` without `| undefined`,
@@ -62,19 +63,19 @@ export class PersonController {
     response.json(await personService.getById(params.id));
   };
 
-  create: RequestHandler = async (_request, response) => {
+  create: RequestHandler = async (request, response) => {
     const { body } = this.createValidator.data(response);
-    response.status(201).json(await personService.create(body));
+    response.status(201).json(await personService.create(body, currentUser(request)));
   };
 
-  update: RequestHandler = async (_request, response) => {
+  update: RequestHandler = async (request, response) => {
     const { params, body } = this.updateValidator.data(response);
-    response.json(await personService.update(params.id, body));
+    response.json(await personService.update(params.id, body, currentUser(request)));
   };
 
-  delete: RequestHandler = async (_request, response) => {
+  delete: RequestHandler = async (request, response) => {
     const { params } = this.personIdValidator.data(response);
-    await personService.delete(params.id);
+    await personService.delete(params.id, currentUser(request));
     const body: ApiMessage = { message: 'Pessoa excluída com sucesso' };
     response.json(body);
   };

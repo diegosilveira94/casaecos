@@ -40,7 +40,13 @@ const userAccountSelection = {
   lastLoginAt: true,
   createdAt: true,
   updatedAt: true,
-  person: { select: { name: true, role: { select: { id: true, description: true } } } },
+  person: {
+    select: {
+      name: true,
+      role: { select: { id: true, description: true } },
+      homeLinks: { select: { homeId: true } },
+    },
+  },
 } satisfies Prisma.UserAccountSelect;
 
 type UserAccountRecord = Prisma.UserAccountGetPayload<{ select: typeof userAccountSelection }>;
@@ -53,6 +59,7 @@ function toUserAccount(record: UserAccountRecord): UserAccount {
     email: record.email,
     passwordHash: record.passwordHash,
     role: new Role(record.person.role.id, record.person.role.description),
+    homeIds: record.person.homeLinks.map((link) => link.homeId),
     lastLoginAt: record.lastLoginAt,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,

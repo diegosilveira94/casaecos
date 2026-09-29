@@ -137,6 +137,7 @@ model HomePerson {
   person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
 
   @@id([homeId, personId])
+  @@index([personId])
   @@map("home_person")
 }
 
