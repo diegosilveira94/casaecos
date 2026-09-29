@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 
 import { App } from './App.js';
 import './index.css';
+import { AuthProvider } from './modules/shared/auth/context/AuthProvider.js';
 
 const container = document.getElementById('root');
 
@@ -12,6 +13,8 @@ if (!container) {
 
 createRoot(container).render(
   <StrictMode>
-    <App />
+    <AuthProvider>
+      <App />
+    </AuthProvider>
   </StrictMode>,
 );
