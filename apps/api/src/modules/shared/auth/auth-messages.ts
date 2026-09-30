@@ -8,6 +8,7 @@ export const ACCESS_MANAGEMENT_NOT_ALLOWED =
   'Somente a coordenação pode alterar o acesso de quem usa o sistema';
 export const HOME_OUT_OF_SCOPE = 'Você não tem acesso a esta casa';
 export const EVENT_OUT_OF_SCOPE = 'Você não tem acesso a este compromisso';
+export const EVENT_NOT_FOUND = 'Compromisso não encontrado';
 export const PERSON_NOT_FOUND = 'Pessoa informada não existe';
 export const PERSON_ALREADY_HAS_ACCOUNT = 'Esta pessoa já possui credencial de acesso';
 export const EMAIL_IN_USE = 'Este e-mail já está em uso';

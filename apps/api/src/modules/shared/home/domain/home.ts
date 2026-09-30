@@ -1,4 +1,8 @@
-import type { HomeResponse, OrganizationSummaryResponse } from '@casaecos/shared-types';
+import type {
+  HomeResponse,
+  HomeSummaryResponse,
+  OrganizationSummaryResponse,
+} from '@casaecos/shared-types';
 
 import type { Person } from '../../person/domain/person.js';
 
@@ -9,6 +13,17 @@ export class OrganizationSummary {
   ) {}
 
   toResponse(): OrganizationSummaryResponse {
+    return { id: this.id, name: this.name };
+  }
+}
+
+export class HomeSummary {
+  constructor(
+    readonly id: number,
+    readonly name: string,
+  ) {}
+
+  toResponse(): HomeSummaryResponse {
     return { id: this.id, name: this.name };
   }
 }

@@ -101,6 +101,9 @@ model Event {
   address     String?   @db.VarChar(100)
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  // Soft delete: a removed commitment stays for reports and accountability.
+  // Every read of event filters `deletedAt: null`.
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   eventType   EventType     @relation(fields: [eventTypeId], references: [id])
   home        Home          @relation(fields: [homeId], references: [id])
