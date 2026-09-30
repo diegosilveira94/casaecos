@@ -99,6 +99,9 @@ export function toHttpError(error: unknown): HttpError | null {
     case 'P2003': {
       return HttpError.badRequest('Referência inválida entre registros');
     }
+    // P2017 is the nested-write flavor: deleting a link (e.g. a person_event) that
+    // no longer exists.
+    case 'P2017':
     case 'P2025': {
       return HttpError.notFound('Recurso não encontrado');
     }
