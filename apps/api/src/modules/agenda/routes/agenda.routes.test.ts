@@ -25,6 +25,7 @@ describe('rotas de compromissos', () => {
   describe('listagem', () => {
     it.each([
       ['casa inválida', 'homeId=abc', 'homeId'],
+      ['pessoa inválida', 'personId=-1', 'personId'],
       ['tipo inválido', 'eventTypeId=0', 'eventTypeId'],
       ['início do período sem fuso', 'from=2026-10-01T00:00:00', 'from'],
       ['fim do período só com a data', 'to=2026-10-31', 'to'],
@@ -73,12 +74,18 @@ describe('rotas de compromissos', () => {
       await expect(request(createApp()).get('/agenda/event-types')).resolves.toMatchObject({
         status: 401,
       });
+      await expect(request(createApp()).get('/agenda/participation-types')).resolves.toMatchObject({
+        status: 401,
+      });
 
       fakeAuthentication.signInAs(ROLE_IDS.sheltered, [1]);
       await expect(request(createApp()).get('/agenda/events')).resolves.toMatchObject({
         status: 403,
       });
       await expect(request(createApp()).get('/agenda/event-types')).resolves.toMatchObject({
+        status: 403,
+      });
+      await expect(request(createApp()).get('/agenda/participation-types')).resolves.toMatchObject({
         status: 403,
       });
     });
@@ -163,6 +170,68 @@ describe('rotas de compromissos', () => {
 
     await expect(request(createApp()).get('/agenda/events/1')).resolves.toMatchObject({
       status: 403,
+    });
+  });
+
+  describe('participantes', () => {
+    const participantPath = '/agenda/events/1/participants/40';
+    const asDriver = { participationTypeId: 4 };
+
+    it.each([
+      ['pessoa inválida', '/agenda/events/1/participants/abc', asDriver, 'personId'],
+      ['compromisso inválido', '/agenda/events/0/participants/40', asDriver, 'id'],
+      ['sem tipo de participação', participantPath, {}, 'participationTypeId'],
+      [
+        'tipo de participação em texto',
+        participantPath,
+        { participationTypeId: '4' },
+        'participationTypeId',
+      ],
+    ])('recusa %s', async (_label, path, body, field) => {
+      const response = await request(createApp()).post(path).send(body);
+
+      expect(response.status).toBe(400);
+      expect(response.body).toMatchObject({
+        message: 'Dados inválidos',
+        details: [expect.objectContaining({ path: [field] })],
+      });
+    });
+
+    it('recusa campo desconhecido no corpo', async () => {
+      const response = await request(createApp())
+        .patch(participantPath)
+        .send({ ...asDriver, role: 'Motorista' });
+
+      expect(response.status).toBe(400);
+    });
+
+    it('exige login', async () => {
+      fakeAuthentication.signOut();
+
+      await expect(
+        request(createApp()).post(participantPath).send(asDriver),
+      ).resolves.toMatchObject({ status: 401 });
+    });
+
+    it.each([
+      ['cuidador', ROLE_IDS.caregiver],
+      ['motorista', ROLE_IDS.driver],
+    ])('recusa que %s mexa nos participantes', async (_label, roleId) => {
+      fakeAuthentication.signInAs(roleId, [1]);
+      const app = createApp();
+
+      await expect(request(app).post(participantPath).send(asDriver)).resolves.toMatchObject({
+        status: 403,
+      });
+      await expect(request(app).put(participantPath).send(asDriver)).resolves.toMatchObject({
+        status: 403,
+      });
+      await expect(request(app).patch(participantPath).send(asDriver)).resolves.toMatchObject({
+        status: 403,
+      });
+      await expect(request(app).delete(participantPath)).resolves.toMatchObject({
+        status: 403,
+      });
     });
   });
 });

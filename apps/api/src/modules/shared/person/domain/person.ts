@@ -1,4 +1,4 @@
-import type { PersonResponse, RoleResponse } from '@casaecos/shared-types';
+import type { PersonResponse, PersonSummaryResponse, RoleResponse } from '@casaecos/shared-types';
 
 export class Role {
   constructor(
@@ -8,6 +8,17 @@ export class Role {
 
   toResponse(): RoleResponse {
     return { id: this.id, description: this.description };
+  }
+}
+
+export class PersonSummary {
+  constructor(
+    readonly id: number,
+    readonly name: string,
+  ) {}
+
+  toResponse(): PersonSummaryResponse {
+    return { id: this.id, name: this.name };
   }
 }
 

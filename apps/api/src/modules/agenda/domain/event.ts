@@ -1,7 +1,13 @@
-import type { EventResponse, EventTypeResponse } from '@casaecos/shared-types';
+import type {
+  EventParticipantResponse,
+  EventResponse,
+  EventTypeResponse,
+  ParticipationTypeResponse,
+} from '@casaecos/shared-types';
 
 import type { ScopedEvent } from '../../shared/auth/domain/access-scope.js';
 import type { HomeSummary } from '../../shared/home/domain/home.js';
+import type { PersonSummary } from '../../shared/person/domain/person.js';
 
 export class EventType {
   constructor(
@@ -14,6 +20,31 @@ export class EventType {
   }
 }
 
+export class ParticipationType {
+  constructor(
+    readonly id: number,
+    readonly description: string,
+  ) {}
+
+  toResponse(): ParticipationTypeResponse {
+    return { id: this.id, description: this.description };
+  }
+}
+
+export class EventParticipant {
+  constructor(
+    readonly person: PersonSummary,
+    readonly participationType: ParticipationType,
+  ) {}
+
+  toResponse(): EventParticipantResponse {
+    return {
+      person: this.person.toResponse(),
+      participationType: this.participationType.toResponse(),
+    };
+  }
+}
+
 export interface EventProperties {
   id: number;
   title: string;
@@ -23,7 +54,7 @@ export interface EventProperties {
   address: string | null;
   eventType: EventType;
   home: HomeSummary;
-  participantIds: readonly number[];
+  participants: readonly EventParticipant[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,8 +68,7 @@ export class Event implements ScopedEvent {
   readonly address: string | null;
   readonly eventType: EventType;
   readonly home: HomeSummary;
-  /** Read by the access scope (a driver sees the events he takes part in); not exposed until ECOS-7. */
-  readonly participantIds: readonly number[];
+  readonly participants: readonly EventParticipant[];
   readonly createdAt: Date;
   readonly updatedAt: Date;
 
@@ -51,13 +81,21 @@ export class Event implements ScopedEvent {
     this.address = properties.address;
     this.eventType = properties.eventType;
     this.home = properties.home;
-    this.participantIds = properties.participantIds;
+    this.participants = properties.participants;
     this.createdAt = properties.createdAt;
     this.updatedAt = properties.updatedAt;
   }
 
   get homeId(): number {
     return this.home.id;
+  }
+
+  get participantIds(): readonly number[] {
+    return this.participants.map((participant) => participant.person.id);
+  }
+
+  hasParticipant(personId: number): boolean {
+    return this.participantIds.includes(personId);
   }
 
   toResponse(): EventResponse {
@@ -70,6 +108,7 @@ export class Event implements ScopedEvent {
       address: this.address,
       eventType: this.eventType.toResponse(),
       home: this.home.toResponse(),
+      participants: this.participants.map((participant) => participant.toResponse()),
       createdAt: this.createdAt.toISOString(),
       updatedAt: this.updatedAt.toISOString(),
     };

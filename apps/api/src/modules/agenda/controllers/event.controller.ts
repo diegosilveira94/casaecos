@@ -20,12 +20,14 @@ const idSchema = z.number().int().positive();
 const urlIdSchema = z.coerce.number().int().positive();
 
 const eventIdParamsSchema = z.object({ id: urlIdSchema });
+const participantParamsSchema = z.object({ id: urlIdSchema, personId: urlIdSchema });
 
 // Strict: a misspelled filter (`start=` instead of `from=`) would otherwise be
 // dropped and the listing would silently come back unfiltered.
 const listEventsQuerySchema = z
   .object({
     homeId: urlIdSchema.exactOptional(),
+    personId: urlIdSchema.exactOptional(),
     eventTypeId: urlIdSchema.exactOptional(),
     from: dateTimeSchema.exactOptional(),
     to: dateTimeSchema.exactOptional(),
@@ -63,6 +65,8 @@ const updateEventSchema = z
   .strict()
   .refine((body) => Object.keys(body).length > 0, { message: 'Informe ao menos um campo' });
 
+const participantSchema = z.object({ participationTypeId: idSchema }).strict();
+
 export class EventController {
   readonly listValidator = new RequestValidator({ query: listEventsQuerySchema });
   readonly eventIdValidator = new RequestValidator({ params: eventIdParamsSchema });
@@ -71,6 +75,11 @@ export class EventController {
     params: eventIdParamsSchema,
     body: updateEventSchema,
   });
+  readonly participantValidator = new RequestValidator({
+    params: participantParamsSchema,
+    body: participantSchema,
+  });
+  readonly participantIdValidator = new RequestValidator({ params: participantParamsSchema });
 
   list: RequestHandler = async (request, response) => {
     const { query } = this.listValidator.data(response);
@@ -79,6 +88,10 @@ export class EventController {
 
   listEventTypes: RequestHandler = async (_request, response) => {
     response.json(await eventService.listEventTypes());
+  };
+
+  listParticipationTypes: RequestHandler = async (_request, response) => {
+    response.json(await eventService.listParticipationTypes());
   };
 
   getById: RequestHandler = async (request, response) => {
@@ -101,6 +114,32 @@ export class EventController {
     await eventService.delete(params.id, currentUser(request).scope);
     const body: ApiMessage = { message: 'Compromisso excluído com sucesso' };
     response.json(body);
+  };
+
+  addParticipant: RequestHandler = async (request, response) => {
+    const { params, body } = this.participantValidator.data(response);
+    await eventService.addParticipant(params.id, params.personId, body, currentUser(request).scope);
+    const message: ApiMessage = { message: 'Pessoa adicionada ao compromisso com sucesso' };
+    response.status(201).json(message);
+  };
+
+  updateParticipant: RequestHandler = async (request, response) => {
+    const { params, body } = this.participantValidator.data(response);
+    await eventService.updateParticipant(
+      params.id,
+      params.personId,
+      body,
+      currentUser(request).scope,
+    );
+    const message: ApiMessage = { message: 'Participação atualizada com sucesso' };
+    response.json(message);
+  };
+
+  removeParticipant: RequestHandler = async (request, response) => {
+    const { params } = this.participantIdValidator.data(response);
+    await eventService.removeParticipant(params.id, params.personId, currentUser(request).scope);
+    const message: ApiMessage = { message: 'Pessoa removida do compromisso com sucesso' };
+    response.json(message);
   };
 }
 

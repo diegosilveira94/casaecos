@@ -1,9 +1,10 @@
 import { prisma } from '../../../config/prisma.js';
-import type { Prisma } from '../../../generated/prisma/client.js';
+import { Prisma } from '../../../generated/prisma/client.js';
 import { pageOffset, type PageRequest } from '../../../shared/pagination.js';
 import type { EventScopeFilter } from '../../shared/auth/domain/access-scope.js';
 import { HomeSummary } from '../../shared/home/domain/home.js';
-import { Event, EventType } from '../domain/event.js';
+import { PersonSummary } from '../../shared/person/domain/person.js';
+import { Event, EventParticipant, EventType, ParticipationType } from '../domain/event.js';
 
 export interface CreateEventData {
   title: string;
@@ -29,6 +30,7 @@ export interface UpdateEventData {
 export interface EventListCriteria {
   scope: EventScopeFilter;
   homeId?: number;
+  personId?: number;
   eventTypeId?: number;
   startsFrom?: Date;
   startsBefore?: Date;
@@ -43,11 +45,29 @@ export interface EventRepository {
   findPage(criteria: EventListCriteria, page: PageRequest): Promise<EventPage>;
   findById(id: number): Promise<Event | null>;
   listEventTypes(): Promise<EventType[]>;
+  listParticipationTypes(): Promise<ParticipationType[]>;
   eventTypeExists(id: number): Promise<boolean>;
+  participationTypeExists(id: number): Promise<boolean>;
   homeExists(id: number): Promise<boolean>;
+  personExists(id: number): Promise<boolean>;
   create(data: CreateEventData): Promise<Event>;
   update(id: number, data: UpdateEventData): Promise<Event>;
   softDelete(id: number): Promise<void>;
+  addParticipant(eventId: number, participant: ParticipantData): Promise<void>;
+  updateParticipant(eventId: number, participant: ParticipantData): Promise<void>;
+  removeParticipant(eventId: number, personId: number): Promise<void>;
+}
+
+export interface ParticipantData {
+  personId: number;
+  participationTypeId: number;
+}
+
+export class DuplicateEventParticipantError extends Error {
+  constructor() {
+    super('Person already takes part in the event');
+    this.name = 'DuplicateEventParticipantError';
+  }
 }
 
 const eventSelection = {
@@ -61,7 +81,13 @@ const eventSelection = {
   updatedAt: true,
   eventType: { select: { id: true, name: true } },
   home: { select: { id: true, name: true } },
-  personLinks: { select: { personId: true } },
+  personLinks: {
+    select: {
+      person: { select: { id: true, name: true } },
+      participationType: { select: { id: true, description: true } },
+    },
+    orderBy: [{ person: { name: 'asc' } }, { personId: 'asc' }],
+  },
 } satisfies Prisma.EventSelect;
 
 type EventRecord = Prisma.EventGetPayload<{ select: typeof eventSelection }>;
@@ -76,7 +102,13 @@ function toEvent(record: EventRecord): Event {
     address: record.address,
     eventType: new EventType(record.eventType.id, record.eventType.name),
     home: new HomeSummary(record.home.id, record.home.name),
-    participantIds: record.personLinks.map((link) => link.personId),
+    participants: record.personLinks.map(
+      (link) =>
+        new EventParticipant(
+          new PersonSummary(link.person.id, link.person.name),
+          new ParticipationType(link.participationType.id, link.participationType.description),
+        ),
+    ),
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   });
@@ -96,12 +128,13 @@ function scopeWhere(scope: EventScopeFilter): Prisma.EventWhereInput {
 // AND keeps the scope and the homeId filter as separate conditions: a home outside
 // the scope narrows the result to nothing instead of replacing the scope.
 function listWhere(criteria: EventListCriteria): Prisma.EventWhereInput {
-  const { homeId, eventTypeId, startsFrom, startsBefore } = criteria;
+  const { homeId, personId, eventTypeId, startsFrom, startsBefore } = criteria;
   return {
     deletedAt: null,
     AND: [
       scopeWhere(criteria.scope),
       homeId === undefined ? {} : { homeId },
+      personId === undefined ? {} : { personLinks: { some: { personId } } },
       eventTypeId === undefined ? {} : { eventTypeId },
       startsFrom === undefined ? {} : { startDate: { gte: startsFrom } },
       startsBefore === undefined ? {} : { startDate: { lt: startsBefore } },
@@ -140,12 +173,29 @@ export class PrismaEventRepository implements EventRepository {
     return eventTypes.map((eventType) => new EventType(eventType.id, eventType.name));
   }
 
+  async listParticipationTypes(): Promise<ParticipationType[]> {
+    const participationTypes = await prisma.participationType.findMany({ orderBy: { id: 'asc' } });
+    return participationTypes.map((type) => new ParticipationType(type.id, type.description));
+  }
+
   async eventTypeExists(id: number): Promise<boolean> {
     return (await prisma.eventType.findUnique({ where: { id }, select: { id: true } })) !== null;
   }
 
+  async participationTypeExists(id: number): Promise<boolean> {
+    const participationType = await prisma.participationType.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    return participationType !== null;
+  }
+
   async homeExists(id: number): Promise<boolean> {
     return (await prisma.home.findUnique({ where: { id }, select: { id: true } })) !== null;
+  }
+
+  async personExists(id: number): Promise<boolean> {
+    return (await prisma.person.findUnique({ where: { id }, select: { id: true } })) !== null;
   }
 
   async create(data: CreateEventData): Promise<Event> {
@@ -166,5 +216,51 @@ export class PrismaEventRepository implements EventRepository {
   // The row and its person_event links stay: reports and accountability read them.
   async softDelete(id: number): Promise<void> {
     await prisma.event.update({ where: { id, deletedAt: null }, data: { deletedAt: new Date() } });
+  }
+
+  // Participant writes go through the event: `deletedAt: null` turns a removal that
+  // happened after the service loaded the event into P2025 (404). `updatedAt` is set by
+  // hand because Prisma leaves `@updatedAt` alone when only a nested relation changes.
+  async addParticipant(eventId: number, participant: ParticipantData): Promise<void> {
+    try {
+      await prisma.event.update({
+        where: { id: eventId, deletedAt: null },
+        data: { updatedAt: new Date(), personLinks: { create: participant } },
+        select: { id: true },
+      });
+    } catch (error: unknown) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new DuplicateEventParticipantError();
+      }
+      throw error;
+    }
+  }
+
+  async updateParticipant(eventId: number, participant: ParticipantData): Promise<void> {
+    const { personId, participationTypeId } = participant;
+    await prisma.event.update({
+      where: { id: eventId, deletedAt: null },
+      data: {
+        updatedAt: new Date(),
+        personLinks: {
+          update: {
+            where: { personId_eventId: { personId, eventId } },
+            data: { participationTypeId },
+          },
+        },
+      },
+      select: { id: true },
+    });
+  }
+
+  async removeParticipant(eventId: number, personId: number): Promise<void> {
+    await prisma.event.update({
+      where: { id: eventId, deletedAt: null },
+      data: {
+        updatedAt: new Date(),
+        personLinks: { delete: { personId_eventId: { personId, eventId } } },
+      },
+      select: { id: true },
+    });
   }
 }

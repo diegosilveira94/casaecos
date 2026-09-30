@@ -3,6 +3,12 @@ export interface RoleResponse {
   description: string;
 }
 
+/** The least another resource needs to name a person: no phone or registration number. */
+export interface PersonSummaryResponse {
+  id: number;
+  name: string;
+}
+
 export interface PersonResponse {
   id: number;
   name: string;
