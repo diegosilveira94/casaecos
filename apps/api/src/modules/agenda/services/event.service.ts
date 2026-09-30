@@ -1,15 +1,27 @@
-import type { CreateEventRequest, EventResponse, UpdateEventRequest } from '@casaecos/shared-types';
+import type {
+  CreateEventRequest,
+  EventResponse,
+  EventTypeResponse,
+  ListEventsQuery,
+  Paginated,
+  UpdateEventRequest,
+} from '@casaecos/shared-types';
 
 import { HttpError } from '../../../middlewares/http-error.js';
 import { normalizeOptionalText } from '../../../shared/optional-text.js';
+import type { PageRequest } from '../../../shared/pagination.js';
 import type { AccessScope } from '../../shared/auth/domain/access-scope.js';
 import type { Event } from '../domain/event.js';
 import {
   PrismaEventRepository,
   type CreateEventData,
+  type EventListCriteria,
   type EventRepository,
   type UpdateEventData,
 } from '../repositories/event.repository.js';
+
+/** What the route hands over after validation: the pagination defaults are already applied. */
+export type ListEventsRequest = ListEventsQuery & PageRequest;
 
 const END_NOT_AFTER_START_MESSAGE = 'O término do compromisso precisa ser depois do início';
 
@@ -19,6 +31,24 @@ function toNullableDate(value: string | null | undefined): Date | null {
 
 export class EventService {
   constructor(private readonly repository: EventRepository) {}
+
+  async list(request: ListEventsRequest, scope: AccessScope): Promise<Paginated<EventResponse>> {
+    const { from, to, page, pageSize, ...filters } = request;
+    const criteria: EventListCriteria = {
+      ...filters,
+      scope: scope.eventFilter(),
+      ...(from === undefined ? {} : { startsFrom: new Date(from) }),
+      ...(to === undefined ? {} : { startsBefore: new Date(to) }),
+    };
+
+    const { events, total } = await this.repository.findPage(criteria, { page, pageSize });
+    return { items: events.map((event) => event.toResponse()), page, pageSize, total };
+  }
+
+  async listEventTypes(): Promise<EventTypeResponse[]> {
+    const eventTypes = await this.repository.listEventTypes();
+    return eventTypes.map((eventType) => eventType.toResponse());
+  }
 
   async getById(id: number, scope: AccessScope): Promise<EventResponse> {
     return (await this.findAccessibleEvent(id, scope)).toResponse();

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { ApiMessage } from '@casaecos/shared-types';
 
 import { RequestValidator } from '../../../middlewares/validate.js';
+import { paginationQueryShape } from '../../../shared/pagination.js';
 import { nullableText } from '../../../shared/text-schemas.js';
 import { currentUser } from '../../shared/auth/middlewares/authenticate.js';
 import { eventService } from '../services/event.service.js';
@@ -15,7 +16,26 @@ const dateTimeSchema = z.iso.datetime({ offset: true });
 const titleSchema = z.string().trim().min(1).max(45);
 const idSchema = z.number().int().positive();
 
-const eventIdParamsSchema = z.object({ id: z.coerce.number().int().positive() });
+// Path and query values arrive as strings.
+const urlIdSchema = z.coerce.number().int().positive();
+
+const eventIdParamsSchema = z.object({ id: urlIdSchema });
+
+// Strict: a misspelled filter (`start=` instead of `from=`) would otherwise be
+// dropped and the listing would silently come back unfiltered.
+const listEventsQuerySchema = z
+  .object({
+    homeId: urlIdSchema.exactOptional(),
+    eventTypeId: urlIdSchema.exactOptional(),
+    from: dateTimeSchema.exactOptional(),
+    to: dateTimeSchema.exactOptional(),
+    ...paginationQueryShape,
+  })
+  .strict()
+  .refine(
+    ({ from, to }) => from === undefined || to === undefined || new Date(to) > new Date(from),
+    { path: ['to'], message: 'O fim do período precisa ser depois do início' },
+  );
 
 const createEventSchema = z
   .object({
@@ -44,12 +64,22 @@ const updateEventSchema = z
   .refine((body) => Object.keys(body).length > 0, { message: 'Informe ao menos um campo' });
 
 export class EventController {
+  readonly listValidator = new RequestValidator({ query: listEventsQuerySchema });
   readonly eventIdValidator = new RequestValidator({ params: eventIdParamsSchema });
   readonly createValidator = new RequestValidator({ body: createEventSchema });
   readonly updateValidator = new RequestValidator({
     params: eventIdParamsSchema,
     body: updateEventSchema,
   });
+
+  list: RequestHandler = async (request, response) => {
+    const { query } = this.listValidator.data(response);
+    response.json(await eventService.list(query, currentUser(request).scope));
+  };
+
+  listEventTypes: RequestHandler = async (_request, response) => {
+    response.json(await eventService.listEventTypes());
+  };
 
   getById: RequestHandler = async (request, response) => {
     const { params } = this.eventIdValidator.data(response);

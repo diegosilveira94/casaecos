@@ -22,6 +22,68 @@ describe('rotas de compromissos', () => {
     fakeAuthentication.signInAs(ROLE_IDS.secretary);
   });
 
+  describe('listagem', () => {
+    it.each([
+      ['casa inválida', 'homeId=abc', 'homeId'],
+      ['tipo inválido', 'eventTypeId=0', 'eventTypeId'],
+      ['início do período sem fuso', 'from=2026-10-01T00:00:00', 'from'],
+      ['fim do período só com a data', 'to=2026-10-31', 'to'],
+      ['página zero', 'page=0', 'page'],
+      ['página grande demais', 'pageSize=201', 'pageSize'],
+    ])('recusa %s', async (_label, query, field) => {
+      const response = await request(createApp()).get(`/agenda/events?${query}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body).toMatchObject({
+        message: 'Dados inválidos',
+        details: [expect.objectContaining({ path: [field] })],
+      });
+    });
+
+    it.each([
+      ['antes do início', '2026-09-30T00:00:00Z'],
+      ['igual ao início', '2026-10-01T00:00:00Z'],
+    ])('recusa fim do período %s, marcando o campo to', async (_label, to) => {
+      const response = await request(createApp()).get(
+        `/agenda/events?from=2026-10-01T00:00:00Z&to=${to}`,
+      );
+
+      expect(response.status).toBe(400);
+      expect(response.body).toMatchObject({
+        details: [
+          expect.objectContaining({
+            path: ['to'],
+            message: 'O fim do período precisa ser depois do início',
+          }),
+        ],
+      });
+    });
+
+    it('recusa filtro desconhecido em vez de ignorá-lo', async () => {
+      const response = await request(createApp()).get('/agenda/events?start=2026-10-01T00:00:00Z');
+
+      expect(response.status).toBe(400);
+    });
+
+    it('exige login e recusa acolhido', async () => {
+      fakeAuthentication.signOut();
+      await expect(request(createApp()).get('/agenda/events')).resolves.toMatchObject({
+        status: 401,
+      });
+      await expect(request(createApp()).get('/agenda/event-types')).resolves.toMatchObject({
+        status: 401,
+      });
+
+      fakeAuthentication.signInAs(ROLE_IDS.sheltered, [1]);
+      await expect(request(createApp()).get('/agenda/events')).resolves.toMatchObject({
+        status: 403,
+      });
+      await expect(request(createApp()).get('/agenda/event-types')).resolves.toMatchObject({
+        status: 403,
+      });
+    });
+  });
+
   it('valida o id do compromisso', async () => {
     const response = await request(createApp()).get('/agenda/events/id-invalido');
 

@@ -4,8 +4,11 @@ import { AccessScope } from '../../shared/auth/domain/access-scope.js';
 import { HomeSummary } from '../../shared/home/domain/home.js';
 import { ROLE_IDS } from '../../shared/person/domain/role-ids.js';
 import { Event, EventType } from '../domain/event.js';
+import type { PageRequest } from '../../../shared/pagination.js';
 import type {
   CreateEventData,
+  EventListCriteria,
+  EventPage,
   EventRepository,
   UpdateEventData,
 } from '../repositories/event.repository.js';
@@ -52,6 +55,16 @@ class FakeEventRepository implements EventRepository {
   createdData: CreateEventData | null = null;
   updatedData: { id: number; data: UpdateEventData } | null = null;
   softDeletedId: number | null = null;
+  listedWith: { criteria: EventListCriteria; page: PageRequest } | null = null;
+
+  findPage(criteria: EventListCriteria, page: PageRequest): Promise<EventPage> {
+    this.listedWith = { criteria, page };
+    return Promise.resolve({ events: this.events, total: 42 });
+  }
+
+  listEventTypes(): Promise<EventType[]> {
+    return Promise.resolve([new EventType(1, 'Consulta médica'), new EventType(6, 'Outro')]);
+  }
 
   findById(id: number): Promise<Event | null> {
     return Promise.resolve(this.events.find((event) => event.id === id) ?? null);
@@ -96,6 +109,64 @@ describe('EventService', () => {
   beforeEach(() => {
     repository = new FakeEventRepository();
     service = new EventService(repository);
+  });
+
+  describe('listagem', () => {
+    const firstPage = { page: 1, pageSize: 50 };
+
+    it('devolve a página com os compromissos serializados e o total', async () => {
+      const result = await service.list({ page: 2, pageSize: 2 }, coordination);
+
+      expect(result).toMatchObject({ page: 2, pageSize: 2, total: 42 });
+      expect(result.items).toEqual(repository.events.map((event) => event.toResponse()));
+      expect(repository.listedWith?.page).toEqual({ page: 2, pageSize: 2 });
+    });
+
+    it('repassa os filtros e converte o período em datas', async () => {
+      await service.list(
+        {
+          ...firstPage,
+          homeId: 1,
+          eventTypeId: 3,
+          from: '2026-10-01T00:00:00-03:00',
+          to: '2026-11-01T00:00:00-03:00',
+        },
+        coordination,
+      );
+
+      expect(repository.listedWith?.criteria).toEqual({
+        scope: { kind: 'all' },
+        homeId: 1,
+        eventTypeId: 3,
+        startsFrom: new Date('2026-10-01T03:00:00.000Z'),
+        startsBefore: new Date('2026-11-01T03:00:00.000Z'),
+      });
+    });
+
+    it('não inventa filtro que não foi pedido', async () => {
+      await service.list(firstPage, coordination);
+
+      expect(repository.listedWith?.criteria).toEqual({ scope: { kind: 'all' } });
+    });
+
+    it.each([
+      ['cuidador', caregiverOfHomeOne, { kind: 'homes', homeIds: [1] }],
+      ['motorista', driver, { kind: 'participant', personId: DRIVER_ID }],
+    ])('recorta a listagem pelo escopo do %s', async (_label, scope, expectedScope) => {
+      await service.list({ ...firstPage, homeId: 2 }, scope);
+
+      // The homeId filter travels next to the scope, never in place of it.
+      expect(repository.listedWith?.criteria).toEqual({ scope: expectedScope, homeId: 2 });
+    });
+  });
+
+  describe('tipos de compromisso', () => {
+    it('lista os tipos serializados', async () => {
+      await expect(service.listEventTypes()).resolves.toEqual([
+        { id: 1, name: 'Consulta médica' },
+        { id: 6, name: 'Outro' },
+      ]);
+    });
   });
 
   describe('busca por id', () => {
