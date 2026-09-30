@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { ApiMessage } from '@casaecos/shared-types';
 
 import { RequestValidator } from '../../../../middlewares/validate.js';
+import { nullableText } from '../../../../shared/text-schemas.js';
 import { currentUser } from '../../auth/middlewares/authenticate.js';
 import { personService } from '../services/person.service.js';
 
@@ -12,9 +13,6 @@ import { personService } from '../services/person.service.js';
 // strings never carry an explicit `undefined`, so the accepted input is unchanged.
 const nameSchema = z.string().trim().min(1).max(45);
 const roleIdSchema = z.number().int().positive();
-
-const nullableText = (maximumLength: number) =>
-  z.union([z.string().trim().max(maximumLength), z.null()]);
 
 const personIdParamsSchema = z.object({ id: z.coerce.number().int().positive() });
 

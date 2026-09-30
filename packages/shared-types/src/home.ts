@@ -5,6 +5,12 @@ export interface OrganizationSummaryResponse {
   name: string;
 }
 
+/** The least an event needs to say where it happens. */
+export interface HomeSummaryResponse {
+  id: number;
+  name: string;
+}
+
 export interface HomeResponse {
   id: number;
   name: string;

@@ -1,5 +1,5 @@
 import { HttpError } from '../../../../middlewares/http-error.js';
-import { EVENT_OUT_OF_SCOPE, HOME_OUT_OF_SCOPE } from '../auth-messages.js';
+import { EVENT_NOT_FOUND, EVENT_OUT_OF_SCOPE, HOME_OUT_OF_SCOPE } from '../auth-messages.js';
 import { scopeKindForRole } from './permissions.js';
 
 export interface AccessScopeOwner {
@@ -42,6 +42,15 @@ export abstract class AccessScope {
   assertCanAccessEvent(event: ScopedEvent): void {
     if (!this.canAccessEvent(event)) throw HttpError.forbidden(EVENT_OUT_OF_SCOPE);
   }
+
+  /**
+   * The answer for an event id that does not exist. A restricted user gets the same
+   * 403 as an event out of scope, so the response never reveals which ids exist in
+   * other homes (decision #61): the home is only known after loading the event.
+   */
+  eventNotFoundError(): HttpError {
+    return HttpError.forbidden(EVENT_OUT_OF_SCOPE);
+  }
 }
 
 class UnrestrictedScope extends AccessScope {
@@ -59,6 +68,11 @@ class UnrestrictedScope extends AccessScope {
 
   canAccessEvent(_event: ScopedEvent): boolean {
     return true;
+  }
+
+  // Whoever sees every home learns nothing from a 404.
+  override eventNotFoundError(): HttpError {
+    return HttpError.notFound(EVENT_NOT_FOUND);
   }
 }
 

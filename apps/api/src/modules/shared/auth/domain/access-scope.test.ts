@@ -75,4 +75,25 @@ describe('AccessScope', () => {
       scope.assertCanAccessHome(1);
     }).not.toThrow();
   });
+
+  it.each([
+    ['Coordenador', ROLE_IDS.coordinator],
+    ['Secretário', ROLE_IDS.secretary],
+  ])('%s recebe 404 para compromisso inexistente', (_label, roleId) => {
+    expect(scopeFor(roleId).eventNotFoundError()).toMatchObject({
+      status: 404,
+      message: 'Compromisso não encontrado',
+    });
+  });
+
+  it.each([
+    ['cuidador', ROLE_IDS.caregiver],
+    ['motorista', ROLE_IDS.driver],
+    ['papel sem regra própria', ROLE_IDS.sheltered],
+  ])('%s recebe o mesmo 403 de fora do escopo para compromisso inexistente', (_label, roleId) => {
+    expect(scopeFor(roleId).eventNotFoundError()).toMatchObject({
+      status: 403,
+      message: 'Você não tem acesso a este compromisso',
+    });
+  });
 });

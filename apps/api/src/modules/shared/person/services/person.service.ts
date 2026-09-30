@@ -6,6 +6,7 @@ import type {
 } from '@casaecos/shared-types';
 
 import { HttpError } from '../../../../middlewares/http-error.js';
+import { normalizeOptionalText } from '../../../../shared/optional-text.js';
 import { ACCESS_MANAGEMENT_NOT_ALLOWED } from '../../auth/auth-messages.js';
 import type { AuthenticatedUser } from '../../auth/domain/user-account.js';
 import { ROLE_IDS } from '../domain/role-ids.js';
@@ -19,15 +20,6 @@ import {
 } from '../repositories/person.repository.js';
 
 const PHONE_IN_USE_MESSAGE = 'Este telefone já está em uso';
-
-function normalizeOptionalValue(value: string | null | undefined): string | null | undefined {
-  if (value === undefined) return undefined;
-  if (value === null) return null;
-
-  const normalizedValue = value.trim();
-  if (normalizedValue.length === 0) return null;
-  return normalizedValue;
-}
 
 export class PersonService {
   constructor(private readonly repository: PersonRepository) {}
@@ -47,13 +39,13 @@ export class PersonService {
     if (request.roleId === ROLE_IDS.coordinator) this.ensureCanManageAccess(actor);
     await this.ensureRoleExists(request.roleId);
 
-    const phone = normalizeOptionalValue(request.phone) ?? null;
+    const phone = normalizeOptionalText(request.phone) ?? null;
     await this.ensurePhoneAvailable(phone);
 
     const data: CreatePersonData = {
       name: request.name.trim(),
       roleId: request.roleId,
-      individualRegistration: normalizeOptionalValue(request.individualRegistration) ?? null,
+      individualRegistration: normalizeOptionalText(request.individualRegistration) ?? null,
       phone,
     };
 
@@ -82,10 +74,10 @@ export class PersonService {
     if (request.name !== undefined) data.name = request.name.trim();
     if (request.roleId !== undefined) data.roleId = request.roleId;
     if (request.individualRegistration !== undefined) {
-      data.individualRegistration = normalizeOptionalValue(request.individualRegistration) ?? null;
+      data.individualRegistration = normalizeOptionalText(request.individualRegistration) ?? null;
     }
     if (request.phone !== undefined) {
-      data.phone = normalizeOptionalValue(request.phone) ?? null;
+      data.phone = normalizeOptionalText(request.phone) ?? null;
       await this.ensurePhoneAvailable(data.phone, id);
     }
 
