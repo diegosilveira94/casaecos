@@ -4,10 +4,18 @@ import { authenticate } from '../../shared/auth/middlewares/authenticate.js';
 import { authorize } from '../../shared/auth/middlewares/authorize.js';
 import { eventController } from '../controllers/event.controller.js';
 
-// Listing with filters lands in ECOS-15; person_event in ECOS-7.
+// person_event lands in ECOS-7.
 export const agendaRouter: Router = Router();
 
 agendaRouter.use(authenticate.handle);
+
+agendaRouter.get('/event-types', authorize('event:read'), eventController.listEventTypes);
+agendaRouter.get(
+  '/events',
+  authorize('event:read'),
+  eventController.listValidator.handle,
+  eventController.list,
+);
 
 agendaRouter.post(
   '/events',

@@ -33,6 +33,21 @@ export interface CreateEventRequest {
   homeId: number;
 }
 
+/**
+ * Filters of `GET /agenda/events`, sent as a query string. A commitment is in the
+ * period when `from <= startDate < to`; both carry an offset, like the event dates.
+ * `pageSize` goes up to 200 (default 50). The result is also cut by the user's
+ * access scope, so a `homeId` outside it yields an empty page, not an error.
+ */
+export interface ListEventsQuery {
+  homeId?: number;
+  eventTypeId?: number;
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+}
+
 export interface UpdateEventRequest {
   title?: string;
   description?: string | null;

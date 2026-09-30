@@ -1,5 +1,7 @@
 import { prisma } from '../../../config/prisma.js';
 import type { Prisma } from '../../../generated/prisma/client.js';
+import { pageOffset, type PageRequest } from '../../../shared/pagination.js';
+import type { EventScopeFilter } from '../../shared/auth/domain/access-scope.js';
 import { HomeSummary } from '../../shared/home/domain/home.js';
 import { Event, EventType } from '../domain/event.js';
 
@@ -23,8 +25,24 @@ export interface UpdateEventData {
   homeId?: number;
 }
 
+/** `startsFrom` is inclusive and `startsBefore` exclusive, so consecutive periods never overlap. */
+export interface EventListCriteria {
+  scope: EventScopeFilter;
+  homeId?: number;
+  eventTypeId?: number;
+  startsFrom?: Date;
+  startsBefore?: Date;
+}
+
+export interface EventPage {
+  events: Event[];
+  total: number;
+}
+
 export interface EventRepository {
+  findPage(criteria: EventListCriteria, page: PageRequest): Promise<EventPage>;
   findById(id: number): Promise<Event | null>;
+  listEventTypes(): Promise<EventType[]>;
   eventTypeExists(id: number): Promise<boolean>;
   homeExists(id: number): Promise<boolean>;
   create(data: CreateEventData): Promise<Event>;
@@ -64,13 +82,62 @@ function toEvent(record: EventRecord): Event {
   });
 }
 
+function scopeWhere(scope: EventScopeFilter): Prisma.EventWhereInput {
+  switch (scope.kind) {
+    case 'all':
+      return {};
+    case 'homes':
+      return { homeId: { in: [...scope.homeIds] } };
+    case 'participant':
+      return { personLinks: { some: { personId: scope.personId } } };
+  }
+}
+
+// AND keeps the scope and the homeId filter as separate conditions: a home outside
+// the scope narrows the result to nothing instead of replacing the scope.
+function listWhere(criteria: EventListCriteria): Prisma.EventWhereInput {
+  const { homeId, eventTypeId, startsFrom, startsBefore } = criteria;
+  return {
+    deletedAt: null,
+    AND: [
+      scopeWhere(criteria.scope),
+      homeId === undefined ? {} : { homeId },
+      eventTypeId === undefined ? {} : { eventTypeId },
+      startsFrom === undefined ? {} : { startDate: { gte: startsFrom } },
+      startsBefore === undefined ? {} : { startDate: { lt: startsBefore } },
+    ],
+  };
+}
+
 export class PrismaEventRepository implements EventRepository {
+  async findPage(criteria: EventListCriteria, page: PageRequest): Promise<EventPage> {
+    const where = listWhere(criteria);
+    // No $transaction: inside one, Prisma loads the relations concurrently on the same
+    // pg client, which pg deprecates. A total that misses a concurrent write is harmless.
+    const [events, total] = await Promise.all([
+      prisma.event.findMany({
+        where,
+        select: eventSelection,
+        orderBy: [{ startDate: 'asc' }, { id: 'asc' }],
+        skip: pageOffset(page),
+        take: page.pageSize,
+      }),
+      prisma.event.count({ where }),
+    ]);
+    return { events: events.map(toEvent), total };
+  }
+
   async findById(id: number): Promise<Event | null> {
     const event = await prisma.event.findFirst({
       where: { id, deletedAt: null },
       select: eventSelection,
     });
     return event ? toEvent(event) : null;
+  }
+
+  async listEventTypes(): Promise<EventType[]> {
+    const eventTypes = await prisma.eventType.findMany({ orderBy: { id: 'asc' } });
+    return eventTypes.map((eventType) => new EventType(eventType.id, eventType.name));
   }
 
   async eventTypeExists(id: number): Promise<boolean> {

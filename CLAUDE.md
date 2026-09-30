@@ -78,7 +78,7 @@ casaecos/
 │   │   │   │       └── auth/          # user_account, login, JWT, middlewares de acesso
 │   │   │   ├── config/                # env.ts (zod) e prisma.ts (client singleton)
 │   │   │   ├── middlewares/           # error-handler, HttpError, RequestValidator
-│   │   │   ├── shared/                # utilitários cross-módulo (prisma-error, optional-text, text-schemas)
+│   │   │   ├── shared/                # utilitários cross-módulo (prisma-error, optional-text, text-schemas, pagination)
 │   │   │   ├── test/                  # helpers de teste (ex: fake-authentication)
 │   │   │   ├── generated/prisma/      # client gerado — fora do versionamento
 │   │   │   ├── routes.ts              # monta os routers de cada módulo
@@ -139,6 +139,10 @@ Modelagem física finalizada e **já implementada** em `apps/api/prisma/schema.p
 - **Models em PascalCase, tabelas e colunas em snake_case** via `@@map`/`@map`.
 - **Todo timestamp é `timestamptz`** (`@db.Timestamptz(6)`), inclusive
   `start_date`/`end_date` do evento.
+- **A sessão do banco roda em UTC** (`options: '-c timezone=UTC'` no `PrismaPg`, em
+  `config/prisma.ts`, decisão #80). Com a sessão em outro fuso, o `@prisma/adapter-pg`
+  descarta o offset do `timestamptz` e toda data grava, lê e filtra deslocada. Não
+  tire essa opção, nem ao trocar de banco ou de hospedagem.
 - **`created_at`/`updated_at` nas entidades principais** (person, home, event,
   organization). Lookups e tabelas de junção não têm.
 - **Delete em cascata** nas junções (`home_person`, `person_event`) e em
@@ -252,7 +256,8 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
 
 - **Rotas em `/agenda/events`**, no `agendaRouter` do módulo: `POST /`, `GET /:id`,
   `PUT`/`PATCH /:id` (ambos edição parcial, #56) e `DELETE /:id`. Listagem com
-  filtros e `/agenda/event-types` são da ECOS-15; participantes, da ECOS-7.
+  filtros e `/agenda/event-types` vieram na ECOS-15 (abaixo); participantes são da
+  ECOS-7.
 - **Permissão**: `event:read` no `GET`, `event:write` no resto. Escopo pelo
   `AccessScope`: `assertCanAccessEvent` no registro carregado e `assertCanAccessHome`
   na casa de destino ao criar ou mover.
@@ -278,6 +283,30 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
 - **Texto opcional**: `normalizeOptionalText` (`src/shared/optional-text.ts`) apara e
   troca vazio por `null`; o schema usa `nullableText` (`src/shared/text-schemas.ts`).
   Os dois saíram do módulo `person` para serem reusados.
+
+### Agenda — listagem (ECOS-15)
+
+> Decisões #79 a #81 no Notion.
+
+- **`GET /agenda/events`** com `event:read`: filtros `homeId`, `eventTypeId`, `from` e
+  `to`, mais `page`/`pageSize`. Devolve `Paginated<EventResponse>` (padrão 50, máximo
+  200 — `src/shared/pagination.ts`), ordenado por `startDate` e depois `id`. O
+  contrato é o `ListEventsQuery` de `shared-types`; no web, `eventService.list()`.
+- **Período pelo início**: entra o compromisso com `from <= startDate < to`
+  (semiaberto, então mês seguido de mês não repete nada). `from`/`to` com fuso
+  obrigatório, como as datas do evento, e `to` depois de `from` (400 em `path: ['to']`).
+  Compromisso que começou antes do `from` não aparece, mesmo que ainda esteja rolando.
+- **Query estrita**: parâmetro desconhecido é 400. Filtro com nome errado (`start=`)
+  não pode virar listagem sem filtro.
+- **Filtro estreita o escopo, nunca o substitui**: o repositório combina
+  `eventFilter()` (os 3 kinds, `switch` exaustivo) e os filtros num `AND`. `homeId`
+  fora do escopo devolve página vazia, não 403 — o motorista não tem casa própria e
+  precisa filtrar por casa entre os eventos em que participa.
+- **Sem `$transaction` na página + total**: dentro de uma, o Prisma carrega as relações
+  em paralelo no mesmo client do `pg`, que o `pg` já marca como depreciado. É
+  `Promise.all`; um total que perde uma escrita concorrente não faz mal.
+- **`GET /agenda/event-types`** com `event:read`: array cru do lookup, ordenado por id
+  (mantém "Outro" no fim). No web, `eventService.listEventTypes()`.
 
 ### Autorização (ECOS-14)
 
@@ -305,7 +334,7 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   (`all` | `homes` | `participant`): trate cada caso, nunca "sem campo = sem filtro".
   Fora do escopo é 403, checado antes da existência.
 - **Rotas protegidas**: `/homes`, `/people`, `/roles` e `/agenda` exigem login e
-  permissão. ECOS-7 e ECOS-15 devem seguir o mesmo contrato dos eventos (ECOS-6).
+  permissão. A ECOS-7 deve seguir o mesmo contrato dos eventos (ECOS-6/15).
 - **Testes de rota** simulam o login com `src/test/fake-authentication.ts`
   (`vi.mock` do `authenticate`).
 
@@ -463,6 +492,11 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
   (sem listagem, que é da ECOS-15), com `authorize('event:*')` e `AccessScope`,
   datas com fuso obrigatório e término depois do início, exclusão lógica
   (`deleted_at`), contrato `event.ts` em `shared-types` e `EventService` no `apps/web`.
+- **ECOS-15 implementada em 30/09/2026**: listagem em `GET /agenda/events` com filtro
+  por casa, tipo e período (pelo início, com fuso), paginada com `Paginated<T>` e
+  recortada pelo `AccessScope`; lookup em `GET /agenda/event-types`; `list()` e
+  `listEventTypes()` no `EventService` do web. Junto, a correção do fuso da sessão do
+  banco (decisão #80), que deslocava as datas quando o Postgres não estava em UTC.
 - Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-9, com ECOS-11 e
   ECOS-12 como base compartilhada (casas e pessoas).
 - Ordem de desenvolvimento: schema Prisma → API → telas React.
@@ -472,8 +506,8 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
   - ECOS-13: Autenticação e login (JWT) — ✅ concluída
   - ECOS-6: API CRUD de eventos — ✅ implementada (com `event.ts` em `shared-types`
     e o `EventService` do web)
-  - ECOS-15: API de listagem de eventos com filtros (data, casa, tipo) — **próxima**
-  - ECOS-7: API de associação de pessoas a eventos (person_event)
+  - ECOS-15: API de listagem de eventos com filtros (data, casa, tipo) — ✅ implementada
+  - ECOS-7: API de associação de pessoas a eventos (person_event) — **próxima**
   - ECOS-11: API de casas (home, home_person)
   - ECOS-14: autorização (RBAC + escopo por casa) — ✅ implementada (aplicada nos
     eventos na ECOS-6)
@@ -489,9 +523,9 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
 ## Pendências que afetam o desenvolvimento
 
 - **Permissões: implementadas na ECOS-14** (ver "Autorização") e aplicadas nos
-  eventos na ECOS-6. ECOS-7 e ECOS-15 precisam usar `authorize('event:*')` e o
-  `AccessScope` (na listagem, `eventFilter()`); a tela (ECOS-8) ainda precisa
-  esconder o que o papel não pode fazer.
+  eventos na ECOS-6 e na listagem da ECOS-15. A ECOS-7 precisa usar
+  `authorize('event:*')` e o `AccessScope`; a tela (ECOS-8) ainda precisa esconder o
+  que o papel não pode fazer.
 - Vínculo org-wide para pessoal não ligado a uma casa específica (ex:
   `person_organization`) só será modelado se surgir uma segunda ONG.
 - **Dívida: `home.controller.ts` (ECOS-11) valida com `schema.parse()` dentro do

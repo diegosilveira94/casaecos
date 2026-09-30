@@ -25,6 +25,38 @@ describe('EventService', () => {
     vi.unstubAllGlobals();
   });
 
+  it('lista os compromissos sem query string quando não há filtro', async () => {
+    await createService().list();
+
+    expect(sentRequest()).toMatchObject({
+      url: 'http://api.test/agenda/events',
+      init: { method: 'GET' },
+    });
+  });
+
+  it('manda os filtros da listagem na query string', async () => {
+    await createService().list({
+      homeId: 2,
+      from: '2026-10-01T00:00:00-03:00',
+      to: '2026-11-01T00:00:00-03:00',
+      pageSize: 200,
+    });
+
+    // URLSearchParams escapes the offset, so a `+01:00` would not arrive as a space.
+    expect(sentRequest().url).toBe(
+      'http://api.test/agenda/events?homeId=2&from=2026-10-01T00%3A00%3A00-03%3A00&to=2026-11-01T00%3A00%3A00-03%3A00&pageSize=200',
+    );
+  });
+
+  it('lista os tipos de compromisso', async () => {
+    await createService().listEventTypes();
+
+    expect(sentRequest()).toMatchObject({
+      url: 'http://api.test/agenda/event-types',
+      init: { method: 'GET' },
+    });
+  });
+
   it('busca o compromisso pelo id', async () => {
     await createService().getById(1);
 
