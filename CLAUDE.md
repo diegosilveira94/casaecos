@@ -95,12 +95,15 @@ casaecos/
 │       ├── src/
 │       │   ├── config/               # env.ts (VITE_API_URL obrigatória)
 │       │   ├── shared/http/          # HttpClient, ApiRequestError e o apiClient
+│       │   ├── shared/ui/            # Dialog, ícones, useIsDesktop, useDismiss, COMING_SOON_PROPS
+│       │   ├── assets/               # logo, marca e paisagem da sidebar (do Figma)
 │       │   ├── modules/              # mesmos módulos + shared
 │       │   │   ├── agenda/           # domain/ (calendário, cores), hooks/, components/,
 │       │   │   │                     # services/EventService, pages/AgendaPage
 │       │   │   └── shared/           # auth/ (SessionStore, AuthService, AuthProvider/useAuth,
 │       │   │                         # LoginPage, ProtectedRoute), home/ (HomeService),
-│       │   │                         # layout/ (AppLayout, AppSidebar, AppHeader, BrandMark)
+│       │   │                         # home/context (casa escolhida), layout/ (AppLayout,
+│       │   │                         # AppSidebar, HomePicker, AppHeader, AppBrand)
 │       │   ├── App.tsx
 │       │   └── main.tsx
 │       └── package.json
@@ -369,14 +372,33 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
 
 ### Agenda — tela (ECOS-8)
 
-> Decisões #92 a #97 no Notion.
+> Decisões #92 a #99 no Notion.
 
-- **Layout mobile = opção A do Figma** (seção `104:483`, frame `104:20`): mini-mês com
-  até 3 pontos por dia na cor do tipo e, embaixo, a lista do dia selecionado. A partir
-  de 52rem (o breakpoint do login) vira a grade do protótipo, com até 3 chips
-  `hora título` + "+N compromissos", e a lista do dia vai para o painel lateral (no
-  lugar do "Próximos compromissos" do Figma). O tipo aparece como **texto colorido,
-  sem fundo** — pedido do Diego, os chips com fundo tinham "cara de IA".
+- **Desktop fiel ao protótipo** (Figma `22:5`, a partir de 52rem): sidebar com o logo
+  e a marca (imagens em `apps/web/src/assets/`), todos os módulos, o seletor de casa,
+  a tagline e a paisagem; header com menu, notificações e o menu do usuário ("Sair");
+  ações Filtros, Exportar e "+ Novo Compromisso"; Mês/Semana/Dia; grade com **um bloco
+  colorido por dia** (hora, título, pessoa) + "+N compromissos"; painel **Próximos
+  compromissos** (os 4 próximos a partir de agora, com os mesmos filtros) e "Ver todos".
+- **Celular = opção A do Figma** (seção `104:483`, frame `104:20`): mini-mês com até 3
+  pontos por dia e a lista do dia selecionado embaixo, com o tipo como **texto colorido,
+  sem fundo**. O botão de menu abre a sidebar como gaveta; no desktop ele recolhe a
+  sidebar. Qual layout vale é decidido em JS por `useIsDesktop()`
+  (`src/shared/ui/use-media-query.ts`), com o mesmo breakpoint do CSS.
+- **Controle sem função ainda** (Medicamentos, Relatórios, Prestação de Contas,
+  Configurações, Ajuda, notificações, Exportar, "+ Novo Compromisso", Semana/Dia, "Ver
+  todos") usa `COMING_SOON_PROPS` (`src/shared/ui/coming-soon.ts`): parece o real, não
+  faz nada e tem `aria-disabled` + "Disponível em breve" (#95). Ao implementar, troque
+  pelo comportamento de verdade.
+- **Casa escolhida na sidebar** (`HomePicker`) vale para toda a área logada, via
+  `HomeSelectionProvider` (`modules/shared/home/context/`), dentro do `AppLayout`. As
+  casas vêm de `homeService.list()` só com `can('home:read')`; com uma casa só (cuidadora)
+  o seletor mostra o nome dela, desabilitado; sem `home:read` (motorista) fica em "Todas
+  as casas", desabilitado. O tipo de compromisso fica no popover de **Filtros**.
+- **Dia no desktop**: clicar no número do dia ou em "+N compromissos" abre a lista do dia
+  numa janela (`DayEventsDialog`); o bloco abre o detalhe. Detalhe, janela do dia e
+  bottom sheet usam o `Dialog` de `src/shared/ui/` (Esc, fundo e "Fechar"; o foco volta
+  para quem abriu).
 - **Só visão de mês.** Semana e Dia ficaram para a ECOS-23. Abre no mês atual com
   hoje selecionado; trocar de mês seleciona o dia 1 (ou hoje, no mês atual); dia de
   fora do mês fica apagado e desabilitado.
@@ -386,23 +408,16 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   200 até o `total`. O resultado é marcado com a chave da requisição: trocar mês ou
   filtro já vale como `loading`, e resposta atrasada de busca antiga é descartada.
   Compromisso entra no dia local do **início** (mesma regra do filtro da ECOS-15).
-- **Permissões na tela**: o filtro de casa (`homeService.list()`, `GET /homes`) só
-  aparece com `can('home:read')` e mais de uma casa visível — motorista nem busca as
-  casas, cuidador de uma casa só não vê o filtro. O "+ Novo compromisso" fica para a
-  ECOS-9, com `can('event:write')`.
-- **Moldura das telas logadas**: o `AppLayout` (rota de layout dentro do
-  `ProtectedRoute`) monta a `AppSidebar` e o `AppHeader`. A sidebar só aparece a partir
-  de 52rem (largura do Figma, 228px) e lista **só os módulos que já têm tela** — hoje,
-  só a Agenda —, com a tagline no rodapé (#95). Módulo novo entra no `NAVIGATION` do
-  `AppSidebar.tsx`. No desktop a marca sai do header e fica na sidebar.
+- **Permissões na tela**: "+ Novo Compromisso" só aparece com `can('event:write')`; a
+  ECOS-9 liga a ação nele.
 - **Cor por tipo**: `event-tone.ts` mapeia o id do `event_type` (ids fixos, #37) para
-  um tom, e o CSS tem um token `--color-event-*` por tom, todos com contraste AA como
-  texto no branco. Tipo novo ou "Outro" cai no neutro até ganhar cor.
-- **Detalhe** em modo leitura (descrição, endereço, participantes com o tipo):
-  bottom sheet no celular, modal no desktop, fecha com Esc/fundo/"Fechar" e devolve
-  o foco ao card. Sem editar nem excluir (ECOS-9).
-- **Lookups que falham só somem com o filtro**; o erro exibido é o da busca do mês
-  (`ApiRequestError.message` + "Tentar novamente"), com a grade continuando na tela.
+  um tom; o CSS tem `--color-event-*` (texto, contraste AA no branco) e `--event-tint`
+  (fundo dos blocos e dos selos) por tom. Tipo novo ou "Outro" cai no neutro.
+- **Erros**: lookup que falha só esvazia o filtro; a falha da busca do mês aparece com
+  `ApiRequestError.message` + "Tentar novamente" (na lista do dia no celular, acima da
+  grade no desktop), sem tirar a grade da tela.
+- **Testes**: `src/test/media-query.ts` substitui o `matchMedia` do jsdom; os testes
+  começam no celular e passam ao desktop com `setDesktopViewport(true)`.
 
 ### Autorização (ECOS-14)
 
