@@ -96,8 +96,9 @@ casaecos/
 │       │   ├── config/               # env.ts (VITE_API_URL obrigatória)
 │       │   ├── shared/http/          # HttpClient, ApiRequestError e o apiClient
 │       │   ├── modules/              # mesmos módulos + shared
-│       │   │   ├── agenda/services/  # EventService (compromissos)
-│       │   │   └── shared/auth/      # SessionStore, AuthService, AuthProvider/useAuth
+│       │   │   ├── agenda/           # services/EventService, pages/AgendaPage (placeholder)
+│       │   │   └── shared/auth/      # SessionStore, AuthService, AuthProvider/useAuth,
+│       │   │                         # pages/LoginPage, routes/ProtectedRoute
 │       │   ├── App.tsx
 │       │   └── main.tsx
 │       └── package.json
@@ -249,6 +250,26 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   que reage ao estado `anonymous`.
 - **`VITE_API_URL` vem do `.env` da raiz** (`envDir: '../..'`) e é obrigatória: sem
   ela o app não sobe. Nos testes o valor é fixo em `http://api.test`.
+
+### Login e rotas (ECOS-17)
+
+> Decisões #87 a #91 no Notion.
+
+- **Roteamento com `react-router` 7** (o pacote canônico, não `react-router-dom`),
+  em modo declarativo: `BrowserRouter` no `main.tsx`, rotas no `App.tsx`. `/login` é
+  pública; `/agenda` fica atrás do `ProtectedRoute`; qualquer outra vai para
+  `/agenda`. O v8 exige Node 22.22+, por isso ficou no 7.
+- **`ProtectedRoute` reage ao `useAuth().status`**: `restoring` mostra o
+  `SessionRestoring` (não redireciona antes do `GET /auth/me` responder),
+  `anonymous` vai para `/login` guardando a rota pedida em `state.from`.
+- **`LoginPage`** volta para a rota pedida (ou `/agenda`) quando o status vira
+  `authenticated`. Valida só o formato do e-mail antes de chamar a API; o erro
+  exibido é o `ApiRequestError.message` (401, 429 e servidor fora do ar já chegam em
+  português, #69).
+- **Visual**: segue o frame `login-desktop` do Figma (nodeId `77:450`), com a marca
+  "Casa Ecos" e a tagline "Cuidando de quem cuida.". O link "Esqueceu a senha?" do
+  Figma ficou de fora: não existe fluxo de recuperação. Tokens em inglês
+  (`--color-*`) no `index.css`, com o verde `#186949` do Figma.
 
 ### Agenda — compromissos (ECOS-6)
 
@@ -475,18 +496,21 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
 | Largura da sidebar                          | 228px                                  |
 | Canvas                                      | 1440×1024 (desktop)                    |
 
+O arquivo também tem o frame `login-desktop` (nodeId `77:450`, base da ECOS-17) e
+os frames de criação e edição de compromisso.
+
 ### Divergências a resolver antes da ECOS-8
 
-1. **O verde não bate.** O protótipo usa `#186949`; o `apps/web/src/index.css` usa
-   `--cor-primaria: #1f7a5a`. Alinhar antes de espalhar a cor pelas telas.
+1. ~~O verde não bate.~~ Resolvido na ECOS-17: `--color-primary: #186949` no
+   `index.css`, igual ao Figma (decisão #89).
 2. **O protótipo é só desktop.** Não existe frame mobile no arquivo, o que contraria
    o princípio mobile-first do projeto. A tela de agenda precisa de uma decisão de
    layout para celular — ou um frame no Figma, ou definida direto no código.
 3. **Tokens não existem no Figma.** Nenhuma variável está definida no arquivo, então
    a fonte da verdade dos tokens vai ser o CSS do `apps/web`, não o Figma. Ao
    importar uma tela, extrair os valores e nomeá-los no código.
-4. **A tagline já aparece no protótipo** ("Cuidando de hoje, transformando o
-   amanhã."), mas a decisão #16 no Notion ainda marca a tagline como em aberto.
+4. ~~Tagline em aberto.~~ Definida na ECOS-17: "Cuidando de quem cuida." (decisão
+   #90). O texto da sidebar do protótipo da agenda precisa ser trocado no Figma.
 
 ## Estado atual / próximos passos
 
@@ -536,6 +560,11 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
   lookup em `GET /agenda/participation-types`, `participants` no `EventResponse`,
   filtro `personId` na listagem e os métodos do `EventService` do web. Junto, o P2017
   do Prisma traduzido para 404.
+- **ECOS-17 implementada em 30/09/2026**: tela de login (branch do Gustavo, de 08/09)
+  mergeada com a `main` e adaptada à ECOS-16 — `react-router`, `ProtectedRoute` que
+  espera a restauração da sessão, erro vindo do `ApiRequestError` e placeholder em
+  `/agenda` até a ECOS-8. O backend de auth paralelo da branch foi descartado em favor
+  da ECOS-13.
 - Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-9, com ECOS-11 e
   ECOS-12 como base compartilhada (casas e pessoas).
 - Ordem de desenvolvimento: schema Prisma → API → telas React.
@@ -551,8 +580,7 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
   - ECOS-14: autorização (RBAC + escopo por casa) — ✅ implementada (aplicada nos
     eventos na ECOS-6)
   - ECOS-16: camada de integração frontend-API — ✅ implementada
-  - ECOS-17: tela de login — a branch original é anterior à ECOS-13 e será
-    refatorada sobre a ECOS-16 (rota protegida + tela, usando `useAuth`)
+  - ECOS-17: tela de login — ✅ implementada (tela do Gustavo adaptada à ECOS-16)
   - ECOS-8: Tela de visualização da agenda
   - ECOS-9: Formulário de criação/edição de evento
   - ECOS-18: testes automatizados do módulo
@@ -578,7 +606,8 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
 - **Sem refresh token** (decisão da própria ECOS-13). Se 8h virar atrito na prática,
   aí sim vira card.
 - **Recuperação de senha e troca de senha pelo próprio usuário não existem.** Hoje só
-  o Coordenador cria credencial; redefinir senha ainda não tem fluxo.
+  o Coordenador cria credencial; redefinir senha ainda não tem fluxo. Por isso o login
+  não mostra o "Esqueceu a senha?" do Figma (decisão #91).
 
 > O RF-31 (estrutura de `participation_type`) foi resolvido: lookup separado com
 > FK not null em `person_event`, seguindo a decisão #11. Já está no schema.
