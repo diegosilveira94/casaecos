@@ -118,6 +118,14 @@ describe('AuthService', () => {
         name: 'Maria Silva',
         email: 'maria@ecos.org',
         role: { id: 2, description: 'Secretário' },
+        permissions: [
+          'person:read',
+          'person:write',
+          'home:read',
+          'home:write',
+          'event:read',
+          'event:write',
+        ],
       },
     });
     expect(tokenIssuer.receivedClaims).toEqual({

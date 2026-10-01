@@ -90,7 +90,8 @@ Módulos: `agenda` (em desenvolvimento), `medicamentos`, `prestacao-contas`,
 | `GET`  | `/auth/me`       | Devolve o usuário do token                                   |
 
 Nas rotas protegidas, envie `Authorization: Bearer <token>`. O token é um JWT
-HS256 de 8 horas, sem refresh token.
+HS256 de 8 horas, sem refresh token. O `user` do login e do `/auth/me` traz as
+`permissions` do papel, que a tela usa para esconder o que o usuário não pode fazer.
 
 O primeiro coordenador é criado fora da API — `POST /auth/accounts` exige um
 Coordenador autenticado:

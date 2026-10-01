@@ -1,8 +1,12 @@
-import type { AuthenticatedUserResponse, UserAccountResponse } from '@casaecos/shared-types';
+import type {
+  AuthenticatedUserResponse,
+  Permission,
+  UserAccountResponse,
+} from '@casaecos/shared-types';
 
 import type { Role } from '../../person/domain/person.js';
 import { AccessScope } from './access-scope.js';
-import { roleHasPermission, type Permission } from './permissions.js';
+import { permissionsForRole, roleHasPermission } from './permissions.js';
 
 export interface AuthenticatedUserProperties {
   personId: number;
@@ -42,6 +46,7 @@ export class AuthenticatedUser {
       name: this.name,
       email: this.email,
       role: this.role.toResponse(),
+      permissions: permissionsForRole(this.role.id),
     };
   }
 }

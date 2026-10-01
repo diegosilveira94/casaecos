@@ -1,13 +1,6 @@
-import { ROLE_IDS } from '../../person/domain/role-ids.js';
+import type { Permission } from '@casaecos/shared-types';
 
-export type Permission =
-  | 'account:manage'
-  | 'person:read'
-  | 'person:write'
-  | 'home:read'
-  | 'home:write'
-  | 'event:read'
-  | 'event:write';
+import { ROLE_IDS } from '../../person/domain/role-ids.js';
 
 const COORDINATION_ROLE_IDS = [ROLE_IDS.coordinator, ROLE_IDS.secretary];
 
@@ -31,6 +24,11 @@ const SCOPE_KIND_BY_ROLE_ID: ReadonlyMap<number, ScopeKind> = new Map<number, Sc
 
 export function roleHasPermission(roleId: number, permission: Permission): boolean {
   return ALLOWED_ROLE_IDS[permission].has(roleId);
+}
+
+export function permissionsForRole(roleId: number): Permission[] {
+  const permissions = Object.keys(ALLOWED_ROLE_IDS) as Permission[];
+  return permissions.filter((permission) => roleHasPermission(roleId, permission));
 }
 
 export function scopeKindForRole(roleId: number): ScopeKind {

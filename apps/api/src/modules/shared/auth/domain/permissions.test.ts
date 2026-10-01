@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
+import type { Permission } from '@casaecos/shared-types';
+
 import { ROLE_IDS } from '../../person/domain/role-ids.js';
-import { roleHasPermission, type Permission } from './permissions.js';
+import { permissionsForRole, roleHasPermission } from './permissions.js';
 
 const { coordinator, secretary, caregiver, driver, sheltered } = ROLE_IDS;
 
@@ -31,5 +33,19 @@ describe('matriz de permissões', () => {
     const permissions = Object.keys(expectedRoleIds) as Permission[];
 
     expect(permissions.some((permission) => roleHasPermission(99, permission))).toBe(false);
+  });
+
+  it('lista as permissões de cada papel, coerente com a matriz', () => {
+    for (const roleId of allRoleIds) {
+      const expected = (Object.keys(expectedRoleIds) as Permission[]).filter((permission) =>
+        expectedRoleIds[permission].includes(roleId),
+      );
+
+      expect(permissionsForRole(roleId)).toEqual(expected);
+    }
+  });
+
+  it('motorista só tem a leitura de eventos', () => {
+    expect(permissionsForRole(driver)).toEqual(['event:read']);
   });
 });

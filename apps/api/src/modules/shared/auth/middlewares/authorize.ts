@@ -1,8 +1,9 @@
 import type { RequestHandler } from 'express';
 
+import type { Permission } from '@casaecos/shared-types';
+
 import { HttpError } from '../../../../middlewares/http-error.js';
 import { ROLE_NOT_ALLOWED } from '../auth-messages.js';
-import type { Permission } from '../domain/permissions.js';
 
 class PermissionMiddleware {
   constructor(private readonly permission: Permission) {}
