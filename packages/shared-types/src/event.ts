@@ -1,8 +1,20 @@
 import type { HomeSummaryResponse } from './home.js';
+import type { PersonSummaryResponse } from './person.js';
 
 export interface EventTypeResponse {
   id: number;
   name: string;
+}
+
+export interface ParticipationTypeResponse {
+  id: number;
+  description: string;
+}
+
+/** Someone taking part in a commitment and in which role (organizer, driver...). */
+export interface EventParticipantResponse {
+  person: PersonSummaryResponse;
+  participationType: ParticipationTypeResponse;
 }
 
 /**
@@ -18,6 +30,8 @@ export interface EventResponse {
   address: string | null;
   eventType: EventTypeResponse;
   home: HomeSummaryResponse;
+  /** Ordered by the person's name. */
+  participants: EventParticipantResponse[];
   createdAt: string;
   updatedAt: string;
 }
@@ -36,11 +50,13 @@ export interface CreateEventRequest {
 /**
  * Filters of `GET /agenda/events`, sent as a query string. A commitment is in the
  * period when `from <= startDate < to`; both carry an offset, like the event dates.
- * `pageSize` goes up to 200 (default 50). The result is also cut by the user's
- * access scope, so a `homeId` outside it yields an empty page, not an error.
+ * `personId` keeps the commitments that person takes part in. `pageSize` goes up
+ * to 200 (default 50). The result is also cut by the user's access scope, so a
+ * `homeId` or `personId` outside it yields an empty page, not an error.
  */
 export interface ListEventsQuery {
   homeId?: number;
+  personId?: number;
   eventTypeId?: number;
   from?: string;
   to?: string;
@@ -56,4 +72,9 @@ export interface UpdateEventRequest {
   address?: string | null;
   eventTypeId?: number;
   homeId?: number;
+}
+
+/** Body of `POST`, `PUT` and `PATCH /agenda/events/:id/participants/:personId`. */
+export interface EventParticipantRequest {
+  participationTypeId: number;
 }

@@ -200,8 +200,8 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   `| undefined`, que é o que os DTOs de `shared-types` aceitam. Assim o dado do
   validador vai direto ao service, sem remontar objeto campo a campo e sem cast.
 - **Erro do Prisma vira `HttpError`** em `shared/prisma-error.ts` (P2002 → 409,
-  P2003 → 400, P2025 → 404). Código sem tradução cai em 500 com log: erro sem
-  tradução é defeito nosso, não do usuário.
+  P2003 → 400, P2025 e P2017 → 404). Código sem tradução cai em 500 com log: erro
+  sem tradução é defeito nosso, não do usuário.
 
 ### Autenticação (ECOS-13)
 
@@ -256,8 +256,8 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
 
 - **Rotas em `/agenda/events`**, no `agendaRouter` do módulo: `POST /`, `GET /:id`,
   `PUT`/`PATCH /:id` (ambos edição parcial, #56) e `DELETE /:id`. Listagem com
-  filtros e `/agenda/event-types` vieram na ECOS-15 (abaixo); participantes são da
-  ECOS-7.
+  filtros e `/agenda/event-types` vieram na ECOS-15, participantes na ECOS-7
+  (abaixo).
 - **Permissão**: `event:read` no `GET`, `event:write` no resto. Escopo pelo
   `AccessScope`: `assertCanAccessEvent` no registro carregado e `assertCanAccessHome`
   na casa de destino ao criar ou mover.
@@ -270,9 +270,8 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   regra vale contra a data já gravada. O erro é 400 com `details` no formato de issue
   do zod (`path: ['endDate']`), para o formulário marcar o campo. Data passada é
   aceita (registro retroativo).
-- **Resposta** (`EventResponse`): tipo `{ id, name }` e casa resumida
-  (`HomeSummaryResponse`). O `Event` de domínio carrega `participantIds` só para o
-  escopo do motorista; não sai na resposta até a ECOS-7.
+- **Resposta** (`EventResponse`): tipo `{ id, name }`, casa resumida
+  (`HomeSummaryResponse`) e `participants` (ECOS-7, abaixo).
 - **Exclusão lógica** (`event.deleted_at`, migração `20260930200000_event_soft_delete`):
   o `DELETE` só marca a data, e o registro e seus `person_event` ficam para relatório
   e prestação de contas. **Toda leitura de `event` filtra `deletedAt: null`** — a
@@ -288,10 +287,11 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
 
 > Decisões #79 a #81 no Notion.
 
-- **`GET /agenda/events`** com `event:read`: filtros `homeId`, `eventTypeId`, `from` e
-  `to`, mais `page`/`pageSize`. Devolve `Paginated<EventResponse>` (padrão 50, máximo
-  200 — `src/shared/pagination.ts`), ordenado por `startDate` e depois `id`. O
-  contrato é o `ListEventsQuery` de `shared-types`; no web, `eventService.list()`.
+- **`GET /agenda/events`** com `event:read`: filtros `homeId`, `personId` (ECOS-7),
+  `eventTypeId`, `from` e `to`, mais `page`/`pageSize`. Devolve
+  `Paginated<EventResponse>` (padrão 50, máximo 200 — `src/shared/pagination.ts`),
+  ordenado por `startDate` e depois `id`. O contrato é o `ListEventsQuery` de
+  `shared-types`; no web, `eventService.list()`.
 - **Período pelo início**: entra o compromisso com `from <= startDate < to`
   (semiaberto, então mês seguido de mês não repete nada). `from`/`to` com fuso
   obrigatório, como as datas do evento, e `to` depois de `from` (400 em `path: ['to']`).
@@ -307,6 +307,39 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   `Promise.all`; um total que perde uma escrita concorrente não faz mal.
 - **`GET /agenda/event-types`** com `event:read`: array cru do lookup, ordenado por id
   (mantém "Outro" no fim). No web, `eventService.listEventTypes()`.
+
+### Agenda — participantes (ECOS-7)
+
+> Decisões #82 a #86 no Notion.
+
+- **Rotas aninhadas no compromisso** (#55): `POST`, `PUT`/`PATCH` e `DELETE` em
+  `/agenda/events/:id/participants/:personId`, com `event:write`. `POST`, `PUT` e
+  `PATCH` recebem `{ participationTypeId }` (`EventParticipantRequest`); `PUT` e `PATCH`
+  trocam o tipo de participação. Todas devolvem `ApiMessage` (201 no `POST`), como o
+  `home_person`. Não há `GET .../participants`: os participantes vêm no
+  `EventResponse`. `GET /agenda/participation-types` (lookup cru, por id) tem
+  `event:read`.
+- **Regras**: compromisso inexistente ou removido segue o `eventNotFoundError()`
+  (404/403); pessoa inexistente é 404 (está no path); tipo de participação
+  inexistente é 400; vínculo duplicado é 409 (pré-checagem + P2002, #54); trocar ou
+  remover quem não participa é 404. Qualquer pessoa pode participar, sem exigir
+  `home_person` com a casa do compromisso (o motorista não tem casa), e compromisso
+  passado aceita participante.
+- **A escrita passa pelo `event`**: o repositório faz `event.update` com
+  `deletedAt: null` no `where` e o `person_event` aninhado, então um compromisso removido
+  depois da checagem dá 404, não um vínculo órfão. O `updatedAt` vai **à mão** nesse
+  update: o Prisma não mexe no `@updatedAt` quando só a relação aninhada muda.
+- **Contrato**: `EventResponse.participants` é
+  `{ person: PersonSummaryResponse, participationType }[]`, ordenado pelo nome da
+  pessoa. `PersonSummaryResponse` é só `{ id, name }` — nada de CPF ou telefone de
+  acolhido na agenda. No domínio, `Event.participants` e o `participantIds` que o
+  `AccessScope` lê é derivado dele; o motorista vê os compromissos em que participa
+  com qualquer tipo de participação.
+- **A outra direção da #55** é o filtro `personId` da listagem: `GET
+/agenda/events?personId=` reaproveita período, paginação e escopo (`AND`, #81), e
+  pessoa fora do escopo dá página vazia. Não existe `GET /people/:id/events`.
+- **Web**: `eventService.addParticipant()`, `updateParticipant()`,
+  `removeParticipant()`, `listParticipationTypes()` e `personId` no `list()`.
 
 ### Autorização (ECOS-14)
 
@@ -334,7 +367,8 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   (`all` | `homes` | `participant`): trate cada caso, nunca "sem campo = sem filtro".
   Fora do escopo é 403, checado antes da existência.
 - **Rotas protegidas**: `/homes`, `/people`, `/roles` e `/agenda` exigem login e
-  permissão. A ECOS-7 deve seguir o mesmo contrato dos eventos (ECOS-6/15).
+  permissão. Eventos, listagem e participantes (ECOS-6/15/7) usam `authorize('event:*')`
+  e o `AccessScope`.
 - **Testes de rota** simulam o login com `src/test/fake-authentication.ts`
   (`vi.mock` do `authenticate`).
 
@@ -497,6 +531,11 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
   recortada pelo `AccessScope`; lookup em `GET /agenda/event-types`; `list()` e
   `listEventTypes()` no `EventService` do web. Junto, a correção do fuso da sessão do
   banco (decisão #80), que deslocava as datas quando o Postgres não estava em UTC.
+- **ECOS-7 implementada em 30/09/2026**: participantes em
+  `/agenda/events/:id/participants/:personId` (`POST`, `PUT`/`PATCH`, `DELETE`),
+  lookup em `GET /agenda/participation-types`, `participants` no `EventResponse`,
+  filtro `personId` na listagem e os métodos do `EventService` do web. Junto, o P2017
+  do Prisma traduzido para 404.
 - Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-9, com ECOS-11 e
   ECOS-12 como base compartilhada (casas e pessoas).
 - Ordem de desenvolvimento: schema Prisma → API → telas React.
@@ -507,7 +546,7 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
   - ECOS-6: API CRUD de eventos — ✅ implementada (com `event.ts` em `shared-types`
     e o `EventService` do web)
   - ECOS-15: API de listagem de eventos com filtros (data, casa, tipo) — ✅ implementada
-  - ECOS-7: API de associação de pessoas a eventos (person_event) — **próxima**
+  - ECOS-7: API de associação de pessoas a eventos (person_event) — ✅ implementada
   - ECOS-11: API de casas (home, home_person)
   - ECOS-14: autorização (RBAC + escopo por casa) — ✅ implementada (aplicada nos
     eventos na ECOS-6)
@@ -523,9 +562,14 @@ aparecem como chips coloridos por tipo, com hora, título e pessoa.
 ## Pendências que afetam o desenvolvimento
 
 - **Permissões: implementadas na ECOS-14** (ver "Autorização") e aplicadas nos
-  eventos na ECOS-6 e na listagem da ECOS-15. A ECOS-7 precisa usar
-  `authorize('event:*')` e o `AccessScope`; a tela (ECOS-8) ainda precisa esconder o
-  que o papel não pode fazer.
+  eventos (ECOS-6), na listagem (ECOS-15) e nos participantes (ECOS-7); a tela
+  (ECOS-8) ainda precisa esconder o que o papel não pode fazer.
+- **Dívida: `POST /agenda/events` dispara o aviso de depreciação do `pg`** ("client
+  is already executing a query"). O `event.create` com `select` de relações roda numa
+  transação implícita e o Prisma carrega as relações em paralelo no mesmo client — o
+  mesmo problema da #79. Vem desde a ECOS-6 (reproduzido na `main`) e não quebra nada
+  hoje, mas vira erro no `pg@9`. Saída provável: criar devolvendo só o `id` e ler com
+  `findById`.
 - Vínculo org-wide para pessoal não ligado a uma casa específica (ex:
   `person_organization`) só será modelado se surgir uma segunda ONG.
 - **Dívida: `home.controller.ts` (ECOS-11) valida com `schema.parse()` dentro do

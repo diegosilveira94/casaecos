@@ -1,9 +1,11 @@
 import type {
   CreateEventRequest,
+  EventParticipantRequest,
   EventResponse,
   EventTypeResponse,
   ListEventsQuery,
   Paginated,
+  ParticipationTypeResponse,
   UpdateEventRequest,
 } from '@casaecos/shared-types';
 
@@ -13,6 +15,7 @@ import type { PageRequest } from '../../../shared/pagination.js';
 import type { AccessScope } from '../../shared/auth/domain/access-scope.js';
 import type { Event } from '../domain/event.js';
 import {
+  DuplicateEventParticipantError,
   PrismaEventRepository,
   type CreateEventData,
   type EventListCriteria,
@@ -24,6 +27,7 @@ import {
 export type ListEventsRequest = ListEventsQuery & PageRequest;
 
 const END_NOT_AFTER_START_MESSAGE = 'O término do compromisso precisa ser depois do início';
+const DUPLICATE_PARTICIPANT_MESSAGE = 'Pessoa já participa deste compromisso';
 
 function toNullableDate(value: string | null | undefined): Date | null {
   return value ? new Date(value) : null;
@@ -48,6 +52,11 @@ export class EventService {
   async listEventTypes(): Promise<EventTypeResponse[]> {
     const eventTypes = await this.repository.listEventTypes();
     return eventTypes.map((eventType) => eventType.toResponse());
+  }
+
+  async listParticipationTypes(): Promise<ParticipationTypeResponse[]> {
+    const participationTypes = await this.repository.listParticipationTypes();
+    return participationTypes.map((participationType) => participationType.toResponse());
   }
 
   async getById(id: number, scope: AccessScope): Promise<EventResponse> {
@@ -111,6 +120,62 @@ export class EventService {
     await this.repository.softDelete(id);
   }
 
+  async addParticipant(
+    eventId: number,
+    personId: number,
+    request: EventParticipantRequest,
+    scope: AccessScope,
+  ): Promise<void> {
+    const event = await this.findAccessibleEvent(eventId, scope);
+    await Promise.all([
+      this.ensurePersonExists(personId),
+      this.ensureParticipationTypeExists(request.participationTypeId),
+    ]);
+    if (event.hasParticipant(personId)) throw HttpError.conflict(DUPLICATE_PARTICIPANT_MESSAGE);
+
+    try {
+      await this.repository.addParticipant(eventId, {
+        personId,
+        participationTypeId: request.participationTypeId,
+      });
+    } catch (error: unknown) {
+      if (error instanceof DuplicateEventParticipantError) {
+        throw HttpError.conflict(DUPLICATE_PARTICIPANT_MESSAGE);
+      }
+      throw error;
+    }
+  }
+
+  async updateParticipant(
+    eventId: number,
+    personId: number,
+    request: EventParticipantRequest,
+    scope: AccessScope,
+  ): Promise<void> {
+    await this.ensureParticipantExists(eventId, personId, scope);
+    await this.ensureParticipationTypeExists(request.participationTypeId);
+    await this.repository.updateParticipant(eventId, {
+      personId,
+      participationTypeId: request.participationTypeId,
+    });
+  }
+
+  async removeParticipant(eventId: number, personId: number, scope: AccessScope): Promise<void> {
+    await this.ensureParticipantExists(eventId, personId, scope);
+    await this.repository.removeParticipant(eventId, personId);
+  }
+
+  private async ensureParticipantExists(
+    eventId: number,
+    personId: number,
+    scope: AccessScope,
+  ): Promise<void> {
+    const event = await this.findAccessibleEvent(eventId, scope);
+    if (!event.hasParticipant(personId)) {
+      throw HttpError.notFound('Participante não encontrado neste compromisso');
+    }
+  }
+
   private async findAccessibleEvent(id: number, scope: AccessScope): Promise<Event> {
     const event = await this.repository.findById(id);
     if (!event) throw scope.eventNotFoundError();
@@ -148,6 +213,19 @@ export class EventService {
   private async ensureEventTypeExists(eventTypeId: number): Promise<void> {
     if (!(await this.repository.eventTypeExists(eventTypeId))) {
       throw HttpError.badRequest('Tipo de compromisso informado não existe');
+    }
+  }
+
+  private async ensureParticipationTypeExists(participationTypeId: number): Promise<void> {
+    if (!(await this.repository.participationTypeExists(participationTypeId))) {
+      throw HttpError.badRequest('Tipo de participação informado não existe');
+    }
+  }
+
+  // The person is in the path, as in home_person: a missing one is 404, not 400.
+  private async ensurePersonExists(personId: number): Promise<void> {
+    if (!(await this.repository.personExists(personId))) {
+      throw HttpError.notFound('Pessoa não encontrada');
     }
   }
 }

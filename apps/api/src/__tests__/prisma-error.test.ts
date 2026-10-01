@@ -57,8 +57,11 @@ describe('toHttpError', () => {
     expect(toHttpError(knownError('P2003'))?.status).toBe(400);
   });
 
-  it('traduz registro inexistente para 404', () => {
-    const httpError = toHttpError(knownError('P2025'));
+  it.each([
+    ['registro inexistente', 'P2025'],
+    ['vínculo aninhado inexistente', 'P2017'],
+  ])('traduz %s para 404', (_label, code) => {
+    const httpError = toHttpError(knownError(code));
 
     expect(httpError?.status).toBe(404);
     expect(httpError?.message).toBe('Recurso não encontrado');

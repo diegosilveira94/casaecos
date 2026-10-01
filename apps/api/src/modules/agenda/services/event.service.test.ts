@@ -2,19 +2,24 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { AccessScope } from '../../shared/auth/domain/access-scope.js';
 import { HomeSummary } from '../../shared/home/domain/home.js';
+import { PersonSummary } from '../../shared/person/domain/person.js';
 import { ROLE_IDS } from '../../shared/person/domain/role-ids.js';
-import { Event, EventType } from '../domain/event.js';
+import { Event, EventParticipant, EventType, ParticipationType } from '../domain/event.js';
 import type { PageRequest } from '../../../shared/pagination.js';
-import type {
-  CreateEventData,
-  EventListCriteria,
-  EventPage,
-  EventRepository,
-  UpdateEventData,
+import {
+  DuplicateEventParticipantError,
+  type CreateEventData,
+  type EventListCriteria,
+  type EventPage,
+  type EventRepository,
+  type ParticipantData,
+  type UpdateEventData,
 } from '../repositories/event.repository.js';
 import { EventService } from './event.service.js';
 
 const DRIVER_ID = 30;
+const CHILD_ID = 40;
+const driverParticipation = new ParticipationType(4, 'Motorista');
 const createdAt = new Date('2026-09-01T10:00:00.000Z');
 const updatedAt = new Date('2026-09-02T10:00:00.000Z');
 const storedStart = new Date('2026-10-01T13:00:00.000Z');
@@ -42,7 +47,10 @@ function makeEvent(id = 1, homeId = 1, participantIds: readonly number[] = [DRIV
     address: null,
     eventType: new EventType(1, 'Consulta médica'),
     home: new HomeSummary(homeId, 'Casa Azul'),
-    participantIds,
+    participants: participantIds.map(
+      (personId) =>
+        new EventParticipant(new PersonSummary(personId, 'João Motorista'), driverParticipation),
+    ),
     createdAt,
     updatedAt,
   });
@@ -52,6 +60,12 @@ class FakeEventRepository implements EventRepository {
   events = [makeEvent(1, 1), makeEvent(2, 2)];
   homeAvailable = true;
   eventTypeAvailable = true;
+  personAvailable = true;
+  participationTypeAvailable = true;
+  duplicateOnInsert = false;
+  addedParticipant: { eventId: number; participant: ParticipantData } | null = null;
+  updatedParticipant: { eventId: number; participant: ParticipantData } | null = null;
+  removedParticipant: { eventId: number; personId: number } | null = null;
   createdData: CreateEventData | null = null;
   updatedData: { id: number; data: UpdateEventData } | null = null;
   softDeletedId: number | null = null;
@@ -68,6 +82,18 @@ class FakeEventRepository implements EventRepository {
 
   findById(id: number): Promise<Event | null> {
     return Promise.resolve(this.events.find((event) => event.id === id) ?? null);
+  }
+
+  listParticipationTypes(): Promise<ParticipationType[]> {
+    return Promise.resolve([new ParticipationType(1, 'Organizador'), driverParticipation]);
+  }
+
+  participationTypeExists(_id: number): Promise<boolean> {
+    return Promise.resolve(this.participationTypeAvailable);
+  }
+
+  personExists(_id: number): Promise<boolean> {
+    return Promise.resolve(this.personAvailable);
   }
 
   eventTypeExists(_id: number): Promise<boolean> {
@@ -90,6 +116,22 @@ class FakeEventRepository implements EventRepository {
 
   softDelete(id: number): Promise<void> {
     this.softDeletedId = id;
+    return Promise.resolve();
+  }
+
+  addParticipant(eventId: number, participant: ParticipantData): Promise<void> {
+    if (this.duplicateOnInsert) return Promise.reject(new DuplicateEventParticipantError());
+    this.addedParticipant = { eventId, participant };
+    return Promise.resolve();
+  }
+
+  updateParticipant(eventId: number, participant: ParticipantData): Promise<void> {
+    this.updatedParticipant = { eventId, participant };
+    return Promise.resolve();
+  }
+
+  removeParticipant(eventId: number, personId: number): Promise<void> {
+    this.removedParticipant = { eventId, personId };
     return Promise.resolve();
   }
 }
@@ -127,6 +169,7 @@ describe('EventService', () => {
         {
           ...firstPage,
           homeId: 1,
+          personId: CHILD_ID,
           eventTypeId: 3,
           from: '2026-10-01T00:00:00-03:00',
           to: '2026-11-01T00:00:00-03:00',
@@ -137,6 +180,7 @@ describe('EventService', () => {
       expect(repository.listedWith?.criteria).toEqual({
         scope: { kind: 'all' },
         homeId: 1,
+        personId: CHILD_ID,
         eventTypeId: 3,
         startsFrom: new Date('2026-10-01T03:00:00.000Z'),
         startsBefore: new Date('2026-11-01T03:00:00.000Z'),
@@ -169,6 +213,15 @@ describe('EventService', () => {
     });
   });
 
+  describe('tipos de participação', () => {
+    it('lista os tipos serializados', async () => {
+      await expect(service.listParticipationTypes()).resolves.toEqual([
+        { id: 1, description: 'Organizador' },
+        { id: 4, description: 'Motorista' },
+      ]);
+    });
+  });
+
   describe('busca por id', () => {
     it('devolve o compromisso serializado', async () => {
       await expect(service.getById(1, coordination)).resolves.toEqual({
@@ -180,6 +233,12 @@ describe('EventService', () => {
         address: null,
         eventType: { id: 1, name: 'Consulta médica' },
         home: { id: 1, name: 'Casa Azul' },
+        participants: [
+          {
+            person: { id: DRIVER_ID, name: 'João Motorista' },
+            participationType: { id: 4, description: 'Motorista' },
+          },
+        ],
         createdAt: createdAt.toISOString(),
         updatedAt: updatedAt.toISOString(),
       });
@@ -352,6 +411,108 @@ describe('EventService', () => {
     it('responde 404 ao excluir compromisso inexistente, sem tocar no banco', async () => {
       await expect(service.delete(99, coordination)).rejects.toMatchObject({ status: 404 });
       expect(repository.softDeletedId).toBeNull();
+    });
+  });
+
+  describe('participantes', () => {
+    const asOrganizer = { participationTypeId: 1 };
+
+    it('adiciona a pessoa ao compromisso com o tipo de participação', async () => {
+      await service.addParticipant(1, CHILD_ID, asOrganizer, coordination);
+
+      expect(repository.addedParticipant).toEqual({
+        eventId: 1,
+        participant: { personId: CHILD_ID, participationTypeId: 1 },
+      });
+    });
+
+    it('responde 409 quando a pessoa já participa, sem tocar no banco', async () => {
+      await expect(
+        service.addParticipant(1, DRIVER_ID, asOrganizer, coordination),
+      ).rejects.toMatchObject({ status: 409, message: 'Pessoa já participa deste compromisso' });
+      expect(repository.addedParticipant).toBeNull();
+    });
+
+    it('responde 409 quando o vínculo surge entre a checagem e a gravação', async () => {
+      repository.duplicateOnInsert = true;
+
+      await expect(
+        service.addParticipant(1, CHILD_ID, asOrganizer, coordination),
+      ).rejects.toMatchObject({ status: 409 });
+    });
+
+    it('responde 404 para pessoa inexistente e 400 para tipo de participação inexistente', async () => {
+      repository.personAvailable = false;
+      await expect(
+        service.addParticipant(1, CHILD_ID, asOrganizer, coordination),
+      ).rejects.toMatchObject({ status: 404, message: 'Pessoa não encontrada' });
+
+      repository.personAvailable = true;
+      repository.participationTypeAvailable = false;
+      await expect(
+        service.addParticipant(1, CHILD_ID, asOrganizer, coordination),
+      ).rejects.toMatchObject({
+        status: 400,
+        message: 'Tipo de participação informado não existe',
+      });
+      expect(repository.addedParticipant).toBeNull();
+    });
+
+    it('trata compromisso inexistente ou removido como no restante da agenda', async () => {
+      await expect(
+        service.addParticipant(99, CHILD_ID, asOrganizer, coordination),
+      ).rejects.toMatchObject({ status: 404, message: 'Compromisso não encontrado' });
+      await expect(
+        service.addParticipant(99, CHILD_ID, asOrganizer, caregiverOfHomeOne),
+      ).rejects.toMatchObject({ status: 403 });
+    });
+
+    it('checa o escopo do compromisso antes de olhar a pessoa', async () => {
+      repository.personAvailable = false;
+
+      await expect(
+        service.addParticipant(2, CHILD_ID, asOrganizer, caregiverOfHomeOne),
+      ).rejects.toMatchObject({ status: 403 });
+    });
+
+    it('troca o tipo de participação de quem já participa', async () => {
+      await service.updateParticipant(1, DRIVER_ID, asOrganizer, coordination);
+
+      expect(repository.updatedParticipant).toEqual({
+        eventId: 1,
+        participant: { personId: DRIVER_ID, participationTypeId: 1 },
+      });
+    });
+
+    it('recusa tipo de participação inexistente na troca', async () => {
+      repository.participationTypeAvailable = false;
+
+      await expect(
+        service.updateParticipant(1, DRIVER_ID, asOrganizer, coordination),
+      ).rejects.toMatchObject({ status: 400 });
+      expect(repository.updatedParticipant).toBeNull();
+    });
+
+    it('remove a pessoa do compromisso', async () => {
+      await service.removeParticipant(1, DRIVER_ID, coordination);
+
+      expect(repository.removedParticipant).toEqual({ eventId: 1, personId: DRIVER_ID });
+    });
+
+    it('responde 404 ao trocar ou remover quem não participa', async () => {
+      const notParticipant = {
+        status: 404,
+        message: 'Participante não encontrado neste compromisso',
+      };
+
+      await expect(
+        service.updateParticipant(1, CHILD_ID, asOrganizer, coordination),
+      ).rejects.toMatchObject(notParticipant);
+      await expect(service.removeParticipant(1, CHILD_ID, coordination)).rejects.toMatchObject(
+        notParticipant,
+      );
+      expect(repository.updatedParticipant).toBeNull();
+      expect(repository.removedParticipant).toBeNull();
     });
   });
 });

@@ -4,12 +4,16 @@ import { authenticate } from '../../shared/auth/middlewares/authenticate.js';
 import { authorize } from '../../shared/auth/middlewares/authorize.js';
 import { eventController } from '../controllers/event.controller.js';
 
-// person_event lands in ECOS-7.
 export const agendaRouter: Router = Router();
 
 agendaRouter.use(authenticate.handle);
 
 agendaRouter.get('/event-types', authorize('event:read'), eventController.listEventTypes);
+agendaRouter.get(
+  '/participation-types',
+  authorize('event:read'),
+  eventController.listParticipationTypes,
+);
 agendaRouter.get(
   '/events',
   authorize('event:read'),
@@ -46,4 +50,31 @@ agendaRouter.delete(
   authorize('event:write'),
   eventController.eventIdValidator.handle,
   eventController.delete,
+);
+
+const participantPath = '/events/:id/participants/:personId';
+
+agendaRouter.post(
+  participantPath,
+  authorize('event:write'),
+  eventController.participantValidator.handle,
+  eventController.addParticipant,
+);
+agendaRouter.put(
+  participantPath,
+  authorize('event:write'),
+  eventController.participantValidator.handle,
+  eventController.updateParticipant,
+);
+agendaRouter.patch(
+  participantPath,
+  authorize('event:write'),
+  eventController.participantValidator.handle,
+  eventController.updateParticipant,
+);
+agendaRouter.delete(
+  participantPath,
+  authorize('event:write'),
+  eventController.participantIdValidator.handle,
+  eventController.removeParticipant,
 );
