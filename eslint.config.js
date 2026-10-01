@@ -19,7 +19,7 @@ export default tseslint.config(
 
   js.configs.recommended,
 
-  // JS de configuração: fora das regras type-aware.
+  // Configuration JS: outside the type-aware rules.
   {
     files: ['**/*.js'],
     languageOptions: {
@@ -33,11 +33,12 @@ export default tseslint.config(
     languageOptions: {
       parserOptions: {
         projectService: {
-          // Configs de ferramenta, fora de qualquer tsconfig.
+          // Tooling configs, outside any tsconfig.
           allowDefaultProject: [
             'apps/api/vitest.config.ts',
             'apps/api/prisma7.config.ts',
             'apps/api/prisma/seed.ts',
+            'apps/api/prisma/seed-admin.ts',
           ],
         },
         tsconfigRootDir: import.meta.dirname,
@@ -70,7 +71,7 @@ export default tseslint.config(
     },
   },
 
-  // Asserts de teste quebram estas duas de propósito.
+  // Test assertions break these two on purpose.
   {
     files: ['**/*.test.{ts,tsx}', '**/test/**/*.{ts,tsx}'],
     rules: {

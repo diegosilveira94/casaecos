@@ -130,12 +130,6 @@ button:disabled {
   letter-spacing: -0.035em;
 }
 
-.login-heading p {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: 0.95rem;
-}
-
 .login-form {
   display: grid;
   gap: 1.25rem;
@@ -304,6 +298,27 @@ button:disabled {
   border-top-color: #fff;
   border-radius: 50%;
   animation: spin 700ms linear infinite;
+}
+
+.spinner--primary {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-color: var(--color-primary-soft);
+  border-top-color: var(--color-primary);
+}
+
+.session-restoring {
+  display: grid;
+  min-height: 100vh;
+  min-height: 100dvh;
+  place-content: center;
+  justify-items: center;
+  gap: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.session-restoring p {
+  margin: 0;
 }
 
 .login-support {

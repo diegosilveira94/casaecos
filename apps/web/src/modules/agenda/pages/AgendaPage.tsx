@@ -1,20 +1,27 @@
-import { useAuth } from '../../auth/context/use-auth.js';
+import { useAuth } from '../../shared/auth/context/use-auth.js';
 
+// Placeholder behind the protected route until the agenda screen (ECOS-8).
 export function AgendaPage(): React.JSX.Element {
-  const { logout } = useAuth();
+  const auth = useAuth();
 
   return (
     <main className="agenda-placeholder">
       <header className="agenda-placeholder__header">
         <div>
-          <span className="agenda-placeholder__eyebrow">EcoAgenda</span>
+          <span className="agenda-placeholder__eyebrow">Casa Ecos</span>
           <h1>Agenda</h1>
         </div>
-        <button className="secondary-button" type="button" onClick={logout}>
+        <button
+          className="secondary-button"
+          type="button"
+          onClick={() => {
+            auth.logout();
+          }}
+        >
           Sair
         </button>
       </header>
-      <p>Você entrou no sistema com segurança.</p>
+      <p>Módulo de Agenda em desenvolvimento.</p>
     </main>
   );
 }

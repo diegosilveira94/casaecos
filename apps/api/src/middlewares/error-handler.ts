@@ -4,6 +4,7 @@ import { ZodError } from 'zod';
 import type { ApiError } from '@casaecos/shared-types';
 
 import { env } from '../config/env.js';
+import { toHttpError } from '../shared/prisma-error.js';
 import { HttpError } from './http-error.js';
 
 export const notFoundHandler: RequestHandler = (_req, res) => {
@@ -11,18 +12,20 @@ export const notFoundHandler: RequestHandler = (_req, res) => {
   res.status(404).json(body);
 };
 
-// Express 5 encaminha rejeições de handlers async para cá automaticamente.
+// Express 5 forwards rejections from async handlers here on its own.
 export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
-  if (err instanceof HttpError) {
-    const body: ApiError = { message: err.message };
-    if (err.details !== undefined) body.details = err.details;
-    res.status(err.status).json(body);
-    return;
-  }
-
   if (err instanceof ZodError) {
     const body: ApiError = { message: 'Dados inválidos', details: err.issues };
     res.status(400).json(body);
+    return;
+  }
+
+  const httpError = err instanceof HttpError ? err : toHttpError(err);
+
+  if (httpError) {
+    const body: ApiError = { message: httpError.message };
+    if (httpError.details !== undefined) body.details = httpError.details;
+    res.status(httpError.status).json(body);
     return;
   }
 

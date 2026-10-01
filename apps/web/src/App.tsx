@@ -1,8 +1,8 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router';
 
 import { AgendaPage } from './modules/agenda/pages/AgendaPage.js';
-import { LoginPage } from './modules/auth/pages/LoginPage.js';
-import { ProtectedRoute } from './modules/auth/routes/ProtectedRoute.js';
+import { LoginPage } from './modules/shared/auth/pages/LoginPage.js';
+import { ProtectedRoute } from './modules/shared/auth/routes/ProtectedRoute.js';
 
 export function App(): React.JSX.Element {
   return (

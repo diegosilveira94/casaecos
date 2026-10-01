@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { config as loadEnv } from 'dotenv';
 import { defineConfig } from 'prisma/config';
 
-// .env único, na raiz do monorepo.
+// Single .env, at the root of the monorepo.
 loadEnv({ path: fileURLToPath(new URL('../../.env', import.meta.url)) });
 
 export default defineConfig({

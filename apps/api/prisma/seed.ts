@@ -1,9 +1,6 @@
-import { hash } from 'bcryptjs';
-
 import { prisma } from '../src/config/prisma.js';
-import { env } from '../src/config/env.js';
 
-// Conteúdo de domínio: fica em português porque é o que a ONG vê na tela.
+// Domain content stays in Portuguese: it is what the NGO reads on screen.
 const roles = ['Coordenador', 'Secretário', 'Cuidador/Monitor', 'Motorista', 'Acolhido'];
 
 const eventTypes = [
@@ -17,8 +14,8 @@ const eventTypes = [
 
 const participationTypes = ['Organizador', 'Participante', 'Responsável', 'Motorista'];
 
-// id fixo pela posição na lista: o seed é reexecutável e os ids ficam estáveis
-// entre ambientes, o que importa porque outras tabelas referenciam esses lookups.
+// Id fixed by position in the list: the seed is re-runnable and the ids stay stable
+// across environments, which matters because other tables reference these lookups.
 async function seedLookups(): Promise<void> {
   await prisma.$transaction([
     ...roles.map((description, index) =>
@@ -45,8 +42,8 @@ async function seedLookups(): Promise<void> {
   ]);
 }
 
-// Upsert com id explícito não move a sequence do Postgres; sem isto o primeiro
-// insert sem id colidiria com as linhas do seed.
+// An upsert with an explicit id does not advance the Postgres sequence; without this
+// the first insert without an id would collide with the seeded rows.
 async function syncLookupSequences(): Promise<void> {
   for (const table of ['role', 'event_type', 'participation_type']) {
     await prisma.$executeRawUnsafe(
@@ -55,53 +52,13 @@ async function syncLookupSequences(): Promise<void> {
   }
 }
 
-async function seedDevelopmentAdmin(): Promise<boolean> {
-  if (env.NODE_ENV === 'production' || !env.SEED_ADMIN_EMAIL || !env.SEED_ADMIN_PASSWORD) {
-    return false;
-  }
-
-  const email = env.SEED_ADMIN_EMAIL.trim().toLowerCase();
-  const passwordHash = await hash(env.SEED_ADMIN_PASSWORD, 12);
-  const existingAccount = await prisma.userAccount.findUnique({
-    where: { email },
-    select: { id: true },
-  });
-
-  if (existingAccount) {
-    await prisma.userAccount.update({
-      where: { id: existingAccount.id },
-      data: { passwordHash },
-    });
-  } else {
-    await prisma.userAccount.create({
-      data: {
-        email,
-        passwordHash,
-        person: {
-          create: {
-            name: 'Administrador local',
-            roleId: 1,
-          },
-        },
-      },
-    });
-  }
-
-  return true;
-}
-
 async function main(): Promise<void> {
   await seedLookups();
   await syncLookupSequences();
-  const adminCreated = await seedDevelopmentAdmin();
 
   console.log(
     `Seed concluído: ${String(roles.length)} roles, ${String(eventTypes.length)} event types, ${String(participationTypes.length)} participation types.`,
   );
-
-  if (adminCreated) {
-    console.log(`Credencial local pronta para ${env.SEED_ADMIN_EMAIL ?? ''}.`);
-  }
 }
 
 main()

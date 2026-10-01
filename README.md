@@ -80,3 +80,61 @@ Módulos: `agenda` (em desenvolvimento), `medicamentos`, `prestacao-contas`,
 - **Um único `.env`**, na raiz, consumido pela API, pelo Vite e pelo docker compose.
 - `apps/api/.claude/skills/` traz as skills oficiais do Prisma, instaladas pelo
   `prisma init`.
+
+## API de autenticação
+
+| Método | Rota             | Descrição                                                    |
+| ------ | ---------------- | ------------------------------------------------------------ |
+| `POST` | `/auth/login`    | E-mail + senha; devolve `{ token, expiresInSeconds, user }`  |
+| `POST` | `/auth/accounts` | Cria credencial para uma pessoa (exige token de Coordenador) |
+| `GET`  | `/auth/me`       | Devolve o usuário do token                                   |
+
+Nas rotas protegidas, envie `Authorization: Bearer <token>`. O token é um JWT
+HS256 de 8 horas, sem refresh token.
+
+O primeiro coordenador é criado fora da API — `POST /auth/accounts` exige um
+Coordenador autenticado:
+
+```
+npm run db:seed:admin   # lê ADMIN_NAME, ADMIN_EMAIL e ADMIN_PASSWORD do .env
+```
+
+## API de pessoas
+
+| Método           | Rota          | Descrição                                  |
+| ---------------- | ------------- | ------------------------------------------ |
+| `POST`           | `/people`     | Cria uma pessoa                            |
+| `GET`            | `/people`     | Lista; aceita os filtros `roleId` e `name` |
+| `GET`            | `/people/:id` | Busca uma pessoa por id                    |
+| `PUT` ou `PATCH` | `/people/:id` | Edita os campos informados                 |
+| `DELETE`         | `/people/:id` | Exclui e confirma uma pessoa sem vínculos  |
+| `GET`            | `/roles`      | Lista os papéis disponíveis                |
+
+## API de casas
+
+| Método           | Rota                              | Descrição                               |
+| ---------------- | --------------------------------- | --------------------------------------- |
+| `POST`           | `/homes`                          | Cria uma casa                           |
+| `GET`            | `/homes`                          | Lista; aceita o filtro `organizationId` |
+| `GET`            | `/homes/:id`                      | Busca uma casa por id                   |
+| `PUT` ou `PATCH` | `/homes/:id`                      | Edita os campos informados              |
+| `DELETE`         | `/homes/:id`                      | Exclui uma casa sem eventos vinculados  |
+| `GET`            | `/homes/:homeId/people`           | Lista as pessoas vinculadas a uma casa  |
+| `POST`           | `/homes/:homeId/people/:personId` | Vincula uma pessoa a uma casa           |
+| `DELETE`         | `/homes/:homeId/people/:personId` | Desvincula uma pessoa de uma casa       |
+| `GET`            | `/people/:personId/homes`         | Lista as casas vinculadas a uma pessoa  |
+
+## API da agenda
+
+| Método           | Rota                                        | Descrição                                                         |
+| ---------------- | ------------------------------------------- | ----------------------------------------------------------------- |
+| `GET`            | `/agenda/events`                            | Lista; filtros `homeId`, `personId`, `eventTypeId`, `from` e `to` |
+| `POST`           | `/agenda/events`                            | Cria um compromisso                                               |
+| `GET`            | `/agenda/events/:id`                        | Busca um compromisso, com os participantes                        |
+| `PUT` ou `PATCH` | `/agenda/events/:id`                        | Edita os campos informados                                        |
+| `DELETE`         | `/agenda/events/:id`                        | Exclui (exclusão lógica)                                          |
+| `POST`           | `/agenda/events/:id/participants/:personId` | Adiciona uma pessoa ao compromisso                                |
+| `PUT` ou `PATCH` | `/agenda/events/:id/participants/:personId` | Troca o tipo de participação                                      |
+| `DELETE`         | `/agenda/events/:id/participants/:personId` | Remove uma pessoa do compromisso                                  |
+| `GET`            | `/agenda/event-types`                       | Lista os tipos de compromisso                                     |
+| `GET`            | `/agenda/participation-types`               | Lista os tipos de participação                                    |
