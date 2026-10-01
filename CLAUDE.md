@@ -569,6 +569,26 @@ os frames de criação e edição de compromisso.
 4. ~~Tagline em aberto.~~ Definida na ECOS-17: "Cuidando de quem cuida." (decisão
    #90). O texto da sidebar do protótipo da agenda precisa ser trocado no Figma.
 
+## Deploy (homologação)
+
+> Decisões #100 a #103 no Notion.
+
+- **Banco:** Neon (Postgres 16, US East). A API usa a URL **com pooler**; migrations e
+  seeds rodam da máquina do dev com a URL **direta**, passada só no comando.
+  Ordem: `db:deploy -w @casaecos/api` → `db:seed` → `db:seed:admin` → `db:seed:demo`.
+- **API:** Render, web service gratuito (Virginia). Build:
+  `npm ci --include=dev && npm run db:generate -w @casaecos/api && npm run build -w @casaecos/api`.
+  Start: `npm run start -w @casaecos/api`. Env: `NODE_VERSION=22`, `NODE_ENV=production`,
+  `API_PORT=10000`, `DATABASE_URL`, `JWT_SECRET` (próprio, não o local), `CORS_ORIGIN`.
+- **Web:** Vercel, raiz do repo, build `npm run build -w @casaecos/web`, saída
+  `apps/web/dist`, `vercel.json` com rewrite de SPA. `VITE_API_URL` entra no build:
+  trocar o valor exige redeploy.
+- **CORS:** só o domínio de produção da Vercel. As URLs de preview dão erro de CORS.
+- **Keep-alive:** UptimeRobot em `GET /health` a cada 5 min. A `/health` não pode
+  consultar o banco, senão o Neon não hiberna e estoura as horas do plano gratuito.
+- **Só dados fictícios** (`seed-demo`). Dado real de acolhido só depois de revisar
+  infraestrutura e consentimento (pendência no Notion).
+
 ## Estado atual / próximos passos
 
 - **Scaffold do monorepo concluído em 06/09/2026**: workspaces npm, API Express 5 +
@@ -626,6 +646,8 @@ os frames de criação e edição de compromisso.
   lista do dia no celular, grade do mês com painel do dia no desktop, filtros de tipo
   e casa, detalhe do compromisso em modo leitura e `permissions` no usuário
   autenticado (`useAuth().can()`).
+- **Deploy de homologação no ar em 01/10/2026**: Neon + Render + Vercel, plano gratuito
+  (decisões #100 a #103).
 - Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-9, com ECOS-11 e
   ECOS-12 como base compartilhada (casas e pessoas).
 - Ordem de desenvolvimento: schema Prisma → API → telas React.
