@@ -1,18 +1,14 @@
 import { useAuth } from '../auth/context/use-auth.js';
-import { BrandMark } from './BrandMark.js';
+import { AppBrand } from './AppBrand.js';
 
-/** Top bar of the logged-in screens: brand, who is using the system and the exit. */
+/** Top bar: who is using the system and the exit. The brand only shows on the phone. */
 export function AppHeader(): React.JSX.Element {
   const auth = useAuth();
 
   return (
     <header className="app-header">
-      <div className="brand-lockup brand-lockup--compact">
-        <BrandMark />
-        <div>
-          <strong>Casa Ecos</strong>
-          <span>Ecos da Esperança</span>
-        </div>
+      <div className="app-header__brand">
+        <AppBrand />
       </div>
 
       <div className="app-header__user">

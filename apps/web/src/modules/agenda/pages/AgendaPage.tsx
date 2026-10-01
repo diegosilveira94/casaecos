@@ -3,7 +3,6 @@ import { useCallback, useMemo, useState } from 'react';
 import type { EventResponse } from '@casaecos/shared-types';
 
 import { useAuth } from '../../shared/auth/context/use-auth.js';
-import { AppHeader } from '../../shared/layout/AppHeader.js';
 import { AgendaFiltersBar } from '../components/AgendaFiltersBar.js';
 import { DayEvents } from '../components/DayEvents.js';
 import { EventDetailsDialog } from '../components/EventDetailsDialog.js';
@@ -49,9 +48,7 @@ export function AgendaPage(): React.JSX.Element {
   const homeOptions = homes.length > 1 ? homes : [];
 
   return (
-    <div className="agenda-page">
-      <AppHeader />
-
+    <>
       <main className="agenda-main">
         <div className="agenda-heading">
           <h1>Agenda</h1>
@@ -96,6 +93,6 @@ export function AgendaPage(): React.JSX.Element {
       {openEvent ? (
         <EventDetailsDialog event={openEvent} today={today} onClose={closeEvent} />
       ) : null}
-    </div>
+    </>
   );
 }

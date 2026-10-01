@@ -397,6 +397,20 @@ button:disabled {
 
 /* ---- Logged-in shell ---- */
 
+.app-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--color-background);
+}
+
+.app-shell__content {
+  min-width: 0;
+}
+
+.app-sidebar {
+  display: none;
+}
+
 .app-header {
   position: sticky;
   z-index: 10;
@@ -465,12 +479,6 @@ button:disabled {
 }
 
 /* ---- Agenda (ECOS-8): mini month + day list on the phone ---- */
-
-.agenda-page {
-  min-height: 100vh;
-  min-height: 100dvh;
-  background: var(--color-background);
-}
 
 .agenda-main {
   max-width: 82rem;
@@ -937,6 +945,85 @@ button:disabled {
 }
 
 @media (min-width: 52rem) {
+  .app-shell {
+    display: grid;
+    grid-template-columns: 14.25rem minmax(0, 1fr);
+  }
+
+  .app-sidebar {
+    position: sticky;
+    top: 0;
+    display: flex;
+    height: 100vh;
+    height: 100dvh;
+    flex-direction: column;
+    gap: 2rem;
+    padding: 1.4rem 0.75rem 1.5rem;
+    border-right: 1px solid var(--color-border);
+    background: var(--color-surface);
+  }
+
+  .app-sidebar > .brand-lockup {
+    padding: 0 0.5rem;
+  }
+
+  .app-sidebar__nav {
+    display: grid;
+    gap: 0.25rem;
+  }
+
+  .app-sidebar__link {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 0.6rem;
+    color: var(--color-text);
+    font-weight: 550;
+    text-decoration: none;
+  }
+
+  .app-sidebar__link svg {
+    width: 1.2rem;
+    height: 1.2rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-width: 1.8;
+  }
+
+  .app-sidebar__link:hover {
+    background: var(--color-background);
+  }
+
+  .app-sidebar__link[aria-current='page'] {
+    box-shadow: inset 3px 0 0 var(--color-primary);
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+  }
+
+  .app-sidebar__link:focus-visible {
+    outline: 3px solid rgb(24 105 73 / 25%);
+    outline-offset: 2px;
+  }
+
+  .app-sidebar__tagline {
+    margin: auto 0.5rem 0;
+    color: var(--color-primary);
+    font-size: 0.85rem;
+    line-height: 1.4;
+  }
+
+  /* The sidebar carries the brand on the desktop. */
+  .app-header {
+    justify-content: flex-end;
+    padding: 0.75rem 2rem;
+  }
+
+  .app-header__brand {
+    display: none;
+  }
+
   .agenda-main {
     padding: 1.75rem 2rem 2.5rem;
   }

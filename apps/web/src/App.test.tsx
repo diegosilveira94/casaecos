@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -159,6 +159,17 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Entrando...' })).toBeDisabled();
     answerLogin(jsonResponse(200, { token: 'token-novo', expiresInSeconds: 3600, user: maria }));
     expect(await screen.findByRole('heading', { name: 'Agenda' })).toBeInTheDocument();
+  });
+
+  it('mostra na navegação só os módulos que já têm tela, com a Agenda ativa', async () => {
+    sessionStore.save({ token: 'token-salvo', expiresInSeconds: 3600 });
+    answerAuthWith(maria);
+    renderApp('/agenda');
+
+    const navigation = await screen.findByRole('navigation', { name: 'Módulos' });
+    const links = within(navigation).getAllByRole('link');
+    expect(links.map((link) => link.textContent)).toEqual(['Agenda']);
+    expect(links[0]).toHaveAttribute('aria-current', 'page');
   });
 
   it('volta para o login ao sair', async () => {

@@ -100,7 +100,7 @@ casaecos/
 │       │   │   │                     # services/EventService, pages/AgendaPage
 │       │   │   └── shared/           # auth/ (SessionStore, AuthService, AuthProvider/useAuth,
 │       │   │                         # LoginPage, ProtectedRoute), home/ (HomeService),
-│       │   │                         # layout/ (AppHeader, BrandMark)
+│       │   │                         # layout/ (AppLayout, AppSidebar, AppHeader, BrandMark)
 │       │   ├── App.tsx
 │       │   └── main.tsx
 │       └── package.json
@@ -389,7 +389,12 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
 - **Permissões na tela**: o filtro de casa (`homeService.list()`, `GET /homes`) só
   aparece com `can('home:read')` e mais de uma casa visível — motorista nem busca as
   casas, cuidador de uma casa só não vê o filtro. O "+ Novo compromisso" fica para a
-  ECOS-9, com `can('event:write')`. Sem sidebar de módulos que ainda não existem (#91).
+  ECOS-9, com `can('event:write')`.
+- **Moldura das telas logadas**: o `AppLayout` (rota de layout dentro do
+  `ProtectedRoute`) monta a `AppSidebar` e o `AppHeader`. A sidebar só aparece a partir
+  de 52rem (largura do Figma, 228px) e lista **só os módulos que já têm tela** — hoje,
+  só a Agenda —, com a tagline no rodapé (#95). Módulo novo entra no `NAVIGATION` do
+  `AppSidebar.tsx`. No desktop a marca sai do header e fica na sidebar.
 - **Cor por tipo**: `event-tone.ts` mapeia o id do `event_type` (ids fixos, #37) para
   um tom, e o CSS tem um token `--color-event-*` por tom, todos com contraste AA como
   texto no branco. Tipo novo ou "Outro" cai no neutro até ganhar cor.
