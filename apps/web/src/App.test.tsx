@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -14,6 +14,14 @@ const maria: AuthenticatedUserResponse = {
   name: 'Maria Silva',
   email: 'maria@ecos.org',
   role: { id: 2, description: 'Secretário' },
+  permissions: [
+    'person:read',
+    'person:write',
+    'home:read',
+    'home:write',
+    'event:read',
+    'event:write',
+  ],
 };
 
 const fetchMock = vi.fn<typeof fetch>();
@@ -22,6 +30,19 @@ function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+// After the login the agenda loads its month: an empty one keeps it out of the way.
+const EMPTY_AGENDA: Record<string, unknown> = {
+  '/agenda/events': { items: [], page: 1, pageSize: 200, total: 0 },
+  '/agenda/event-types': [],
+};
+
+function answerAuthWith(body: unknown): void {
+  fetchMock.mockImplementation((input) => {
+    const path = new URL(input instanceof Request ? input.url : input).pathname;
+    return Promise.resolve(jsonResponse(200, EMPTY_AGENDA[path] ?? body));
   });
 }
 
@@ -61,7 +82,7 @@ describe('App', () => {
 
   it('espera a restauração da sessão antes de decidir, ao recarregar a página', async () => {
     sessionStore.save({ token: 'token-salvo', expiresInSeconds: 3600 });
-    fetchMock.mockResolvedValue(jsonResponse(200, maria));
+    answerAuthWith(maria);
 
     renderApp('/agenda');
 
@@ -75,7 +96,7 @@ describe('App', () => {
       expiresInSeconds: 3600,
       user: maria,
     };
-    fetchMock.mockResolvedValue(jsonResponse(200, loginResponse));
+    answerAuthWith(loginResponse);
     renderApp('/agenda');
 
     await submitLogin(' maria@ecos.org ', 'senha-correta');
@@ -140,12 +161,35 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'Agenda' })).toBeInTheDocument();
   });
 
-  it('volta para o login ao sair', async () => {
+  it('leva à Agenda pela navegação e mostra os outros módulos ainda sem ação', async () => {
     sessionStore.save({ token: 'token-salvo', expiresInSeconds: 3600 });
-    fetchMock.mockResolvedValue(jsonResponse(200, maria));
+    answerAuthWith(maria);
     renderApp('/agenda');
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Sair' }));
+    const navigation = await screen.findByRole('navigation', { name: 'Módulos' });
+    const links = within(navigation).getAllByRole('link');
+    expect(links.map((link) => link.textContent)).toEqual(['Agenda']);
+    expect(links[0]).toHaveAttribute('aria-current', 'page');
+    const upcomingModules = within(navigation).getAllByRole('button');
+    expect(upcomingModules.map((button) => button.textContent)).toEqual([
+      'Medicamentos',
+      'Relatórios',
+      'Prestação de Contas',
+      'Configurações',
+      'Ajuda',
+    ]);
+    expect(upcomingModules.every((button) => button.getAttribute('aria-disabled') === 'true')).toBe(
+      true,
+    );
+  });
+
+  it('volta para o login ao sair', async () => {
+    sessionStore.save({ token: 'token-salvo', expiresInSeconds: 3600 });
+    answerAuthWith(maria);
+    renderApp('/agenda');
+
+    await userEvent.click(await screen.findByRole('button', { name: /Maria Silva/ }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Sair' }));
 
     expect(screen.getByRole('heading', { name: 'Acesse sua conta' })).toBeInTheDocument();
     expect(sessionStore.readAccessToken()).toBeNull();

@@ -34,6 +34,31 @@ describe('EventService', () => {
     });
   });
 
+  it('junta todas as páginas da listagem, pedindo o máximo por página', async () => {
+    const page = (ids: number[], total: number): Response =>
+      new Response(
+        JSON.stringify({ items: ids.map((id) => ({ id })), page: 1, pageSize: 200, total }),
+      );
+    fetchMock.mockResolvedValueOnce(page([1, 2], 3)).mockResolvedValueOnce(page([3], 3));
+
+    const events = await createService().listAll({ homeId: 2 });
+
+    expect(events.map((event) => event.id)).toEqual([1, 2, 3]);
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      'http://api.test/agenda/events?homeId=2&page=1&pageSize=200',
+      'http://api.test/agenda/events?homeId=2&page=2&pageSize=200',
+    ]);
+  });
+
+  it('para quando uma página volta vazia, mesmo que o total diga o contrário', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ items: [], page: 1, pageSize: 200, total: 5 })),
+    );
+
+    await expect(createService().listAll()).resolves.toEqual([]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('manda os filtros da listagem na query string', async () => {
     await createService().list({
       homeId: 2,

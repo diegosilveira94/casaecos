@@ -14,6 +14,14 @@ const maria: AuthenticatedUserResponse = {
   name: 'Maria Silva',
   email: 'maria@ecos.org',
   role: { id: 2, description: 'Secretário' },
+  permissions: [
+    'person:read',
+    'person:write',
+    'home:read',
+    'home:write',
+    'event:read',
+    'event:write',
+  ],
 };
 
 const fetchMock = vi.fn<typeof fetch>();
@@ -31,6 +39,7 @@ function SessionProbe(): React.JSX.Element {
   return (
     <>
       <p>{auth.status === 'authenticated' ? `Olá, ${auth.user.name}` : auth.status}</p>
+      <p>{auth.can('event:write') ? 'pode editar a agenda' : 'não edita a agenda'}</p>
       <button
         type="button"
         onClick={() => void auth.login({ email: maria.email, password: 'senha-correta' })}
@@ -81,6 +90,29 @@ describe('AuthProvider', () => {
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(url).toBe('http://api.test/auth/me');
     expect(new Headers(init!.headers).get('Authorization')).toBe('Bearer token-salvo');
+  });
+
+  it('responde can() com as permissões do usuário, e nega tudo sem sessão', async () => {
+    const driver: AuthenticatedUserResponse = {
+      ...maria,
+      role: { id: 4, description: 'Motorista' },
+      permissions: ['event:read'],
+    };
+    sessionStore.save({ token: 'token-salvo', expiresInSeconds: 3600 });
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, maria));
+    renderWithAuth();
+
+    expect(screen.getByText('não edita a agenda')).toBeInTheDocument();
+    expect(await screen.findByText('pode editar a agenda')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sair' }));
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, { token: 'token-novo', expiresInSeconds: 3600, user: driver }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    expect(await screen.findByText('Olá, Maria Silva')).toBeInTheDocument();
+    expect(screen.getByText('não edita a agenda')).toBeInTheDocument();
   });
 
   it('descarta a sessão salva que a API recusa', async () => {
