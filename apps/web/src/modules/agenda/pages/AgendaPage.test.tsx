@@ -2,30 +2,23 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type {
-  AuthenticatedUserResponse,
-  EventResponse,
-  HomeResponse,
-  Permission,
-} from '@casaecos/shared-types';
+import type { AuthenticatedUserResponse, EventResponse, Permission } from '@casaecos/shared-types';
 
 import { ApiRequestError } from '../../../shared/http/api-request-error.js';
 import { AuthContext, type AuthContextValue } from '../../shared/auth/context/auth-context.js';
-import { homeService } from '../../shared/home/services/home-service.js';
+import { HomeSelectionContext } from '../../shared/home/context/home-selection-context.js';
+import { setDesktopViewport } from '../../../test/media-query.js';
 import { toOffsetIsoString } from '../domain/calendar-dates.js';
 import { eventService } from '../services/event-service.js';
 import { AgendaPage } from './AgendaPage.js';
 
 vi.mock('../services/event-service.js', () => ({
-  eventService: { listAll: vi.fn(), listEventTypes: vi.fn() },
-}));
-vi.mock('../../shared/home/services/home-service.js', () => ({
-  homeService: { list: vi.fn() },
+  eventService: { list: vi.fn(), listAll: vi.fn(), listEventTypes: vi.fn() },
 }));
 
 const listAll = vi.mocked(eventService.listAll);
 const listEventTypes = vi.mocked(eventService.listEventTypes);
-const listHomes = vi.mocked(homeService.list);
+const listUpcoming = vi.mocked(eventService.list);
 
 const SECRETARY_PERMISSIONS: Permission[] = [
   'person:read',
@@ -64,25 +57,6 @@ function makeEvent(overrides: Partial<EventResponse>): EventResponse {
   };
 }
 
-function makeHome(id: number, name: string): HomeResponse {
-  return {
-    id,
-    name,
-    organization: { id: 1, name: 'Ecos da Esperança' },
-    responsible: {
-      id: 9,
-      name: 'Ana',
-      role: { id: 3, description: 'Cuidador/Monitor' },
-      individualRegistration: null,
-      phone: null,
-      createdAt: at(0, 1, 8),
-      updatedAt: at(0, 1, 8),
-    },
-    createdAt: at(0, 1, 8),
-    updatedAt: at(0, 1, 8),
-  };
-}
-
 const consultation = makeEvent({
   id: 1,
   title: 'Consulta pediátrica',
@@ -115,7 +89,10 @@ const school = makeEvent({
   eventType: { id: 2, name: 'Escola' },
 });
 
-function renderPage(user: AuthenticatedUserResponse = secretary): void {
+function renderPage(
+  user: AuthenticatedUserResponse = secretary,
+  selectedHomeId: number | null = null,
+): void {
   const auth: AuthContextValue = {
     status: 'authenticated',
     user,
@@ -125,7 +102,11 @@ function renderPage(user: AuthenticatedUserResponse = secretary): void {
   };
   render(
     <AuthContext value={auth}>
-      <AgendaPage />
+      <HomeSelectionContext
+        value={{ homes: [], selectedHomeId, canChooseHome: true, selectHome: vi.fn() }}
+      >
+        <AgendaPage />
+      </HomeSelectionContext>
     </AuthContext>,
   );
 }
@@ -147,7 +128,12 @@ describe('AgendaPage', () => {
       { id: 1, name: 'Consulta médica' },
       { id: 3, name: 'Terapia' },
     ]);
-    listHomes.mockResolvedValue([makeHome(1, 'Casa Esperança'), makeHome(2, 'Casa Fé')]);
+    listUpcoming.mockResolvedValue({
+      items: [consultation, therapy],
+      page: 1,
+      pageSize: 4,
+      total: 2,
+    });
   });
 
   afterEach(() => {
@@ -226,53 +212,51 @@ describe('AgendaPage', () => {
     expect(outsideDays.map((button) => button.textContent)).toEqual(['30', '31', '1', '2', '3']);
   });
 
-  it('refaz a busca com o tipo escolhido, e tira o filtro em "Todos os tipos"', async () => {
+  it('refaz a busca com o tipo escolhido em "Filtros", e tira o filtro em "Todos os tipos"', async () => {
     const user = userEvent.setup();
     renderPage();
-    const typeFilter = await screen.findByRole('combobox', { name: 'Tipo de compromisso' });
 
+    await user.click(screen.getByRole('button', { name: 'Filtros' }));
+    const typeFilter = await screen.findByRole('combobox', { name: 'Tipo de compromisso' });
     await user.selectOptions(typeFilter, 'Terapia');
     expect(lastListAllQuery()).toMatchObject({ eventTypeId: 3 });
+    expect(screen.getByRole('button', { name: /^Filtros.*1 ativo/ })).toBeInTheDocument();
 
     await user.selectOptions(typeFilter, 'Todos os tipos');
     expect(lastListAllQuery()).not.toHaveProperty('eventTypeId');
   });
 
-  it('mostra o filtro de casa para quem enxerga mais de uma casa', async () => {
-    const user = userEvent.setup();
-    renderPage();
+  it('busca só a casa escolhida na sidebar', async () => {
+    renderPage(secretary, 2);
 
-    await user.selectOptions(await screen.findByRole('combobox', { name: 'Casa' }), 'Casa Fé');
-
+    await within(dayList()).findByText('Consulta pediátrica');
     expect(lastListAllQuery()).toMatchObject({ homeId: 2 });
   });
 
-  it('esconde o filtro de casa do cuidador de uma casa só', async () => {
-    listHomes.mockResolvedValue([makeHome(1, 'Casa Esperança')]);
+  it('mostra "Novo Compromisso" e "Exportar" ainda sem ação', async () => {
+    renderPage();
+    await within(dayList()).findByText('Consulta pediátrica');
+
+    expect(screen.getByRole('button', { name: 'Novo Compromisso' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Exportar' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+  });
+
+  it('esconde "Novo Compromisso" de quem não pode criar compromisso', async () => {
     renderPage({
       ...secretary,
       role: { id: 3, description: 'Cuidador/Monitor' },
       permissions: ['home:read', 'event:read'],
     });
+    await within(dayList()).findByText('Consulta pediátrica');
 
-    expect(
-      await screen.findByRole('combobox', { name: 'Tipo de compromisso' }),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole('combobox', { name: 'Casa' })).not.toBeInTheDocument();
-  });
-
-  it('nem busca as casas para o motorista, que não tem home:read', async () => {
-    renderPage({
-      ...secretary,
-      role: { id: 4, description: 'Motorista' },
-      permissions: ['event:read'],
-    });
-
-    expect(
-      await screen.findByRole('combobox', { name: 'Tipo de compromisso' }),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole('combobox', { name: 'Casa' })).not.toBeInTheDocument();
-    expect(listHomes).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Novo Compromisso' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Exportar' })).toBeInTheDocument();
   });
 
   it('mostra o erro da API e tenta de novo', async () => {
@@ -326,5 +310,57 @@ describe('AgendaPage', () => {
 
     await user.click(within(dialog).getByRole('button', { name: 'Fechar' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  describe('no desktop', () => {
+    beforeEach(() => {
+      setDesktopViewport(true);
+    });
+
+    it('mostra os próximos compromissos a partir de agora, com os mesmos filtros', async () => {
+      renderPage(secretary, 2);
+
+      const panel = await screen.findByRole('region', { name: 'Próximos compromissos' });
+      expect(await within(panel).findByText('Sessão com psicóloga')).toBeInTheDocument();
+      expect(within(panel).getAllByText('30/09/2026')).toHaveLength(2);
+      expect(listUpcoming).toHaveBeenLastCalledWith({
+        from: toOffsetIsoString(new Date(2026, 8, 30, 10, 0)),
+        pageSize: 4,
+        homeId: 2,
+      });
+      expect(within(panel).getByRole('button', { name: 'Ver todos' })).toHaveAttribute(
+        'aria-disabled',
+        'true',
+      );
+    });
+
+    it('abre o dia numa janela pelo "+N compromissos", e dali o compromisso', async () => {
+      const user = userEvent.setup();
+      renderPage();
+
+      await user.click(await screen.findByRole('button', { name: '+1 compromisso' }));
+      const day = screen.getByRole('dialog', { name: 'Hoje · quarta-feira, 30 de setembro' });
+      await user.click(within(day).getByRole('button', { name: /Sessão com psicóloga/ }));
+
+      expect(screen.getByRole('dialog', { name: 'Sessão com psicóloga' })).toBeInTheDocument();
+      expect(screen.queryByRole('dialog', { name: /30 de setembro/ })).not.toBeInTheDocument();
+    });
+
+    it('abre o compromisso pelo bloco da grade', async () => {
+      const user = userEvent.setup();
+      renderPage();
+
+      const grid = await screen.findByRole('group', { name: 'Dias de Setembro 2026' });
+      await user.click(await within(grid).findByRole('button', { name: /Reunião na escola/ }));
+
+      expect(screen.getByRole('dialog', { name: 'Reunião na escola' })).toBeInTheDocument();
+    });
+
+    it('avisa o erro da busca do mês acima da grade', async () => {
+      listAll.mockRejectedValueOnce(new ApiRequestError(500, { message: 'Erro interno' }));
+      renderPage();
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('Erro interno');
+    });
   });
 });

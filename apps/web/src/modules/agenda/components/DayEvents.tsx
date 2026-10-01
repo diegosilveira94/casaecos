@@ -2,7 +2,8 @@ import type { EventResponse } from '@casaecos/shared-types';
 
 import { formatDayHeading } from '../domain/event-format.js';
 import type { MonthEvents } from '../hooks/use-month-events.js';
-import { EventCard } from './EventCard.js';
+import { EventCardList } from './EventCardList.js';
+import { MonthLoadError } from './MonthLoadError.js';
 
 interface DayEventsProps {
   day: Date;
@@ -33,33 +34,10 @@ function DayEventsBody({
   }
 
   if (monthEvents.status === 'failed') {
-    return (
-      <div className="day-events__error" role="alert">
-        <p>{monthEvents.message}</p>
-        <button
-          className="secondary-button secondary-button--compact"
-          type="button"
-          onClick={onRetry}
-        >
-          Tentar novamente
-        </button>
-      </div>
-    );
+    return <MonthLoadError message={monthEvents.message} onRetry={onRetry} />;
   }
 
-  if (dayEvents.length === 0) {
-    return <p className="day-events__status">Nenhum compromisso neste dia.</p>;
-  }
-
-  return (
-    <ul className="day-events__list">
-      {dayEvents.map((event) => (
-        <li key={event.id}>
-          <EventCard event={event} onOpen={onOpenEvent} />
-        </li>
-      ))}
-    </ul>
-  );
+  return <EventCardList events={dayEvents} onOpenEvent={onOpenEvent} />;
 }
 
 export function DayEvents({ day, today, ...body }: DayEventsProps): React.JSX.Element {

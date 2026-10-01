@@ -1,36 +1,55 @@
 import { NavLink } from 'react-router';
 
+import landscapeUrl from '../../../assets/sidebar-landscape.png';
+import { COMING_SOON_PROPS } from '../../../shared/ui/coming-soon.js';
+import {
+  CalendarIcon,
+  ChartIcon,
+  DollarIcon,
+  GearIcon,
+  HelpIcon,
+  PillIcon,
+} from '../../../shared/ui/icons.js';
 import { AppBrand } from './AppBrand.js';
+import { HomePicker } from './HomePicker.js';
 
-function CalendarIcon(): React.JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="3.5" y="5" width="17" height="15" rx="2.5" />
-      <path d="M3.5 10h17M8 3v4M16 3v4" />
-    </svg>
-  );
+// Shown as in the prototype; they become links as each module ships.
+const UPCOMING_MODULES = [
+  { label: 'Medicamentos', icon: <PillIcon /> },
+  { label: 'Relatórios', icon: <ChartIcon /> },
+  { label: 'Prestação de Contas', icon: <DollarIcon /> },
+  { label: 'Configurações', icon: <GearIcon /> },
+  { label: 'Ajuda', icon: <HelpIcon /> },
+];
+
+interface AppSidebarProps {
+  onNavigate: () => void;
 }
 
-// Only modules that already have a screen: a link with no destination misleads the
-// caregiver (#95). Medicamentos, Relatórios and the others join as they ship.
-const NAVIGATION = [{ to: '/agenda', label: 'Agenda', icon: <CalendarIcon /> }];
-
-/** Desktop navigation. The phone has a single module for now, so it has no menu. */
-export function AppSidebar(): React.JSX.Element {
+export function AppSidebar({ onNavigate }: AppSidebarProps): React.JSX.Element {
   return (
-    <aside className="app-sidebar">
-      <AppBrand />
+    <aside className="app-sidebar" id="app-sidebar">
+      <AppBrand layout="stacked" />
 
       <nav className="app-sidebar__nav" aria-label="Módulos">
-        {NAVIGATION.map(({ to, label, icon }) => (
-          <NavLink key={to} to={to} className="app-sidebar__link">
+        <NavLink to="/agenda" className="app-sidebar__link" onClick={onNavigate}>
+          <CalendarIcon />
+          Agenda
+        </NavLink>
+        {UPCOMING_MODULES.map(({ label, icon }) => (
+          <button key={label} className="app-sidebar__link" {...COMING_SOON_PROPS}>
             {icon}
             {label}
-          </NavLink>
+          </button>
         ))}
       </nav>
 
-      <p className="app-sidebar__tagline">Cuidando de quem cuida.</p>
+      <div className="app-sidebar__footer">
+        <HomePicker />
+        <p className="app-sidebar__tagline">Cuidando de quem cuida.</p>
+      </div>
+
+      <img className="app-sidebar__landscape" src={landscapeUrl} alt="" width={228} height={161} />
     </aside>
   );
 }

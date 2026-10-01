@@ -10,6 +10,11 @@ const dayHeadingFormat = new Intl.DateTimeFormat('pt-BR', {
   month: 'long',
 });
 const dayLabelFormat = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'long' });
+const fullDateFormat = new Intl.DateTimeFormat('pt-BR', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+});
 
 function capitalize(text: string): string {
   return `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
@@ -17,6 +22,11 @@ function capitalize(text: string): string {
 
 export function formatTime(isoDate: string): string {
   return timeFormat.format(new Date(isoDate));
+}
+
+/** "18/06/2026". */
+export function formatDate(isoDate: string): string {
+  return fullDateFormat.format(new Date(isoDate));
 }
 
 /** "09:00 – 10:00", "09:00" without an end, or the end date when it falls on another day. */
@@ -48,6 +58,11 @@ export function formatDayLabel(day: Date, eventCount: number): string {
 
 export function participantNames(event: EventResponse): string {
   return event.participants.map(({ person }) => person.name).join(', ');
+}
+
+/** Who the commitment is about, as the prototype's second line; the home when nobody is linked. */
+export function eventSubject(event: EventResponse): string {
+  return participantNames(event) || event.home.name;
 }
 
 /** Commitments by the local day they start, keeping the API order (start, then id). */

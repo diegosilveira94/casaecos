@@ -161,7 +161,7 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'Agenda' })).toBeInTheDocument();
   });
 
-  it('mostra na navegação só os módulos que já têm tela, com a Agenda ativa', async () => {
+  it('leva à Agenda pela navegação e mostra os outros módulos ainda sem ação', async () => {
     sessionStore.save({ token: 'token-salvo', expiresInSeconds: 3600 });
     answerAuthWith(maria);
     renderApp('/agenda');
@@ -170,6 +170,17 @@ describe('App', () => {
     const links = within(navigation).getAllByRole('link');
     expect(links.map((link) => link.textContent)).toEqual(['Agenda']);
     expect(links[0]).toHaveAttribute('aria-current', 'page');
+    const upcomingModules = within(navigation).getAllByRole('button');
+    expect(upcomingModules.map((button) => button.textContent)).toEqual([
+      'Medicamentos',
+      'Relatórios',
+      'Prestação de Contas',
+      'Configurações',
+      'Ajuda',
+    ]);
+    expect(upcomingModules.every((button) => button.getAttribute('aria-disabled') === 'true')).toBe(
+      true,
+    );
   });
 
   it('volta para o login ao sair', async () => {
@@ -177,7 +188,8 @@ describe('App', () => {
     answerAuthWith(maria);
     renderApp('/agenda');
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Sair' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Maria Silva/ }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Sair' }));
 
     expect(screen.getByRole('heading', { name: 'Acesse sua conta' })).toBeInTheDocument();
     expect(sessionStore.readAccessToken()).toBeNull();
