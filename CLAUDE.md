@@ -161,6 +161,7 @@ npm run db:up       # sobe o Postgres do docker-compose
 npm run db:migrate  # prisma migrate dev
 npm run db:seed     # popula role, event_type e participation_type
 npm run db:seed:admin  # cria o primeiro Coordenador com credencial (lê ADMIN_* do .env)
+npm run db:seed:demo   # dados de teste: casas, pessoas, contas e compromissos (só fora de produção)
 ```
 
 O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não no

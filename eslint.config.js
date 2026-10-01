@@ -39,6 +39,7 @@ export default tseslint.config(
             'apps/api/prisma7.config.ts',
             'apps/api/prisma/seed.ts',
             'apps/api/prisma/seed-admin.ts',
+            'apps/api/prisma/seed-demo.ts',
           ],
         },
         tsconfigRootDir: import.meta.dirname,

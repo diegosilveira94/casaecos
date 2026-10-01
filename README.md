@@ -46,17 +46,18 @@ Para subir só uma ponta: `npm run dev:api` ou `npm run dev:web`.
 
 ## Scripts da raiz
 
-| Script               | O que faz                                       |
-| -------------------- | ----------------------------------------------- |
-| `npm run dev`        | shared-types (watch) + API + Web em paralelo    |
-| `npm run build`      | build dos três workspaces, na ordem certa       |
-| `npm test`           | Vitest em todos os workspaces                   |
-| `npm run typecheck`  | `tsc --noEmit` em todos os workspaces           |
-| `npm run lint`       | ESLint no monorepo inteiro                      |
-| `npm run format`     | Prettier em tudo                                |
-| `npm run db:up/down` | sobe/derruba o Postgres do `docker-compose.yml` |
-| `npm run db:migrate` | `prisma migrate dev` na `apps/api`              |
-| `npm run db:studio`  | Prisma Studio                                   |
+| Script                 | O que faz                                                           |
+| ---------------------- | ------------------------------------------------------------------- |
+| `npm run dev`          | shared-types (watch) + API + Web em paralelo                        |
+| `npm run build`        | build dos três workspaces, na ordem certa                           |
+| `npm test`             | Vitest em todos os workspaces                                       |
+| `npm run typecheck`    | `tsc --noEmit` em todos os workspaces                               |
+| `npm run lint`         | ESLint no monorepo inteiro                                          |
+| `npm run format`       | Prettier em tudo                                                    |
+| `npm run db:up/down`   | sobe/derruba o Postgres do `docker-compose.yml`                     |
+| `npm run db:migrate`   | `prisma migrate dev` na `apps/api`                                  |
+| `npm run db:studio`    | Prisma Studio                                                       |
+| `npm run db:seed:demo` | Dados de teste: 2 casas, contas de cada papel e compromissos do mês |
 
 ## Estrutura
 
