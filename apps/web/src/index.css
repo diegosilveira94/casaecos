@@ -10,6 +10,16 @@
   --color-background: #f5f7f6;
   --color-error: #b42318;
   --color-error-background: #fef3f2;
+  --color-surface: #fff;
+
+  /* One color per seeded event_type (src/modules/agenda/domain/event-tone.ts). All
+     pass 4.5:1 as text on white, since the type name is written in that color. */
+  --color-event-health: #186949;
+  --color-event-school: #8a5a0b;
+  --color-event-therapy: #2463a6;
+  --color-event-activity: #b03e26;
+  --color-event-meeting: #6b46b0;
+  --color-event-neutral: #65716c;
 
   color: var(--color-text);
   background: var(--color-background);
@@ -31,7 +41,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   color: inherit;
   font: inherit;
 }
@@ -113,8 +124,7 @@ button:disabled {
   margin-top: 4.25rem;
 }
 
-.login-heading__eyebrow,
-.agenda-placeholder__eyebrow {
+.login-heading__eyebrow {
   color: var(--color-primary);
   font-size: 0.78rem;
   font-weight: 700;
@@ -210,7 +220,11 @@ button:disabled {
 
 .password-toggle:focus-visible,
 .primary-button:focus-visible,
-.secondary-button:focus-visible {
+.secondary-button:focus-visible,
+.icon-button:focus-visible,
+.month-grid__day:focus-visible,
+.event-card:focus-visible,
+.select-field select:focus-visible {
   outline: 3px solid rgb(24 105 73 / 25%);
   outline-offset: 2px;
 }
@@ -333,38 +347,501 @@ button:disabled {
   font-weight: 700;
 }
 
-.agenda-placeholder {
-  min-height: 100vh;
-  padding: 1.5rem;
-  background: var(--color-background);
-}
-
-.agenda-placeholder__header {
-  display: flex;
-  max-width: 70rem;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin: 0 auto;
-}
-
-.agenda-placeholder h1 {
-  margin: 0.2rem 0 0;
-  font-size: 2rem;
-}
-
-.agenda-placeholder > p {
-  max-width: 70rem;
-  margin: 2rem auto;
-  color: var(--color-text-muted);
-}
-
 .secondary-button {
   min-height: 2.75rem;
   padding: 0.55rem 1rem;
   border: 1px solid var(--color-border);
   background: #fff;
   color: var(--color-primary);
+}
+
+.secondary-button--compact {
+  min-height: 2.5rem;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.9rem;
+}
+
+.secondary-button:hover:not(:disabled),
+.icon-button:hover:not(:disabled) {
+  border-color: #a9b8b1;
+  background: var(--color-primary-soft);
+}
+
+.icon-button {
+  display: inline-grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: 0.65rem;
+  background: var(--color-surface);
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.spinner--small {
+  width: 1rem;
+  height: 1rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- Logged-in shell ---- */
+
+.app-header {
+  position: sticky;
+  z-index: 10;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.brand-lockup--compact .brand-mark {
+  width: 2.2rem;
+  height: 2.2rem;
+}
+
+.brand-lockup--compact strong {
+  font-size: 1.05rem;
+}
+
+.brand-lockup--compact span {
+  display: none;
+  font-size: 0.62rem;
+  white-space: nowrap;
+}
+
+/* The org name only fits beside the user on phones wider than ~400px. */
+@media (min-width: 25rem) {
+  .brand-lockup--compact span {
+    display: block;
+  }
+}
+
+.app-header__user {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.app-header__identity {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  margin: 0;
+  line-height: 1.25;
+  text-align: right;
+}
+
+.app-header__identity strong,
+.app-header__identity span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-header__identity strong {
+  font-size: 0.85rem;
+}
+
+.app-header__identity span {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+/* ---- Agenda (ECOS-8): mini month + day list on the phone ---- */
+
+.agenda-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--color-background);
+}
+
+.agenda-main {
+  max-width: 82rem;
+  margin: 0 auto;
+  padding: 1rem 1rem 2rem;
+}
+
+.agenda-heading h1 {
+  margin: 0 0 0.75rem;
+  font-size: 1.65rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.agenda-filters {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 0.5rem;
+}
+
+.select-field {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+
+.select-field::after {
+  position: absolute;
+  top: 50%;
+  right: 0.85rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 1.5px solid var(--color-text-muted);
+  border-bottom: 1.5px solid var(--color-text-muted);
+  content: '';
+  pointer-events: none;
+  transform: translateY(-70%) rotate(45deg);
+}
+
+.select-field select {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 2.2rem 0.5rem 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.65rem;
+  appearance: none;
+  background: var(--color-surface);
+  text-overflow: ellipsis;
+}
+
+.agenda-layout {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.agenda-calendar {
+  min-width: 0;
+}
+
+.month-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.month-navigation__period {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.month-navigation h2 {
+  min-width: 8.5rem;
+  margin: 0;
+  font-size: 1.05rem;
+  text-align: center;
+}
+
+.month-grid__weekdays,
+.month-grid__week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.month-grid__weekdays span {
+  padding: 0.3rem 0;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.month-grid__day {
+  display: flex;
+  min-width: 0;
+  min-height: 3.4rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.25rem 0;
+  border: 0;
+  border-radius: 0.65rem;
+  background: transparent;
+}
+
+.month-grid__day:disabled {
+  cursor: default;
+}
+
+.month-grid__number {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 0.92rem;
+}
+
+.month-grid__day.is-outside .month-grid__number {
+  color: #a9b5af;
+}
+
+.month-grid__day.is-today .month-grid__number {
+  box-shadow: inset 0 0 0 1.5px var(--color-primary);
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.month-grid__day.is-selected .month-grid__number {
+  background: var(--color-primary);
+  box-shadow: none;
+  color: #fff;
+  font-weight: 700;
+}
+
+.month-grid__day:hover:not(:disabled):not(.is-selected) .month-grid__number {
+  background: var(--color-primary-soft);
+}
+
+.month-grid__marks,
+.month-grid__dots {
+  display: flex;
+  gap: 0.18rem;
+}
+
+.month-grid__dot {
+  width: 0.38rem;
+  height: 0.38rem;
+  border-radius: 50%;
+  background: var(--event-color);
+}
+
+.month-grid__chips {
+  display: none;
+}
+
+.month-grid[aria-busy='true'] .month-grid__weeks {
+  opacity: 0.6;
+}
+
+.event-tone--health {
+  --event-color: var(--color-event-health);
+}
+
+.event-tone--school {
+  --event-color: var(--color-event-school);
+}
+
+.event-tone--therapy {
+  --event-color: var(--color-event-therapy);
+}
+
+.event-tone--activity {
+  --event-color: var(--color-event-activity);
+}
+
+.event-tone--meeting {
+  --event-color: var(--color-event-meeting);
+}
+
+.event-tone--neutral {
+  --event-color: var(--color-event-neutral);
+}
+
+.day-events {
+  min-width: 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.day-events__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.day-events__header h2 {
+  margin: 0;
+  color: var(--color-primary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.day-events__header span,
+.day-events__status {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.day-events__header span {
+  white-space: nowrap;
+}
+
+.day-events__status {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.5rem 0;
+}
+
+.day-events__error {
+  display: grid;
+  justify-items: start;
+  gap: 0.75rem;
+  padding: 0.9rem;
+  border: 1px solid #fecdca;
+  border-radius: 0.65rem;
+  background: var(--color-error-background);
+  color: var(--color-error);
+}
+
+.day-events__error p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.day-events__list {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.event-card {
+  display: grid;
+  width: 100%;
+  gap: 0.15rem;
+  padding: 0.75rem 0.85rem 0.75rem 1.1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  background:
+    linear-gradient(var(--event-color), var(--event-color)) left 0.55rem top 0.75rem / 0.25rem
+      calc(100% - 1.5rem) no-repeat,
+    var(--color-surface);
+  text-align: left;
+}
+
+.event-card:hover {
+  border-color: #a9b8b1;
+}
+
+.event-card__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.event-card__time,
+.event-card__home {
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+}
+
+.event-card__time {
+  font-weight: 600;
+}
+
+.event-card__type,
+.event-dialog__type {
+  color: var(--event-color);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.event-card__title {
+  font-size: 0.98rem;
+}
+
+.event-card__people {
+  font-size: 0.85rem;
+}
+
+.event-dialog {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+}
+
+.event-dialog__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(24 34 30 / 45%);
+}
+
+.event-dialog__panel {
+  position: relative;
+  width: 100%;
+  max-height: 85dvh;
+  overflow-y: auto;
+  padding: 1.25rem 1.25rem 1.75rem;
+  border-radius: 1rem 1rem 0 0;
+  background: var(--color-surface);
+  box-shadow: 0 -8px 30px rgb(24 34 30 / 18%);
+}
+
+.event-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.event-dialog__header h2 {
+  margin: 0.2rem 0 0;
+  font-size: 1.3rem;
+  line-height: 1.25;
+}
+
+.event-dialog__details {
+  display: grid;
+  gap: 0.9rem;
+  margin: 1.25rem 0 0;
+}
+
+.event-dialog__details dt {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.event-dialog__details dd {
+  margin: 0.15rem 0 0;
+}
+
+.event-dialog__description {
+  white-space: pre-line;
+}
+
+.event-dialog__participants {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.event-dialog__participants span {
+  color: var(--color-text-muted);
 }
 
 @keyframes spin {
@@ -456,6 +933,140 @@ button:disabled {
 
   .login-heading {
     margin-top: 0;
+  }
+}
+
+@media (min-width: 52rem) {
+  .agenda-main {
+    padding: 1.75rem 2rem 2.5rem;
+  }
+
+  .agenda-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.5rem;
+  }
+
+  .agenda-heading h1 {
+    margin: 0;
+    font-size: 2rem;
+  }
+
+  .agenda-filters {
+    grid-auto-columns: minmax(11rem, 14rem);
+  }
+
+  .agenda-layout {
+    grid-template-columns: minmax(0, 1fr) 20rem;
+    align-items: start;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+  }
+
+  .agenda-calendar,
+  .day-events {
+    border: 1px solid var(--color-border);
+    border-radius: 0.9rem;
+    background: var(--color-surface);
+  }
+
+  .agenda-calendar {
+    overflow: hidden;
+  }
+
+  .month-navigation {
+    margin: 0;
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .month-navigation h2 {
+    font-size: 1.25rem;
+  }
+
+  .month-grid__weekdays {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .month-grid__weekdays span {
+    padding: 0.5rem 0;
+    font-size: 0.85rem;
+  }
+
+  .month-grid__week + .month-grid__week {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .month-grid__day {
+    min-height: 7.25rem;
+    align-items: stretch;
+    padding: 0.4rem;
+    border-radius: 0;
+    text-align: left;
+  }
+
+  .month-grid__day + .month-grid__day {
+    border-left: 1px solid var(--color-border);
+  }
+
+  .month-grid__day.is-outside {
+    background: #fafbfa;
+  }
+
+  .month-grid__day:hover:not(:disabled) {
+    background: #f7faf8;
+  }
+
+  .month-grid__number {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .month-grid__dots {
+    display: none;
+  }
+
+  .month-grid__marks,
+  .month-grid__chips {
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  .month-grid__chip {
+    overflow: hidden;
+    padding: 0.15rem 0.35rem;
+    border-left: 3px solid var(--event-color);
+    border-radius: 0.3rem;
+    background: #f5f7f6;
+    font-size: 0.72rem;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .month-grid__more {
+    color: var(--color-primary);
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+
+  .day-events {
+    position: sticky;
+    top: 5rem;
+    padding: 1rem;
+  }
+
+  .event-dialog {
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+
+  .event-dialog__panel {
+    width: min(34rem, 100%);
+    border-radius: 1rem;
+    padding: 1.5rem 1.75rem 1.75rem;
   }
 }
 

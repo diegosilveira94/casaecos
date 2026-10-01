@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import type { LoginRequest } from '@casaecos/shared-types';
+import type { LoginRequest, Permission } from '@casaecos/shared-types';
 
 import { apiClient } from '../../../../shared/http/api-client.js';
 import { authService } from '../services/auth-service.js';
@@ -57,7 +57,13 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
     setState({ status: 'authenticated', user });
   }, []);
 
-  const value = useMemo(() => ({ ...state, login, logout }), [state, login, logout]);
+  const can = useCallback(
+    (permission: Permission) =>
+      state.status === 'authenticated' && state.user.permissions.includes(permission),
+    [state],
+  );
+
+  const value = useMemo(() => ({ ...state, login, logout, can }), [state, login, logout, can]);
 
   return <AuthContext value={value}>{children}</AuthContext>;
 }
