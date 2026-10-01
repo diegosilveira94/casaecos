@@ -96,9 +96,11 @@ casaecos/
 │       │   ├── config/               # env.ts (VITE_API_URL obrigatória)
 │       │   ├── shared/http/          # HttpClient, ApiRequestError e o apiClient
 │       │   ├── modules/              # mesmos módulos + shared
-│       │   │   ├── agenda/           # services/EventService, pages/AgendaPage (placeholder)
-│       │   │   └── shared/auth/      # SessionStore, AuthService, AuthProvider/useAuth,
-│       │   │                         # pages/LoginPage, routes/ProtectedRoute
+│       │   │   ├── agenda/           # domain/ (calendário, cores), hooks/, components/,
+│       │   │   │                     # services/EventService, pages/AgendaPage
+│       │   │   └── shared/           # auth/ (SessionStore, AuthService, AuthProvider/useAuth,
+│       │   │                         # LoginPage, ProtectedRoute), home/ (HomeService),
+│       │   │                         # layout/ (AppHeader, BrandMark)
 │       │   ├── App.tsx
 │       │   └── main.tsx
 │       └── package.json
@@ -214,7 +216,8 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
 - **`POST /auth/accounts`** — cria credencial para uma `person` existente. Exige
   token **e** papel Coordenador.
 - **`GET /auth/me`** — devolve o usuário do token; é o que a tela usa para restaurar
-  a sessão ao recarregar a página.
+  a sessão ao recarregar a página. O `user` (aqui e no login) traz as `permissions`
+  do papel (ECOS-8), calculadas do `permissions.ts`.
 - **Token**: JWT HS256 via `jose`, 8h de validade, sem refresh token. Carrega
   `sub` (= `person_id`), `email` e `roleId`. **Escopo por casa fica fora do token**
   de propósito: vínculo muda e token não se atualiza.
@@ -245,7 +248,8 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
 - **Sessão**: `SessionStore` guarda só token + expiração no `localStorage`; token
   vencido é descartado sem ir à API. O usuário não é guardado — volta do
   `GET /auth/me` ao recarregar. Leia o estado com `useAuth()`
-  (`restoring | anonymous | authenticated`).
+  (`restoring | anonymous | authenticated`), e a permissão com `useAuth().can('event:write')`
+  (falso sem sessão).
 - **O cliente não conhece o router.** Redirecionar para o login é da rota protegida,
   que reage ao estado `anonymous`.
 - **`VITE_API_URL` vem do `.env` da raiz** (`envDir: '../..'`) e é obrigatória: sem
@@ -361,6 +365,38 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   pessoa fora do escopo dá página vazia. Não existe `GET /people/:id/events`.
 - **Web**: `eventService.addParticipant()`, `updateParticipant()`,
   `removeParticipant()`, `listParticipationTypes()` e `personId` no `list()`.
+
+### Agenda — tela (ECOS-8)
+
+> Decisões #92 a #97 no Notion.
+
+- **Layout mobile = opção A do Figma** (seção `104:483`, frame `104:20`): mini-mês com
+  até 3 pontos por dia na cor do tipo e, embaixo, a lista do dia selecionado. A partir
+  de 52rem (o breakpoint do login) vira a grade do protótipo, com até 3 chips
+  `hora título` + "+N compromissos", e a lista do dia vai para o painel lateral (no
+  lugar do "Próximos compromissos" do Figma). O tipo aparece como **texto colorido,
+  sem fundo** — pedido do Diego, os chips com fundo tinham "cara de IA".
+- **Só visão de mês.** Semana e Dia ficaram para a ECOS-23. Abre no mês atual com
+  hoje selecionado; trocar de mês seleciona o dia 1 (ou hoje, no mês atual); dia de
+  fora do mês fica apagado e desabilitado.
+- **Uma busca por mês**: `useMonthEvents` chama `eventService.listAll()` com
+  `from`/`to` = início do mês e do seguinte no **fuso do aparelho**
+  (`toOffsetIsoString`), mais `homeId`/`eventTypeId`. O `listAll` percorre as páginas de
+  200 até o `total`. O resultado é marcado com a chave da requisição: trocar mês ou
+  filtro já vale como `loading`, e resposta atrasada de busca antiga é descartada.
+  Compromisso entra no dia local do **início** (mesma regra do filtro da ECOS-15).
+- **Permissões na tela**: o filtro de casa (`homeService.list()`, `GET /homes`) só
+  aparece com `can('home:read')` e mais de uma casa visível — motorista nem busca as
+  casas, cuidador de uma casa só não vê o filtro. O "+ Novo compromisso" fica para a
+  ECOS-9, com `can('event:write')`. Sem sidebar de módulos que ainda não existem (#91).
+- **Cor por tipo**: `event-tone.ts` mapeia o id do `event_type` (ids fixos, #37) para
+  um tom, e o CSS tem um token `--color-event-*` por tom, todos com contraste AA como
+  texto no branco. Tipo novo ou "Outro" cai no neutro até ganhar cor.
+- **Detalhe** em modo leitura (descrição, endereço, participantes com o tipo):
+  bottom sheet no celular, modal no desktop, fecha com Esc/fundo/"Fechar" e devolve
+  o foco ao card. Sem editar nem excluir (ECOS-9).
+- **Lookups que falham só somem com o filtro**; o erro exibido é o da busca do mês
+  (`ApiRequestError.message` + "Tentar novamente"), com a grade continuando na tela.
 
 ### Autorização (ECOS-14)
 
@@ -503,9 +539,9 @@ os frames de criação e edição de compromisso.
 
 1. ~~O verde não bate.~~ Resolvido na ECOS-17: `--color-primary: #186949` no
    `index.css`, igual ao Figma (decisão #89).
-2. **O protótipo é só desktop.** Não existe frame mobile no arquivo, o que contraria
-   o princípio mobile-first do projeto. A tela de agenda precisa de uma decisão de
-   layout para celular — ou um frame no Figma, ou definida direto no código.
+2. ~~O protótipo é só desktop.~~ Resolvido na ECOS-8: as três opções de layout mobile
+   estão na seção `104:483` do Figma, e a escolhida é a A (frame `104:20`, decisão
+   #92).
 3. **Tokens não existem no Figma.** Nenhuma variável está definida no arquivo, então
    a fonte da verdade dos tokens vai ser o CSS do `apps/web`, não o Figma. Ao
    importar uma tela, extrair os valores e nomeá-los no código.
@@ -565,6 +601,10 @@ os frames de criação e edição de compromisso.
   espera a restauração da sessão, erro vindo do `ApiRequestError` e placeholder em
   `/agenda` até a ECOS-8. O backend de auth paralelo da branch foi descartado em favor
   da ECOS-13.
+- **ECOS-8 implementada em 01/10/2026**: tela da agenda em `/agenda` — mini-mês +
+  lista do dia no celular, grade do mês com painel do dia no desktop, filtros de tipo
+  e casa, detalhe do compromisso em modo leitura e `permissions` no usuário
+  autenticado (`useAuth().can()`).
 - Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-9, com ECOS-11 e
   ECOS-12 como base compartilhada (casas e pessoas).
 - Ordem de desenvolvimento: schema Prisma → API → telas React.
@@ -581,17 +621,19 @@ os frames de criação e edição de compromisso.
     eventos na ECOS-6)
   - ECOS-16: camada de integração frontend-API — ✅ implementada
   - ECOS-17: tela de login — ✅ implementada (tela do Gustavo adaptada à ECOS-16)
-  - ECOS-8: Tela de visualização da agenda
+  - ECOS-8: Tela de visualização da agenda — ✅ implementada (só visão de mês)
   - ECOS-9: Formulário de criação/edição de evento
   - ECOS-18: testes automatizados do módulo
   - ECOS-19/20: telas de design no Figma (formulário de compromisso, login)
   - ECOS-21: exportar agenda — adiada (decisão #38)
+  - ECOS-23: visões Semana e Dia da agenda — backlog (decisão #93)
 
 ## Pendências que afetam o desenvolvimento
 
 - **Permissões: implementadas na ECOS-14** (ver "Autorização") e aplicadas nos
-  eventos (ECOS-6), na listagem (ECOS-15) e nos participantes (ECOS-7); a tela
-  (ECOS-8) ainda precisa esconder o que o papel não pode fazer.
+  eventos (ECOS-6), na listagem (ECOS-15) e nos participantes (ECOS-7). Na tela, a
+  ECOS-8 entregou o `useAuth().can()`; a ECOS-9 precisa usá-lo no "+ Novo
+  compromisso" e nas ações de editar/excluir (`event:write`).
 - **Dívida: `POST /agenda/events` dispara o aviso de depreciação do `pg`** ("client
   is already executing a query"). O `event.create` com `select` de relações roda numa
   transação implícita e o Prisma carrega as relações em paralelo no mesmo client — o
