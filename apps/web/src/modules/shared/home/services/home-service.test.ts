@@ -26,4 +26,15 @@ describe('HomeService', () => {
     expect(url).toBe('http://api.test/homes');
     expect(init?.method).toBe('GET');
   });
+
+  it('lista as pessoas da casa em GET /homes/:id/people', async () => {
+    const service = new HomeService(
+      new HttpClient('http://api.test', { readAccessToken: () => 'token' }),
+    );
+
+    await expect(service.listPeople(7)).resolves.toEqual([]);
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe('http://api.test/homes/7/people');
+    expect(init?.method).toBe('GET');
+  });
 });

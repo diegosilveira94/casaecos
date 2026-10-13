@@ -23,17 +23,24 @@ export function Dialog({
   const titleId = useId();
   const closeButton = useRef<HTMLButtonElement>(null);
 
+  // Focus moves only on open and on close: `onClose` may change while the dialog is
+  // open (a form whose close depends on its state) and must not steal the focus back.
   useEffect(() => {
     const openedFrom =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     closeButton.current?.focus();
+    return () => {
+      openedFrom?.focus();
+    };
+  }, []);
+
+  useEffect(() => {
     const closeOnEscape = (keyboardEvent: KeyboardEvent): void => {
       if (keyboardEvent.key === 'Escape') onClose();
     };
     document.addEventListener('keydown', closeOnEscape);
     return () => {
       document.removeEventListener('keydown', closeOnEscape);
-      openedFrom?.focus();
     };
   }, [onClose]);
 

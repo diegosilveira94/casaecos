@@ -10,6 +10,7 @@ import { useHomeSelection } from '../../shared/home/context/use-home-selection.j
 import { DayEvents } from '../components/DayEvents.js';
 import { DayEventsDialog } from '../components/DayEventsDialog.js';
 import { EventDetailsDialog } from '../components/EventDetailsDialog.js';
+import { EventFormDialog } from '../components/EventFormDialog.js';
 import { FiltersMenu } from '../components/FiltersMenu.js';
 import { MonthGrid } from '../components/MonthGrid.js';
 import { MonthLoadError } from '../components/MonthLoadError.js';
@@ -26,14 +27,27 @@ const NO_EVENTS: EventResponse[] = [];
 
 interface UpcomingEventsProps {
   filters: AgendaFilters;
+  reloadCount: number;
   onOpenEvent: (event: EventResponse) => void;
 }
 
 // Its own component so the upcoming list is only fetched where it is shown (desktop).
-function UpcomingEvents({ filters, onOpenEvent }: UpcomingEventsProps): React.JSX.Element {
+function UpcomingEvents({
+  filters,
+  reloadCount,
+  onOpenEvent,
+}: UpcomingEventsProps): React.JSX.Element {
   return (
-    <UpcomingEventsPanel upcomingEvents={useUpcomingEvents(filters)} onOpenEvent={onOpenEvent} />
+    <UpcomingEventsPanel
+      upcomingEvents={useUpcomingEvents(filters, reloadCount)}
+      onOpenEvent={onOpenEvent}
+    />
   );
+}
+
+/** The form dialog when open: `event` null is a new commitment. */
+interface EventFormTarget {
+  event: EventResponse | null;
 }
 
 export function AgendaPage(): React.JSX.Element {
@@ -46,6 +60,9 @@ export function AgendaPage(): React.JSX.Element {
   const [eventTypeId, setEventTypeId] = useState<number | undefined>();
   const [openEvent, setOpenEvent] = useState<EventResponse | null>(null);
   const [openDay, setOpenDay] = useState<Date | null>(null);
+  const [formTarget, setFormTarget] = useState<EventFormTarget | null>(null);
+  const [upcomingReloadCount, setUpcomingReloadCount] = useState(0);
+  const canWriteEvents = can('event:write');
 
   const eventTypes = useEventTypes();
   const filters = useMemo<AgendaFilters>(
@@ -55,7 +72,7 @@ export function AgendaPage(): React.JSX.Element {
     }),
     [selectedHomeId, eventTypeId],
   );
-  const { monthEvents, retry } = useMonthEvents(month, filters);
+  const { monthEvents, reload: reloadMonth } = useMonthEvents(month, filters);
 
   const eventsByDay = useMemo(
     () => groupEventsByDay(monthEvents.status === 'loaded' ? monthEvents.events : NO_EVENTS),
@@ -89,6 +106,24 @@ export function AgendaPage(): React.JSX.Element {
     setOpenDay(null);
   }, []);
 
+  const reloadEvents = (): void => {
+    reloadMonth();
+    setUpcomingReloadCount((current) => current + 1);
+  };
+
+  const closeForm = (): void => {
+    setFormTarget(null);
+  };
+
+  // The agenda lands on the day of what was just saved, so the result is in sight.
+  const showSavedEvent = (savedEvent: EventResponse): void => {
+    const day = startOfDay(new Date(savedEvent.startDate));
+    setMonth(CalendarMonth.containing(day));
+    setSelectedDay(day);
+    reloadEvents();
+    closeForm();
+  };
+
   return (
     <>
       <main className="agenda-main">
@@ -107,8 +142,14 @@ export function AgendaPage(): React.JSX.Element {
               <UploadIcon />
               Exportar
             </button>
-            {can('event:write') ? (
-              <button className="primary-button primary-button--compact" {...COMING_SOON_PROPS}>
+            {canWriteEvents ? (
+              <button
+                className="primary-button primary-button--compact"
+                type="button"
+                onClick={() => {
+                  setFormTarget({ event: null });
+                }}
+              >
                 <PlusIcon />
                 Novo Compromisso
               </button>
@@ -126,7 +167,7 @@ export function AgendaPage(): React.JSX.Element {
               }}
             />
             {isDesktop && monthEvents.status === 'failed' ? (
-              <MonthLoadError message={monthEvents.message} onRetry={retry} />
+              <MonthLoadError message={monthEvents.message} onRetry={reloadMonth} />
             ) : null}
             <MonthGrid
               month={month}
@@ -140,14 +181,18 @@ export function AgendaPage(): React.JSX.Element {
           </section>
 
           {isDesktop ? (
-            <UpcomingEvents filters={filters} onOpenEvent={openEventDetails} />
+            <UpcomingEvents
+              filters={filters}
+              reloadCount={upcomingReloadCount}
+              onOpenEvent={openEventDetails}
+            />
           ) : (
             <DayEvents
               day={selectedDay}
               today={today}
               monthEvents={monthEvents}
               dayEvents={eventsOf(selectedDay)}
-              onRetry={retry}
+              onRetry={reloadMonth}
               onOpenEvent={openEventDetails}
             />
           )}
@@ -164,7 +209,33 @@ export function AgendaPage(): React.JSX.Element {
         />
       ) : null}
       {openEvent ? (
-        <EventDetailsDialog event={openEvent} today={today} onClose={closeEvent} />
+        <EventDetailsDialog
+          event={openEvent}
+          today={today}
+          onEdit={
+            canWriteEvents
+              ? () => {
+                  setFormTarget({ event: openEvent });
+                  setOpenEvent(null);
+                }
+              : undefined
+          }
+          onClose={closeEvent}
+        />
+      ) : null}
+      {formTarget ? (
+        <EventFormDialog
+          event={formTarget.event}
+          initialDay={selectedDay}
+          eventTypes={eventTypes}
+          onSaved={showSavedEvent}
+          onDeleted={() => {
+            reloadEvents();
+            closeForm();
+          }}
+          onStored={reloadEvents}
+          onClose={closeForm}
+        />
       ) : null}
     </>
   );

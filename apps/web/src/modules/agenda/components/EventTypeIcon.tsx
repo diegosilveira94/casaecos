@@ -17,13 +17,17 @@ const ICON_BY_TONE: Record<EventTone, () => React.JSX.Element> = {
   neutral: CalendarIcon,
 };
 
+/** The bare pictogram of a type, colored by whoever places it. */
+export function EventTypeGlyph({ eventTypeId }: { eventTypeId: number }): React.JSX.Element {
+  const ToneIcon = ICON_BY_TONE[eventToneFor(eventTypeId)];
+  return <ToneIcon />;
+}
+
 /** The round badge of the "Próximos compromissos" panel. */
 export function EventTypeIcon({ eventTypeId }: { eventTypeId: number }): React.JSX.Element {
-  const ToneIcon = ICON_BY_TONE[eventToneFor(eventTypeId)];
-
   return (
     <span className={`event-type-icon ${eventToneClassName(eventTypeId)}`}>
-      <ToneIcon />
+      <EventTypeGlyph eventTypeId={eventTypeId} />
     </span>
   );
 }

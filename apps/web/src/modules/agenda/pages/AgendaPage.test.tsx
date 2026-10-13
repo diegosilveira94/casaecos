@@ -2,23 +2,54 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { AuthenticatedUserResponse, EventResponse, Permission } from '@casaecos/shared-types';
+import type {
+  AuthenticatedUserResponse,
+  EventResponse,
+  HomeResponse,
+  Permission,
+  PersonResponse,
+} from '@casaecos/shared-types';
 
 import { ApiRequestError } from '../../../shared/http/api-request-error.js';
 import { AuthContext, type AuthContextValue } from '../../shared/auth/context/auth-context.js';
 import { HomeSelectionContext } from '../../shared/home/context/home-selection-context.js';
+import { homeService } from '../../shared/home/services/home-service.js';
+import { personService } from '../../shared/person/services/person-service.js';
 import { setDesktopViewport } from '../../../test/media-query.js';
 import { toOffsetIsoString } from '../domain/calendar-dates.js';
 import { eventService } from '../services/event-service.js';
 import { AgendaPage } from './AgendaPage.js';
 
 vi.mock('../services/event-service.js', () => ({
-  eventService: { list: vi.fn(), listAll: vi.fn(), listEventTypes: vi.fn() },
+  eventService: {
+    list: vi.fn(),
+    listAll: vi.fn(),
+    listEventTypes: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    addParticipant: vi.fn(),
+    updateParticipant: vi.fn(),
+    removeParticipant: vi.fn(),
+  },
+}));
+vi.mock('../../shared/home/services/home-service.js', () => ({
+  homeService: { listPeople: vi.fn() },
+}));
+vi.mock('../../shared/person/services/person-service.js', () => ({
+  personService: { listByRole: vi.fn() },
 }));
 
 const listAll = vi.mocked(eventService.listAll);
 const listEventTypes = vi.mocked(eventService.listEventTypes);
 const listUpcoming = vi.mocked(eventService.list);
+const createEvent = vi.mocked(eventService.create);
+const updateEvent = vi.mocked(eventService.update);
+const deleteEvent = vi.mocked(eventService.delete);
+const addParticipant = vi.mocked(eventService.addParticipant);
+const removeParticipant = vi.mocked(eventService.removeParticipant);
+const listHomePeople = vi.mocked(homeService.listPeople);
+const listPeopleByRole = vi.mocked(personService.listByRole);
 
 const SECRETARY_PERMISSIONS: Permission[] = [
   'person:read',
@@ -89,6 +120,36 @@ const school = makeEvent({
   eventType: { id: 2, name: 'Escola' },
 });
 
+function makePerson(id: number, name: string, roleId: number, role: string): PersonResponse {
+  return {
+    id,
+    name,
+    role: { id: roleId, description: role },
+    individualRegistration: null,
+    phone: null,
+    createdAt: at(8, 1, 8),
+    updatedAt: at(8, 1, 8),
+  };
+}
+
+const anaSouza = makePerson(2, 'Ana Souza', 3, 'Cuidador/Monitor');
+const joaoPedro = makePerson(5, 'João Pedro', 5, 'Acolhido');
+// Linked to no home, like the drivers of the organization.
+const carlosLima = makePerson(4, 'Carlos Lima', 4, 'Motorista');
+
+function makeHome(id: number, name: string): HomeResponse {
+  return {
+    id,
+    name,
+    organization: { id: 1, name: 'Ecos da Esperança' },
+    responsible: anaSouza,
+    createdAt: at(8, 1, 8),
+    updatedAt: at(8, 1, 8),
+  };
+}
+
+const homes = [makeHome(1, 'Casa Esperança'), makeHome(2, 'Casa Fé')];
+
 function renderPage(
   user: AuthenticatedUserResponse = secretary,
   selectedHomeId: number | null = null,
@@ -103,7 +164,7 @@ function renderPage(
   render(
     <AuthContext value={auth}>
       <HomeSelectionContext
-        value={{ homes: [], selectedHomeId, canChooseHome: true, selectHome: vi.fn() }}
+        value={{ homes, selectedHomeId, canChooseHome: true, selectHome: vi.fn() }}
       >
         <AgendaPage />
       </HomeSelectionContext>
@@ -134,6 +195,11 @@ describe('AgendaPage', () => {
       pageSize: 4,
       total: 2,
     });
+    listHomePeople.mockResolvedValue([anaSouza, joaoPedro]);
+    listPeopleByRole.mockResolvedValue([carlosLima]);
+    addParticipant.mockResolvedValue({ message: 'ok' });
+    removeParticipant.mockResolvedValue({ message: 'ok' });
+    deleteEvent.mockResolvedValue({ message: 'ok' });
   });
 
   afterEach(() => {
@@ -233,14 +299,10 @@ describe('AgendaPage', () => {
     expect(lastListAllQuery()).toMatchObject({ homeId: 2 });
   });
 
-  it('mostra "Novo Compromisso" e "Exportar" ainda sem ação', async () => {
+  it('mostra "Exportar" ainda sem ação', async () => {
     renderPage();
     await within(dayList()).findByText('Consulta pediátrica');
 
-    expect(screen.getByRole('button', { name: 'Novo Compromisso' })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
     expect(screen.getByRole('button', { name: 'Exportar' })).toHaveAttribute(
       'aria-disabled',
       'true',
@@ -306,10 +368,260 @@ describe('AgendaPage', () => {
     const dialog = screen.getByRole('dialog', { name: 'Sessão com psicóloga' });
     expect(within(dialog).queryByText('Endereço')).not.toBeInTheDocument();
     expect(within(dialog).queryByText('Descrição')).not.toBeInTheDocument();
-    expect(within(dialog).getByText('Nenhum participante')).toBeInTheDocument();
+    expect(within(dialog).getByText('Nenhuma pessoa envolvida')).toBeInTheDocument();
 
     await user.click(within(dialog).getByRole('button', { name: 'Fechar' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  describe('formulário de compromisso', () => {
+    const openNewForm = async (user: ReturnType<typeof userEvent.setup>): Promise<HTMLElement> => {
+      await within(dayList()).findByText('Consulta pediátrica');
+      await user.click(screen.getByRole('button', { name: 'Novo Compromisso' }));
+      return screen.getByRole('dialog', { name: 'Novo compromisso' });
+    };
+
+    const openEditForm = async (user: ReturnType<typeof userEvent.setup>): Promise<HTMLElement> => {
+      await user.click(
+        await within(dayList()).findByRole('button', { name: /Consulta pediátrica/ }),
+      );
+      const details = screen.getByRole('dialog', { name: 'Consulta pediátrica' });
+      await user.click(within(details).getByRole('button', { name: 'Editar' }));
+      return screen.getByRole('dialog', { name: 'Editar compromisso' });
+    };
+
+    it('cria o compromisso com as pessoas e mostra o dia dele na agenda', async () => {
+      const user = userEvent.setup();
+      const created = makeEvent({ id: 9, title: 'Vacinação', startDate: at(9, 5, 9) });
+      createEvent.mockResolvedValue(created);
+      renderPage();
+      const form = await openNewForm(user);
+
+      await user.type(within(form).getByLabelText(/^Título/), 'Vacinação');
+      await user.click(within(form).getByRole('radio', { name: 'Consulta médica' }));
+      const startDay = within(form).getByLabelText(/^Data/);
+      expect(startDay).toHaveValue('2026-09-30');
+      await user.clear(startDay);
+      await user.type(startDay, '2026-10-05');
+      await user.type(within(form).getByLabelText(/^Início/), '09:00');
+      await user.selectOptions(within(form).getByLabelText(/^Casa/), 'Casa Fé');
+      await user.click(await within(form).findByRole('checkbox', { name: 'João Pedro' }));
+      await user.selectOptions(within(form).getByLabelText('Responsável'), 'Ana Souza');
+      await user.selectOptions(within(form).getByLabelText('Motorista'), 'Carlos Lima');
+      expect(listPeopleByRole).toHaveBeenCalledWith(4);
+      expect(
+        within(within(form).getByLabelText('Motorista')).queryByRole('option', {
+          name: 'Ana Souza',
+        }),
+      ).not.toBeInTheDocument();
+      await user.click(within(form).getByRole('button', { name: 'Salvar compromisso' }));
+
+      expect(await screen.findByRole('heading', { name: 'Outubro 2026' })).toBeInTheDocument();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(listHomePeople).toHaveBeenLastCalledWith(2);
+      expect(createEvent).toHaveBeenCalledWith({
+        title: 'Vacinação',
+        eventTypeId: 1,
+        homeId: 2,
+        startDate: toOffsetIsoString(new Date(2026, 9, 5, 9, 0)),
+        endDate: null,
+        address: null,
+        description: null,
+      });
+      expect(addParticipant.mock.calls).toEqual([
+        [9, 5, { participationTypeId: 2 }],
+        [9, 2, { participationTypeId: 3 }],
+        [9, 4, { participationTypeId: 4 }],
+      ]);
+      expect(within(dayList()).getByRole('heading')).toHaveTextContent(
+        'Segunda-feira, 5 de outubro',
+      );
+    });
+
+    it('já vem com a casa escolhida na sidebar', async () => {
+      const user = userEvent.setup();
+      renderPage(secretary, 2);
+      const form = await openNewForm(user);
+
+      expect(within(form).getByLabelText(/^Casa/)).toHaveValue('2');
+    });
+
+    it('aponta os campos obrigatórios em branco e não salva', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      const form = await openNewForm(user);
+
+      await user.click(within(form).getByRole('button', { name: 'Salvar compromisso' }));
+
+      expect(within(form).getByText('Informe o título.')).toBeInTheDocument();
+      expect(within(form).getByText('Escolha o tipo de compromisso.')).toBeInTheDocument();
+      expect(within(form).getByText('Informe o horário.')).toBeInTheDocument();
+      expect(within(form).getByText('Escolha a casa.')).toBeInTheDocument();
+      expect(within(form).getByLabelText(/^Título/)).toHaveAttribute('aria-invalid', 'true');
+      expect(createEvent).not.toHaveBeenCalled();
+    });
+
+    it('fecha direto sem alterações, e pede confirmação quando há alterações', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      let form = await openNewForm(user);
+
+      await user.click(within(form).getByRole('button', { name: 'Cancelar' }));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+      form = await openNewForm(user);
+      await user.type(within(form).getByLabelText(/^Título/), 'Vacinação');
+      await user.keyboard('{Escape}');
+
+      const confirmation = screen.getByRole('dialog', { name: 'Descartar alterações?' });
+      await user.click(within(confirmation).getByRole('button', { name: 'Continuar editando' }));
+      expect(screen.getByRole('dialog', { name: 'Novo compromisso' })).toBeInTheDocument();
+      expect(within(form).getByLabelText(/^Título/)).toHaveValue('Vacinação');
+
+      await user.click(within(form).getByRole('button', { name: 'Cancelar' }));
+      await user.click(
+        within(screen.getByRole('dialog', { name: 'Descartar alterações?' })).getByRole('button', {
+          name: 'Descartar',
+        }),
+      );
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('edita pelo detalhe do compromisso, mandando só as pessoas que mudaram', async () => {
+      const user = userEvent.setup();
+      updateEvent.mockResolvedValue({ ...consultation, title: 'Consulta de retorno' });
+      renderPage();
+      const form = await openEditForm(user);
+
+      const title = within(form).getByLabelText(/^Título/);
+      expect(title).toHaveValue('Consulta pediátrica');
+      expect(within(form).getByRole('radio', { name: 'Consulta médica' })).toBeChecked();
+      expect(within(form).getByLabelText(/^Início/)).toHaveValue('09:00');
+      expect(within(form).getByLabelText(/^Término/)).toHaveValue('10:00');
+      await user.clear(title);
+      await user.type(title, 'Consulta de retorno');
+      expect(await within(form).findByRole('checkbox', { name: 'João Pedro' })).toBeChecked();
+      const responsible = within(form).getByLabelText('Responsável');
+      expect(within(responsible).getByRole('option', { name: 'Maria Silva' })).toHaveProperty(
+        'selected',
+        true,
+      );
+      await user.selectOptions(responsible, 'Ninguém');
+      await user.click(within(form).getByRole('button', { name: 'Salvar alterações' }));
+
+      expect(await within(dayList()).findByText('Consulta pediátrica')).toBeInTheDocument();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(updateEvent).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          title: 'Consulta de retorno',
+          endDate: toOffsetIsoString(new Date(2026, 8, 30, 10, 0)),
+          address: 'Rua das Flores, 100',
+        }),
+      );
+      expect(removeParticipant).toHaveBeenCalledWith(1, 1);
+      expect(addParticipant).not.toHaveBeenCalled();
+      expect(listAll).toHaveBeenCalledTimes(2);
+    });
+
+    it('pede confirmação ao trocar a casa e tira quem é só da casa antiga', async () => {
+      const user = userEvent.setup();
+      const mariaClara = makePerson(7, 'Maria Clara', 5, 'Acolhido');
+      listHomePeople.mockImplementation((homeId) =>
+        Promise.resolve(homeId === 2 ? [mariaClara] : [anaSouza, joaoPedro]),
+      );
+      updateEvent.mockResolvedValue(consultation);
+      renderPage();
+      const form = await openEditForm(user);
+      const home = within(form).getByLabelText(/^Casa/);
+      expect(await within(form).findByRole('checkbox', { name: 'João Pedro' })).toBeChecked();
+
+      await user.selectOptions(home, 'Casa Fé');
+      const confirmation = await screen.findByRole('dialog', { name: 'Trocar a casa?' });
+      expect(confirmation).toHaveTextContent(
+        'Trocar a casa remove os acolhidos já vinculados. Continuar?',
+      );
+      await user.click(within(confirmation).getByRole('button', { name: 'Manter a casa' }));
+      expect(home).toHaveValue('1');
+      expect(within(form).getByRole('checkbox', { name: 'João Pedro' })).toBeChecked();
+
+      await user.selectOptions(home, 'Casa Fé');
+      await user.click(
+        within(await screen.findByRole('dialog', { name: 'Trocar a casa?' })).getByRole('button', {
+          name: 'Trocar a casa',
+        }),
+      );
+      expect(home).toHaveValue('2');
+      expect(await within(form).findByRole('checkbox', { name: 'Maria Clara' })).not.toBeChecked();
+      expect(within(form).queryByRole('checkbox', { name: 'João Pedro' })).not.toBeInTheDocument();
+
+      await user.click(within(form).getByRole('button', { name: 'Salvar alterações' }));
+
+      expect(await within(dayList()).findByText('Consulta pediátrica')).toBeInTheDocument();
+      expect(updateEvent).toHaveBeenCalledWith(1, expect.objectContaining({ homeId: 2 }));
+      // Maria Silva is of neither home: she stays as the responsible one.
+      expect(removeParticipant.mock.calls).toEqual([[1, 5]]);
+    });
+
+    it('mostra o erro da API e mantém o formulário aberto', async () => {
+      const user = userEvent.setup();
+      updateEvent.mockRejectedValue(
+        new ApiRequestError(null, { message: 'Não foi possível conectar ao servidor' }),
+      );
+      renderPage();
+      const form = await openEditForm(user);
+
+      await user.click(within(form).getByRole('button', { name: 'Salvar alterações' }));
+
+      expect(await within(form).findByRole('alert')).toHaveTextContent(
+        'Não foi possível conectar ao servidor',
+      );
+      expect(within(form).getByRole('button', { name: 'Salvar alterações' })).toBeEnabled();
+    });
+
+    it('exclui depois de confirmar', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      const form = await openEditForm(user);
+
+      await user.click(within(form).getByRole('button', { name: 'Excluir' }));
+      const confirmation = screen.getByRole('dialog', { name: 'Excluir compromisso?' });
+      expect(confirmation).toHaveTextContent(
+        'Consulta pediátrica será excluído da agenda. Essa ação não pode ser desfeita.',
+      );
+
+      await user.click(within(confirmation).getByRole('button', { name: 'Manter compromisso' }));
+      expect(deleteEvent).not.toHaveBeenCalled();
+      expect(screen.getByRole('dialog', { name: 'Editar compromisso' })).toBeInTheDocument();
+
+      await user.click(within(form).getByRole('button', { name: 'Excluir' }));
+      await user.click(
+        within(screen.getByRole('dialog', { name: 'Excluir compromisso?' })).getByRole('button', {
+          name: 'Excluir',
+        }),
+      );
+
+      expect(await within(dayList()).findByText('Consulta pediátrica')).toBeInTheDocument();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(deleteEvent).toHaveBeenCalledWith(1);
+      expect(listAll).toHaveBeenCalledTimes(2);
+    });
+
+    it('não oferece "Editar" a quem não pode alterar compromissos', async () => {
+      const user = userEvent.setup();
+      renderPage({
+        ...secretary,
+        role: { id: 3, description: 'Cuidador/Monitor' },
+        permissions: ['home:read', 'event:read'],
+      });
+
+      await user.click(
+        await within(dayList()).findByRole('button', { name: /Consulta pediátrica/ }),
+      );
+
+      const details = screen.getByRole('dialog', { name: 'Consulta pediátrica' });
+      expect(within(details).queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument();
+    });
   });
 
   describe('no desktop', () => {
