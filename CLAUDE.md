@@ -646,6 +646,17 @@ os frames de criação e edição de compromisso.
   lista do dia no celular, grade do mês com painel do dia no desktop, filtros de tipo
   e casa, detalhe do compromisso em modo leitura e `permissions` no usuário
   autenticado (`useAuth().can()`).
+- **ECOS-9 implementada em 06/10/2026**: formulário de compromisso em `/agenda` —
+  "+ Novo Compromisso" e "Editar" (no detalhe) abrem o `EventFormDialog`, bottom sheet
+  no celular e modal no desktop; tipo em cartões, término opcional com "Termina em
+  outro dia", `*` nos obrigatórios, confirmação ao sair com alterações e ao excluir.
+  As pessoas entram em um campo por papel no compromisso — "Acolhidos" (cartões para
+  marcar), "Responsável" e "Motorista" —, e o detalhe as mostra em etiquetas
+  ("Envolvidos"). A mesma pessoa não é oferecida em dois campos, porque `person_event`
+  guarda um papel só por pessoa; "Organizador" não tem campo, mas quem já está salvo
+  assim é mantido. Salvar é o compromisso e depois os
+  participantes, um a um (`EventFormSaver`), porque a API os mantém em rotas próprias.
+  O desenho foi validado num protótipo HTML antes do código.
 - **Deploy de homologação no ar em 01/10/2026**: Neon + Render + Vercel, plano gratuito
   (decisões #100 a #103).
 - Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-9, com ECOS-11 e
@@ -665,7 +676,7 @@ os frames de criação e edição de compromisso.
   - ECOS-16: camada de integração frontend-API — ✅ implementada
   - ECOS-17: tela de login — ✅ implementada (tela do Gustavo adaptada à ECOS-16)
   - ECOS-8: Tela de visualização da agenda — ✅ implementada (só visão de mês)
-  - ECOS-9: Formulário de criação/edição de evento
+  - ECOS-9: Formulário de criação/edição de evento — ✅ implementada
   - ECOS-18: testes automatizados do módulo
   - ECOS-19/20: telas de design no Figma (formulário de compromisso, login)
   - ECOS-21: exportar agenda — adiada (decisão #38)
@@ -675,8 +686,26 @@ os frames de criação e edição de compromisso.
 
 - **Permissões: implementadas na ECOS-14** (ver "Autorização") e aplicadas nos
   eventos (ECOS-6), na listagem (ECOS-15) e nos participantes (ECOS-7). Na tela, a
-  ECOS-8 entregou o `useAuth().can()`; a ECOS-9 precisa usá-lo no "+ Novo
-  compromisso" e nas ações de editar/excluir (`event:write`).
+  ECOS-8 entregou o `useAuth().can()` e a ECOS-9 o usa no "+ Novo Compromisso" e no
+  "Editar" do detalhe (`event:write`).
+- **Salvar compromisso não é atômico.** Se o compromisso salva e o vínculo de alguma
+  pessoa falha, o formulário avisa e fica aberto; tentar de novo atualiza o mesmo
+  compromisso. Uma rota que receba os participantes junto resolveria de vez.
+- **Uma pessoa precisa poder acumular mais de uma função** (ex.: coordenadora e
+  motorista, cuidadora e motorista). Hoje não cabe em dois lugares: `person.role_id` é
+  um papel só por pessoa, e `person_event` tem chave `(person_id, event_id)`, um papel
+  só por pessoa em cada compromisso — a cuidadora que leva as crianças dirigindo fica
+  como Responsável _ou_ Motorista. Levantado pelo Diego em 07/10/2026, durante a
+  ECOS-9; fica para depois do formulário. Mexe em schema, RBAC (permissões e escopo
+  saem do papel) e nas rotas de participantes.
+- **Trocar a casa de um compromisso pede confirmação** quando há pessoas da casa
+  antiga que a nova não tem ("Trocar a casa remove os acolhidos já vinculados.
+  Continuar?"); confirmando, elas saem do compromisso. Quem não é de nenhuma das duas
+  (um motorista sem vínculo com casa, por exemplo) permanece.
+- **O campo "Motorista" oferece todos os motoristas da organização**
+  (`GET /people?roleId=4`), além da equipe da casa: motorista atende qualquer casa e
+  não precisa de vínculo em `home_person`. "Responsável" continua só com a equipe
+  vinculada à casa, então secretária e coordenação sem vínculo não aparecem ali.
 - **Dívida: `POST /agenda/events` dispara o aviso de depreciação do `pg`** ("client
   is already executing a query"). O `event.create` com `select` de relações roda numa
   transação implícita e o Prisma carrega as relações em paralelo no mesmo client — o
