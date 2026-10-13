@@ -16,10 +16,16 @@ interface UpcomingEventsResult {
   outcome: UpcomingEvents;
 }
 
-/** The next commitments from now on, with the same filters as the month. */
-export function useUpcomingEvents({ homeId, eventTypeId }: AgendaFilters): UpcomingEvents {
+/**
+ * The next commitments from now on, with the same filters as the month. A new
+ * `reloadCount` fetches them again, after a commitment is saved or deleted.
+ */
+export function useUpcomingEvents(
+  { homeId, eventTypeId }: AgendaFilters,
+  reloadCount: number,
+): UpcomingEvents {
   const [result, setResult] = useState<UpcomingEventsResult | null>(null);
-  const requestKey = JSON.stringify({ homeId, eventTypeId });
+  const requestKey = JSON.stringify({ homeId, eventTypeId, reloadCount });
 
   useEffect(() => {
     let current = true;

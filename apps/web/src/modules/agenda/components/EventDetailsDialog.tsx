@@ -7,13 +7,16 @@ import { eventToneClassName } from '../domain/event-tone.js';
 interface EventDetailsDialogProps {
   event: EventResponse;
   today: Date;
+  /** Absent for who cannot change commitments (`event:write`): no "Editar" then. */
+  onEdit?: (() => void) | undefined;
   onClose: () => void;
 }
 
-/** Read-only view of a commitment. Editing and removing are ECOS-9. */
+/** Read-only view of a commitment; "Editar" leads to the form, which also deletes. */
 export function EventDetailsDialog({
   event,
   today,
+  onEdit,
   onClose,
 }: EventDetailsDialogProps): React.JSX.Element {
   return (
@@ -47,12 +50,12 @@ export function EventDetailsDialog({
           </div>
         ) : null}
         <div>
-          <dt>Participantes</dt>
+          <dt>Envolvidos</dt>
           <dd>
             {event.participants.length === 0 ? (
-              'Nenhum participante'
+              'Nenhuma pessoa envolvida'
             ) : (
-              <ul className="event-details__participants">
+              <ul className="event-details__tags">
                 {event.participants.map(({ person, participationType }) => (
                   <li key={person.id}>
                     {person.name} <span>· {participationType.description}</span>
@@ -63,6 +66,13 @@ export function EventDetailsDialog({
           </dd>
         </div>
       </dl>
+      {onEdit ? (
+        <div className="event-details__actions">
+          <button className="outline-button" type="button" onClick={onEdit}>
+            Editar
+          </button>
+        </div>
+      ) : null}
     </Dialog>
   );
 }

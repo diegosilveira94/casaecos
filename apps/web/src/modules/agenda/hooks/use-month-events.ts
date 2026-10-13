@@ -35,7 +35,7 @@ function failureMessage(error: unknown): string {
 export function useMonthEvents(
   month: CalendarMonth,
   { homeId, eventTypeId }: AgendaFilters,
-): { monthEvents: MonthEvents; retry: () => void } {
+): { monthEvents: MonthEvents; reload: () => void } {
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<MonthEventsResult | null>(null);
   const { from, to } = month.period();
@@ -68,11 +68,12 @@ export function useMonthEvents(
     };
   }, [requestKey, from, to, homeId, eventTypeId]);
 
-  const retry = useCallback(() => {
+  // Used by "Tentar novamente" and after a commitment is saved or deleted.
+  const reload = useCallback(() => {
     setAttempt((current) => current + 1);
   }, []);
 
   const monthEvents: MonthEvents =
     result?.requestKey === requestKey ? result.outcome : { status: 'loading' };
-  return { monthEvents, retry };
+  return { monthEvents, reload };
 }

@@ -1151,14 +1151,27 @@ button:disabled {
   white-space: pre-line;
 }
 
-.event-details__participants {
-  margin: 0;
+/* Who is involved, as small tags: name in weight, role in the commitment after it. */
+.event-details__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.3rem 0 0;
   padding: 0;
   list-style: none;
 }
 
-.event-details__participants span {
-  color: var(--color-text-muted);
+.event-details__tags li {
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.3rem;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.event-details__tags span {
+  font-weight: 400;
 }
 
 .upcoming-events {
@@ -1573,6 +1586,402 @@ button:disabled {
     width: min(34rem, 100%);
     border-radius: 1rem;
     padding: 1.5rem 1.75rem 1.75rem;
+  }
+}
+
+/* ---- Event form (ECOS-9): bottom sheet on the phone ---- */
+
+.dialog__panel--form {
+  max-height: 94dvh;
+}
+
+.event-form {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.event-form__row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 1rem 0.75rem;
+}
+
+.event-form__row > .form-field--wide {
+  grid-column: 1 / -1;
+}
+
+.event-form fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.event-form legend {
+  margin-bottom: 0.5rem;
+  padding: 0;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.form-field__required {
+  color: var(--color-error);
+}
+
+.form-field textarea,
+.form-select select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 0.65rem;
+  outline: none;
+  background: var(--color-surface);
+  color: inherit;
+  font: inherit;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.form-field textarea {
+  min-height: 5.5rem;
+  padding: 0.75rem 0.9rem;
+  resize: vertical;
+}
+
+.form-field textarea::placeholder {
+  color: #98a39e;
+}
+
+.form-select {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.form-select select {
+  min-height: 3.25rem;
+  padding: 0.75rem 2.4rem 0.75rem 0.9rem;
+  appearance: none;
+  text-overflow: ellipsis;
+}
+
+.form-select > .icon {
+  position: absolute;
+  right: 0.85rem;
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.form-select--prompt select {
+  color: #98a39e;
+}
+
+.form-field textarea:disabled,
+.form-select select:disabled {
+  background: #f4f6f5;
+  color: var(--color-text-muted);
+}
+
+.form-field textarea:hover:not(:disabled),
+.form-select select:hover:not(:disabled) {
+  border-color: #a9b8b1;
+}
+
+.form-field textarea:focus,
+.form-select select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgb(24 105 73 / 14%);
+}
+
+.form-field [aria-invalid='true'],
+.form-field [aria-invalid='true']:hover:not(:disabled) {
+  border-color: var(--color-error);
+}
+
+.form-field__error,
+.form-field__hint {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.form-field__error {
+  color: var(--color-error);
+}
+
+.form-field__hint {
+  color: var(--color-text-muted);
+}
+
+.form-field__footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.form-field__footer .form-field__hint {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* The type fieldset is not a .form-field on purpose: `.form-field label` would
+   restyle the options. */
+.type-field .form-field__error {
+  margin-top: 0.5rem;
+}
+
+.type-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+/* Icon above the name: "Atividade/passeio" still fits two columns on the phone. */
+.type-option {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.65rem;
+  background: var(--color-surface);
+  font-size: 0.88rem;
+  line-height: 1.25;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.type-option .icon {
+  color: var(--event-color);
+}
+
+.type-option:hover {
+  border-color: #a9b8b1;
+}
+
+.type-option:has(input:checked) {
+  border-color: var(--event-color);
+  background: var(--event-tint);
+  color: var(--event-color);
+  font-weight: 600;
+}
+
+.type-option:has(input:focus-visible) {
+  outline: 3px solid rgb(24 105 73 / 25%);
+  outline-offset: 2px;
+}
+
+.type-picker--invalid .type-option:not(:has(input:checked)) {
+  border-color: var(--color-error);
+}
+
+.event-form__checkbox {
+  display: flex;
+  min-height: 2.5rem;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.event-form__checkbox input {
+  width: 1.2rem;
+  height: 1.2rem;
+  margin: 0;
+  accent-color: var(--color-primary);
+}
+
+/* Sheltered children of the home: one tap each, no list to open. */
+.person-chips {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.person-chip {
+  display: flex;
+  min-width: 0;
+  min-height: 3rem;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.65rem;
+  background: var(--color-surface);
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.person-chip input {
+  width: 1.2rem;
+  height: 1.2rem;
+  flex: 0 0 auto;
+  margin: 0;
+  accent-color: var(--color-primary);
+}
+
+.person-chip span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.person-chip:hover {
+  border-color: #a9b8b1;
+}
+
+.person-chip:has(input:checked) {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.person-chip:has(input:focus-visible) {
+  outline: 3px solid rgb(24 105 73 / 25%);
+  outline-offset: 2px;
+}
+
+/* Actions stay reachable while the sheet scrolls. */
+.dialog__footer {
+  position: sticky;
+  z-index: 1;
+  bottom: -1.75rem;
+  display: grid;
+  gap: 0.75rem;
+  margin: 0.25rem -1.25rem -1.75rem;
+  padding: 0.85rem 1.25rem 1.1rem;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.dialog__actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+/* Tighter side padding lets Excluir, Cancelar and Salvar share one row on the phone. */
+.dialog__actions .outline-button {
+  min-height: 3.25rem;
+  padding-inline: 0.8rem;
+  border-radius: 0.65rem;
+}
+
+.dialog__actions .primary-button {
+  flex: 1;
+}
+
+.outline-button--danger,
+.outline-button--danger:hover:not(:disabled) {
+  border-color: var(--color-error);
+  background: var(--color-error);
+  color: #fff;
+  font-weight: 600;
+}
+
+.outline-button--danger:hover:not(:disabled) {
+  filter: brightness(0.9);
+}
+
+.outline-button--danger:disabled {
+  opacity: 0.55;
+}
+
+/* "Descartar alterações?" and "Excluir compromisso?", stacked over the form. */
+.dialog__panel--confirm p {
+  margin: 0 0 1.5rem;
+  color: var(--color-text-muted);
+}
+
+.dialog__panel--confirm p strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.event-details__actions {
+  display: flex;
+  margin-top: 1.5rem;
+}
+
+.event-details__actions .outline-button {
+  flex: 1;
+}
+
+@media (min-width: 52rem) {
+  .dialog__panel--form {
+    width: min(40rem, 100%);
+    max-height: 90dvh;
+  }
+
+  .event-form__row {
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .event-form__row > .form-field--wide {
+    grid-column: auto;
+  }
+
+  .event-form__row--pairs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .type-picker {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .person-chips {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .dialog__footer {
+    margin: 0.5rem -1.75rem -1.75rem;
+    padding: 1rem 1.75rem 1.25rem;
+  }
+
+  .dialog__actions {
+    justify-content: flex-end;
+  }
+
+  .dialog__actions .outline-button,
+  .dialog__actions .primary-button {
+    min-height: 2.9rem;
+  }
+
+  .dialog__actions .outline-button {
+    padding-inline: 1rem;
+  }
+
+  .dialog__actions .primary-button {
+    width: auto;
+    flex: 0 0 auto;
+    padding-inline: 1.6rem;
+  }
+
+  .dialog__delete {
+    margin-right: auto;
+  }
+
+  .dialog__panel--confirm {
+    width: min(27rem, 100%);
+  }
+
+  .event-details__actions {
+    justify-content: flex-end;
+  }
+
+  .event-details__actions .outline-button {
+    flex: 0 0 auto;
   }
 }
 
