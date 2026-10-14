@@ -7,6 +7,7 @@ import { PlusIcon, UploadIcon } from '../../../shared/ui/icons.js';
 import { useIsDesktop } from '../../../shared/ui/use-media-query.js';
 import { useAuth } from '../../shared/auth/context/use-auth.js';
 import { useHomeSelection } from '../../shared/home/context/use-home-selection.js';
+import { AgendaNavigation } from '../components/AgendaNavigation.js';
 import { DayEvents } from '../components/DayEvents.js';
 import { DayEventsDialog } from '../components/DayEventsDialog.js';
 import { EventDetailsDialog } from '../components/EventDetailsDialog.js';
@@ -14,13 +15,21 @@ import { EventFormDialog } from '../components/EventFormDialog.js';
 import { FiltersMenu } from '../components/FiltersMenu.js';
 import { MonthGrid } from '../components/MonthGrid.js';
 import { MonthLoadError } from '../components/MonthLoadError.js';
-import { MonthNavigation } from '../components/MonthNavigation.js';
+import { TimeGrid } from '../components/TimeGrid.js';
 import { UpcomingEventsPanel } from '../components/UpcomingEventsPanel.js';
+import { WeekEventList } from '../components/WeekEventList.js';
 import { dayKey, startOfDay } from '../domain/calendar-dates.js';
+import {
+  dayViewLabel,
+  daysOfWeek,
+  moveVisibleDate,
+  type AgendaView,
+  weekViewLabel,
+} from '../domain/calendar-period.js';
 import { CalendarMonth } from '../domain/calendar-month.js';
 import { groupEventsByDay } from '../domain/event-format.js';
+import { useAgendaEvents, type AgendaFilters } from '../hooks/use-agenda-events.js';
 import { useEventTypes } from '../hooks/use-event-types.js';
-import { useMonthEvents, type AgendaFilters } from '../hooks/use-month-events.js';
 import { useUpcomingEvents } from '../hooks/use-upcoming-events.js';
 
 const NO_EVENTS: EventResponse[] = [];
@@ -55,8 +64,8 @@ export function AgendaPage(): React.JSX.Element {
   const { selectedHomeId } = useHomeSelection();
   const isDesktop = useIsDesktop();
   const [today] = useState(() => startOfDay(new Date()));
-  const [month, setMonth] = useState(() => CalendarMonth.containing(today));
   const [selectedDay, setSelectedDay] = useState(today);
+  const [view, setView] = useState<AgendaView>('month');
   const [eventTypeId, setEventTypeId] = useState<number | undefined>();
   const [openEvent, setOpenEvent] = useState<EventResponse | null>(null);
   const [openDay, setOpenDay] = useState<Date | null>(null);
@@ -72,17 +81,24 @@ export function AgendaPage(): React.JSX.Element {
     }),
     [selectedHomeId, eventTypeId],
   );
-  const { monthEvents, reload: reloadMonth } = useMonthEvents(month, filters);
+  const month = CalendarMonth.containing(selectedDay);
+  const { agendaEvents, reload: reloadAgenda } = useAgendaEvents(view, selectedDay, month, filters);
 
   const eventsByDay = useMemo(
-    () => groupEventsByDay(monthEvents.status === 'loaded' ? monthEvents.events : NO_EVENTS),
-    [monthEvents],
+    () => groupEventsByDay(agendaEvents.status === 'loaded' ? agendaEvents.events : NO_EVENTS),
+    [agendaEvents],
   );
   const eventsOf = (day: Date): EventResponse[] => eventsByDay.get(dayKey(day)) ?? NO_EVENTS;
+  const weekDays = useMemo(() => daysOfWeek(selectedDay), [selectedDay]);
+  const navigationLabel =
+    view === 'month'
+      ? month.label
+      : view === 'week'
+        ? weekViewLabel(selectedDay)
+        : dayViewLabel(selectedDay);
 
   const showMonth = useCallback(
     (target: CalendarMonth) => {
-      setMonth(target);
       setSelectedDay(target.contains(today) ? today : target.firstDay);
     },
     [today],
@@ -107,7 +123,7 @@ export function AgendaPage(): React.JSX.Element {
   }, []);
 
   const reloadEvents = (): void => {
-    reloadMonth();
+    reloadAgenda();
     setUpcomingReloadCount((current) => current + 1);
   };
 
@@ -118,7 +134,6 @@ export function AgendaPage(): React.JSX.Element {
   // The agenda lands on the day of what was just saved, so the result is in sight.
   const showSavedEvent = (savedEvent: EventResponse): void => {
     const day = startOfDay(new Date(savedEvent.startDate));
-    setMonth(CalendarMonth.containing(day));
     setSelectedDay(day);
     reloadEvents();
     closeForm();
@@ -159,25 +174,65 @@ export function AgendaPage(): React.JSX.Element {
 
         <div className="agenda-layout">
           <section className="agenda-calendar" aria-label="Calendário">
-            <MonthNavigation
-              month={month}
-              onShowMonth={showMonth}
+            <AgendaNavigation
+              view={view}
+              label={navigationLabel}
+              onPrevious={() => {
+                if (view === 'month') showMonth(month.previous());
+                else setSelectedDay(moveVisibleDate(view, selectedDay, -1));
+              }}
+              onNext={() => {
+                if (view === 'month') showMonth(month.next());
+                else setSelectedDay(moveVisibleDate(view, selectedDay, 1));
+              }}
               onShowToday={() => {
-                showMonth(CalendarMonth.containing(today));
+                setSelectedDay(today);
+              }}
+              onChangeView={(nextView) => {
+                setView(nextView);
               }}
             />
-            {isDesktop && monthEvents.status === 'failed' ? (
-              <MonthLoadError message={monthEvents.message} onRetry={reloadMonth} />
+            {isDesktop && agendaEvents.status === 'failed' ? (
+              <MonthLoadError message={agendaEvents.message} onRetry={reloadAgenda} />
             ) : null}
-            <MonthGrid
-              month={month}
-              today={today}
-              selectedDay={selectedDay}
-              eventsByDay={eventsByDay}
-              isLoading={monthEvents.status === 'loading'}
-              onSelectDay={selectDay}
-              onOpenEvent={openEventDetails}
-            />
+            {view === 'month' ? (
+              <MonthGrid
+                month={month}
+                today={today}
+                selectedDay={selectedDay}
+                eventsByDay={eventsByDay}
+                isLoading={agendaEvents.status === 'loading'}
+                onSelectDay={selectDay}
+                onOpenEvent={openEventDetails}
+              />
+            ) : isDesktop ? (
+              <TimeGrid
+                days={view === 'week' ? weekDays : [selectedDay]}
+                today={today}
+                eventsByDay={eventsByDay}
+                isLoading={agendaEvents.status === 'loading'}
+                hasError={agendaEvents.status === 'failed'}
+                label={view === 'week' ? `Semana de ${navigationLabel}` : navigationLabel}
+                onOpenEvent={openEventDetails}
+                {...(view === 'week'
+                  ? {
+                      onShowDay: (day: Date) => {
+                        setSelectedDay(day);
+                        setView('day');
+                      },
+                    }
+                  : {})}
+              />
+            ) : view === 'week' ? (
+              <WeekEventList
+                days={weekDays}
+                today={today}
+                eventsByDay={eventsByDay}
+                agendaEvents={agendaEvents}
+                onRetry={reloadAgenda}
+                onOpenEvent={openEventDetails}
+              />
+            ) : null}
           </section>
 
           {isDesktop ? (
@@ -186,16 +241,16 @@ export function AgendaPage(): React.JSX.Element {
               reloadCount={upcomingReloadCount}
               onOpenEvent={openEventDetails}
             />
-          ) : (
+          ) : view !== 'week' ? (
             <DayEvents
               day={selectedDay}
               today={today}
-              monthEvents={monthEvents}
+              agendaEvents={agendaEvents}
               dayEvents={eventsOf(selectedDay)}
-              onRetry={reloadMonth}
+              onRetry={reloadAgenda}
               onOpenEvent={openEventDetails}
             />
-          )}
+          ) : null}
         </div>
       </main>
 

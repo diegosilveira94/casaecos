@@ -42,7 +42,7 @@ vi.mock('../../shared/person/services/person-service.js', () => ({
 
 const listAll = vi.mocked(eventService.listAll);
 const listEventTypes = vi.mocked(eventService.listEventTypes);
-const listUpcoming = vi.mocked(eventService.list);
+const listEvents = vi.mocked(eventService.list);
 const createEvent = vi.mocked(eventService.create);
 const updateEvent = vi.mocked(eventService.update);
 const deleteEvent = vi.mocked(eventService.delete);
@@ -182,6 +182,7 @@ function lastListAllQuery(): Parameters<typeof eventService.listAll>[0] {
 
 describe('AgendaPage', () => {
   beforeEach(() => {
+    setDesktopViewport(false);
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(2026, 8, 30, 10, 0));
     listAll.mockResolvedValue([school, consultation, therapy]);
@@ -189,7 +190,7 @@ describe('AgendaPage', () => {
       { id: 1, name: 'Consulta médica' },
       { id: 3, name: 'Terapia' },
     ]);
-    listUpcoming.mockResolvedValue({
+    listEvents.mockResolvedValue({
       items: [consultation, therapy],
       page: 1,
       pageSize: 4,
@@ -297,6 +298,51 @@ describe('AgendaPage', () => {
 
     await within(dayList()).findByText('Consulta pediátrica');
     expect(lastListAllQuery()).toMatchObject({ homeId: 2 });
+  });
+
+  it('mostra a semana como lista agrupada no celular e busca só o período visível', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: 'Semana' }));
+
+    const list = await screen.findByRole('region', { name: 'Compromissos da semana' });
+    expect(within(list).getByText('Consulta pediátrica')).toBeInTheDocument();
+    expect(within(list).getByText('Sessão com psicóloga')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Semana' })).toHaveAttribute('aria-pressed', 'true');
+    expect(listEvents).toHaveBeenLastCalledWith({
+      from: toOffsetIsoString(new Date(2026, 8, 27)),
+      to: toOffsetIsoString(new Date(2026, 9, 4)),
+      pageSize: 200,
+    });
+  });
+
+  it('mostra e navega o dia no celular com uma busca por dia', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: 'Dia' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Quarta-feira, 30 de setembro de 2026' }),
+    ).toBeInTheDocument();
+    expect(within(dayList()).getByText('Consulta pediátrica')).toBeInTheDocument();
+    expect(listEvents).toHaveBeenLastCalledWith({
+      from: toOffsetIsoString(new Date(2026, 8, 30)),
+      to: toOffsetIsoString(new Date(2026, 9, 1)),
+      pageSize: 200,
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Próximo dia' }));
+
+    expect(
+      screen.getByRole('heading', { name: 'Quinta-feira, 1 de outubro de 2026' }),
+    ).toBeInTheDocument();
+    expect(listEvents).toHaveBeenLastCalledWith({
+      from: toOffsetIsoString(new Date(2026, 9, 1)),
+      to: toOffsetIsoString(new Date(2026, 9, 2)),
+      pageSize: 200,
+    });
   });
 
   it('mostra "Exportar" ainda sem ação', async () => {
@@ -635,7 +681,7 @@ describe('AgendaPage', () => {
       const panel = await screen.findByRole('region', { name: 'Próximos compromissos' });
       expect(await within(panel).findByText('Sessão com psicóloga')).toBeInTheDocument();
       expect(within(panel).getAllByText('30/09/2026')).toHaveLength(2);
-      expect(listUpcoming).toHaveBeenLastCalledWith({
+      expect(listEvents).toHaveBeenLastCalledWith({
         from: toOffsetIsoString(new Date(2026, 8, 30, 10, 0)),
         pageSize: 4,
         homeId: 2,
@@ -666,6 +712,28 @@ describe('AgendaPage', () => {
       await user.click(await within(grid).findByRole('button', { name: /Reunião na escola/ }));
 
       expect(screen.getByRole('dialog', { name: 'Reunião na escola' })).toBeInTheDocument();
+    });
+
+    it('mostra a grade semanal por horário e abre um dia pelo cabeçalho', async () => {
+      const user = userEvent.setup();
+      renderPage();
+
+      await user.click(screen.getByRole('button', { name: 'Semana' }));
+
+      const grid = await screen.findByRole('group', { name: /^Semana de / });
+      expect(within(grid).getByRole('button', { name: /Consulta pediátrica/ })).toBeInTheDocument();
+      expect(listEvents).toHaveBeenCalledWith({
+        from: toOffsetIsoString(new Date(2026, 8, 27)),
+        to: toOffsetIsoString(new Date(2026, 9, 4)),
+        pageSize: 200,
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Ver dia 30' }));
+
+      expect(
+        await screen.findByRole('group', { name: 'Quarta-feira, 30 de setembro de 2026' }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Dia' })).toHaveAttribute('aria-pressed', 'true');
     });
 
     it('avisa o erro da busca do mês acima da grade', async () => {
