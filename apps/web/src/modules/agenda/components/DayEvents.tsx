@@ -1,14 +1,14 @@
 import type { EventResponse } from '@casaecos/shared-types';
 
 import { formatDayHeading } from '../domain/event-format.js';
-import type { MonthEvents } from '../hooks/use-month-events.js';
+import type { AgendaEvents } from '../hooks/use-agenda-events.js';
 import { EventCardList } from './EventCardList.js';
 import { MonthLoadError } from './MonthLoadError.js';
 
 interface DayEventsProps {
   day: Date;
   today: Date;
-  monthEvents: MonthEvents;
+  agendaEvents: AgendaEvents;
   dayEvents: EventResponse[];
   onRetry: () => void;
   onOpenEvent: (event: EventResponse) => void;
@@ -19,12 +19,12 @@ function eventCountLabel(count: number): string {
 }
 
 function DayEventsBody({
-  monthEvents,
+  agendaEvents,
   dayEvents,
   onRetry,
   onOpenEvent,
 }: Omit<DayEventsProps, 'day' | 'today'>): React.JSX.Element {
-  if (monthEvents.status === 'loading') {
+  if (agendaEvents.status === 'loading') {
     return (
       <p className="day-events__status" role="status">
         <span className="spinner spinner--primary spinner--small" aria-hidden="true" />
@@ -33,8 +33,8 @@ function DayEventsBody({
     );
   }
 
-  if (monthEvents.status === 'failed') {
-    return <MonthLoadError message={monthEvents.message} onRetry={onRetry} />;
+  if (agendaEvents.status === 'failed') {
+    return <MonthLoadError message={agendaEvents.message} onRetry={onRetry} />;
   }
 
   return <EventCardList events={dayEvents} onOpenEvent={onOpenEvent} />;
@@ -47,7 +47,7 @@ export function DayEvents({ day, today, ...body }: DayEventsProps): React.JSX.El
     <section className="day-events" aria-label={`Compromissos do dia: ${heading}`}>
       <header className="day-events__header">
         <h2>{heading}</h2>
-        {body.monthEvents.status === 'loaded' && body.dayEvents.length > 0 ? (
+        {body.agendaEvents.status === 'loaded' && body.dayEvents.length > 0 ? (
           <span>{eventCountLabel(body.dayEvents.length)}</span>
         ) : null}
       </header>

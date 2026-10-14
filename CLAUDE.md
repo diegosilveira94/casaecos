@@ -370,7 +370,7 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
 - **Web**: `eventService.addParticipant()`, `updateParticipant()`,
   `removeParticipant()`, `listParticipationTypes()` e `personId` no `list()`.
 
-### Agenda — tela (ECOS-8)
+### Agenda — tela (ECOS-8 e ECOS-23)
 
 > Decisões #92 a #99 no Notion.
 
@@ -386,8 +386,8 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   sidebar. Qual layout vale é decidido em JS por `useIsDesktop()`
   (`src/shared/ui/use-media-query.ts`), com o mesmo breakpoint do CSS.
 - **Controle sem função ainda** (Medicamentos, Relatórios, Prestação de Contas,
-  Configurações, Ajuda, notificações, Exportar, "+ Novo Compromisso", Semana/Dia, "Ver
-  todos") usa `COMING_SOON_PROPS` (`src/shared/ui/coming-soon.ts`): parece o real, não
+  Configurações, Ajuda, notificações, Exportar e "Ver todos") usa
+  `COMING_SOON_PROPS` (`src/shared/ui/coming-soon.ts`): parece o real, não
   faz nada e tem `aria-disabled` + "Disponível em breve" (#95). Ao implementar, troque
   pelo comportamento de verdade.
 - **Casa escolhida na sidebar** (`HomePicker`) vale para toda a área logada, via
@@ -399,15 +399,19 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   numa janela (`DayEventsDialog`); o bloco abre o detalhe. Detalhe, janela do dia e
   bottom sheet usam o `Dialog` de `src/shared/ui/` (Esc, fundo e "Fechar"; o foco volta
   para quem abriu).
-- **Só visão de mês.** Semana e Dia ficaram para a ECOS-23. Abre no mês atual com
-  hoje selecionado; trocar de mês seleciona o dia 1 (ou hoje, no mês atual); dia de
-  fora do mês fica apagado e desabilitado.
-- **Uma busca por mês**: `useMonthEvents` chama `eventService.listAll()` com
-  `from`/`to` = início do mês e do seguinte no **fuso do aparelho**
-  (`toOffsetIsoString`), mais `homeId`/`eventTypeId`. O `listAll` percorre as páginas de
-  200 até o `total`. O resultado é marcado com a chave da requisição: trocar mês ou
-  filtro já vale como `loading`, e resposta atrasada de busca antiga é descartada.
-  Compromisso entra no dia local do **início** (mesma regra do filtro da ECOS-15).
+- **Mês, Semana e Dia.** Abre no mês atual com hoje selecionado; trocar de mês
+  seleciona o dia 1 (ou hoje, no mês atual); dia de fora do mês fica apagado e
+  desabilitado. No desktop, Semana e Dia usam uma grade temporal que começa às 7h e
+  termina às 20h, expandindo até 0h/24h se houver compromissos fora da faixa. O
+  cabeçalho de um dia na semana abre a visão Dia. No celular, Semana é uma lista
+  agrupada pelos dias com compromissos e Dia reutiliza a lista detalhada da ECOS-8.
+- **Uma busca pelo período visível**: `useAgendaEvents` usa `from`/`to` no **fuso do
+  aparelho** (`toOffsetIsoString`), mais `homeId`/`eventTypeId`. No mês chama
+  `eventService.listAll()` e percorre as páginas de 200; em Semana e Dia chama
+  `eventService.list()` com, respectivamente, domingo→domingo e dia→dia seguinte. O
+  resultado é marcado com a chave da requisição: trocar período, visão ou filtro já
+  vale como `loading`, e resposta atrasada de busca antiga é descartada. Compromisso
+  entra no dia local do **início** (mesma regra do filtro da ECOS-15).
 - **Permissões na tela**: "+ Novo Compromisso" só aparece com `can('event:write')`; a
   ECOS-9 liga a ação nele.
 - **Cor por tipo**: `event-tone.ts` mapeia o id do `event_type` (ids fixos, #37) para
@@ -646,6 +650,9 @@ os frames de criação e edição de compromisso.
   lista do dia no celular, grade do mês com painel do dia no desktop, filtros de tipo
   e casa, detalhe do compromisso em modo leitura e `permissions` no usuário
   autenticado (`useAuth().can()`).
+- **ECOS-23 implementada em 13/10/2026**: visões Semana e Dia — grade temporal no
+  desktop, lista semanal agrupada e lista do dia no celular, navegação pelo período e
+  buscas recortadas com `from`/`to`.
 - **ECOS-9 implementada em 06/10/2026**: formulário de compromisso em `/agenda` —
   "+ Novo Compromisso" e "Editar" (no detalhe) abrem o `EventFormDialog`, bottom sheet
   no celular e modal no desktop; tipo em cartões, término opcional com "Termina em
@@ -675,12 +682,12 @@ os frames de criação e edição de compromisso.
     eventos na ECOS-6)
   - ECOS-16: camada de integração frontend-API — ✅ implementada
   - ECOS-17: tela de login — ✅ implementada (tela do Gustavo adaptada à ECOS-16)
-  - ECOS-8: Tela de visualização da agenda — ✅ implementada (só visão de mês)
+  - ECOS-8: Tela de visualização da agenda — ✅ implementada
   - ECOS-9: Formulário de criação/edição de evento — ✅ implementada
   - ECOS-18: testes automatizados do módulo
   - ECOS-19/20: telas de design no Figma (formulário de compromisso, login)
   - ECOS-21: exportar agenda — adiada (decisão #38)
-  - ECOS-23: visões Semana e Dia da agenda — backlog (decisão #93)
+  - ECOS-23: visões Semana e Dia da agenda — ✅ implementada
 
 ## Pendências que afetam o desenvolvimento
 
