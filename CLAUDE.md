@@ -219,6 +219,8 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   revelar quais e-mails existem. Rate limit por IP na rota.
 - **`POST /auth/accounts`** — cria credencial para uma `person` existente. Exige
   token **e** papel Coordenador.
+- **`GET /auth/accounts`** e **`PATCH /auth/accounts/:personId/password`** — o
+  Coordenador lista quem tem credencial e redefine a senha sem depender de e-mail.
 - **`GET /auth/me`** — devolve o usuário do token; é o que a tela usa para restaurar
   a sessão ao recarregar a página. O `user` (aqui e no login) traz as `permissions`
   do papel (ECOS-8), calculadas do `permissions.ts`.
@@ -275,9 +277,9 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   exibido é o `ApiRequestError.message` (401, 429 e servidor fora do ar já chegam em
   português, #69).
 - **Visual**: segue o frame `login-desktop` do Figma (nodeId `77:450`), com a marca
-  "Casa Ecos" e a tagline "Cuidando de quem cuida.". O link "Esqueceu a senha?" do
-  Figma ficou de fora: não existe fluxo de recuperação. Tokens em inglês
-  (`--color-*`) no `index.css`, com o verde `#186949` do Figma.
+  "Casa Ecos" e a tagline "Cuidando de quem cuida.". O link "Esqueceu a senha?"
+  orienta a procurar a Coordenação; não há recuperação automática. Tokens em
+  inglês (`--color-*`) no `index.css`, com o verde `#186949` do Figma.
 
 ### Agenda — compromissos (ECOS-6)
 
@@ -610,6 +612,9 @@ os frames de criação e edição de compromisso.
   (`jose`, HS256, 8h), senha em hash `bcryptjs` (12 rounds), criação de credencial
   restrita a Coordenador, middleware que injeta o usuário na requisição e rate
   limit na rota de login.
+- **Redefinição de senha implementada em 27/10/2026**: somente o Coordenador lista
+  as credenciais e define uma nova senha. O usuário solicita a alteração à
+  Coordenação; não há troca da própria senha nem envio de e-mail.
 - **ECOS-22 concluída em 23/09/2026**: o módulo `person` passou a validar com
   `RequestValidator` nas rotas, como o `auth`, e os opcionais passaram a
   `.exactOptional()` (decisão #67).
@@ -726,9 +731,9 @@ os frames de criação e edição de compromisso.
   resolveu no `person`. Alinhar ao `RequestValidator` com `.exactOptional()`.
 - **Sem refresh token** (decisão da própria ECOS-13). Se 8h virar atrito na prática,
   aí sim vira card.
-- **Recuperação de senha e troca de senha pelo próprio usuário não existem.** Hoje só
-  o Coordenador cria credencial; redefinir senha ainda não tem fluxo. Por isso o login
-  não mostra o "Esqueceu a senha?" do Figma (decisão #91).
+- **Recuperação de senha por e-mail ainda não existe.** O login mostra "Esqueceu a
+  senha?" e orienta a procurar a Coordenação, que pode redefini-la sem conhecer a
+  senha atual. O envio automático por e-mail fica para depois, se fizer falta.
 
 > O RF-31 (estrutura de `participation_type`) foi resolvido: lookup separado com
 > FK not null em `person_event`, seguindo a decisão #11. Já está no schema.

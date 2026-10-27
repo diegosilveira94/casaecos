@@ -40,6 +40,11 @@ class FakeUserAccountRepository implements UserAccountRepository {
   searchedEmail: string | null = null;
   createdData: CreateUserAccountData | null = null;
   registeredLogin: { id: number; at: Date } | null = null;
+  updatedPassword: { id: number; passwordHash: string } | null = null;
+
+  findAll(): Promise<UserAccount[]> {
+    return Promise.resolve(this.accountByEmail ? [this.accountByEmail] : []);
+  }
 
   findByEmail(email: string): Promise<UserAccount | null> {
     this.searchedEmail = email;
@@ -62,6 +67,11 @@ class FakeUserAccountRepository implements UserAccountRepository {
 
   registerLogin(id: number, at: Date): Promise<void> {
     this.registeredLogin = { id, at };
+    return Promise.resolve();
+  }
+
+  updatePassword(id: number, passwordHash: string): Promise<void> {
+    this.updatedPassword = { id, passwordHash };
     return Promise.resolve();
   }
 }
@@ -222,5 +232,32 @@ describe('AuthService', () => {
       status: 409,
       message: 'Esta pessoa já possui credencial de acesso',
     });
+  });
+
+  it('lista somente os dados necessários para a coordenação escolher uma conta', async () => {
+    await expect(service.listAccounts()).resolves.toEqual([
+      { personId: 7, personName: 'Maria Silva', email: 'maria@ecos.org' },
+    ]);
+  });
+
+  it('deixa a coordenação redefinir a senha sem conhecer a atual', async () => {
+    repository.accountByPersonId = makeAccount();
+
+    await expect(service.resetPassword(7, { password: 'senha-temporaria' })).resolves.toEqual({
+      message: 'Senha redefinida com sucesso',
+    });
+    expect(repository.updatedPassword).toEqual({
+      id: 5,
+      passwordHash: 'hashed:senha-temporaria',
+    });
+  });
+
+  it('informa quando a pessoa não tem credencial para redefinir', async () => {
+    await expect(service.resetPassword(99, { password: 'senha-temporaria' })).rejects.toMatchObject(
+      {
+        status: 404,
+        message: 'Credencial de acesso não encontrada',
+      },
+    );
   });
 });

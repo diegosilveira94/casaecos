@@ -1,12 +1,16 @@
 import type {
+  ApiMessage,
   CreateUserAccountRequest,
   LoginRequest,
   LoginResponse,
+  ManagedUserAccountResponse,
+  ResetPasswordRequest,
   UserAccountResponse,
 } from '@casaecos/shared-types';
 
 import { HttpError } from '../../../../middlewares/http-error.js';
 import {
+  ACCOUNT_NOT_FOUND,
   EMAIL_IN_USE,
   INVALID_CREDENTIALS,
   PERSON_ALREADY_HAS_ACCOUNT,
@@ -78,6 +82,22 @@ export class AuthService {
     }
   }
 
+  async listAccounts(): Promise<ManagedUserAccountResponse[]> {
+    return (await this.repository.findAll()).map((account) => ({
+      personId: account.personId,
+      personName: account.personName,
+      email: account.email,
+    }));
+  }
+
+  async resetPassword(personId: number, request: ResetPasswordRequest): Promise<ApiMessage> {
+    const account = await this.repository.findByPersonId(personId);
+    if (!account) throw HttpError.notFound(ACCOUNT_NOT_FOUND);
+
+    await this.storePassword(account.id, request.password);
+    return { message: 'Senha redefinida com sucesso' };
+  }
+
   /** Answers the same 401 for unknown e-mail and wrong password. */
   private async findAccountMatching(credentials: LoginRequest): Promise<UserAccount> {
     const account = await this.repository.findByEmail(normalizeEmail(credentials.email));
@@ -102,6 +122,10 @@ export class AuthService {
     if (await this.repository.findByPersonId(personId)) {
       throw HttpError.conflict(PERSON_ALREADY_HAS_ACCOUNT);
     }
+  }
+
+  private async storePassword(accountId: number, password: string): Promise<void> {
+    await this.repository.updatePassword(accountId, await this.passwordHasher.hash(password));
   }
 
   private translatePersistenceError(error: unknown): never {

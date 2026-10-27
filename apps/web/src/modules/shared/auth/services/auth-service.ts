@@ -1,7 +1,10 @@
 import type {
+  ApiMessage,
   AuthenticatedUserResponse,
   LoginRequest,
   LoginResponse,
+  ManagedUserAccountResponse,
+  ResetPasswordRequest,
 } from '@casaecos/shared-types';
 
 import { apiClient } from '../../../../shared/http/api-client.js';
@@ -16,6 +19,14 @@ export class AuthService {
 
   getCurrentUser(): Promise<AuthenticatedUserResponse> {
     return this.http.get('/auth/me');
+  }
+
+  listAccounts(): Promise<ManagedUserAccountResponse[]> {
+    return this.http.get('/auth/accounts');
+  }
+
+  resetPassword(personId: number, request: ResetPasswordRequest): Promise<ApiMessage> {
+    return this.http.patch(`/auth/accounts/${String(personId)}/password`, request);
   }
 }
 
