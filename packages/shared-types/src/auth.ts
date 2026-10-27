@@ -38,6 +38,17 @@ export interface CreateUserAccountRequest {
   password: string;
 }
 
+export interface ResetPasswordRequest {
+  password: string;
+}
+
+/** The information a coordinator needs to choose whose password to reset. */
+export interface ManagedUserAccountResponse {
+  personId: number;
+  personName: string;
+  email: string;
+}
+
 /** Never carries the password hash: it does not leave the database. */
 export interface UserAccountResponse {
   id: number;

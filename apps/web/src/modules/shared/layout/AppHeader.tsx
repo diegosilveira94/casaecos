@@ -4,6 +4,7 @@ import { COMING_SOON_PROPS } from '../../../shared/ui/coming-soon.js';
 import { BellIcon, ChevronDownIcon, MenuIcon, UserIcon } from '../../../shared/ui/icons.js';
 import { useDismiss } from '../../../shared/ui/use-dismiss.js';
 import { useAuth } from '../auth/context/use-auth.js';
+import { ResetPasswordDialog } from '../auth/components/PasswordDialogs.js';
 import { AppBrand } from './AppBrand.js';
 
 interface AppHeaderProps {
@@ -14,6 +15,7 @@ interface AppHeaderProps {
 function UserMenu(): React.JSX.Element | null {
   const auth = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
   const menu = useRef<HTMLDivElement>(null);
 
   const close = useCallback(() => {
@@ -45,10 +47,29 @@ function UserMenu(): React.JSX.Element | null {
       </button>
       {isOpen ? (
         <div className="user-menu__popover" role="menu">
+          {auth.can('account:manage') ? (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setIsOpen(false);
+                setIsResetPasswordOpen(true);
+              }}
+            >
+              Redefinir senha
+            </button>
+          ) : null}
           <button type="button" role="menuitem" onClick={auth.logout}>
             Sair
           </button>
         </div>
+      ) : null}
+      {isResetPasswordOpen ? (
+        <ResetPasswordDialog
+          onClose={() => {
+            setIsResetPasswordOpen(false);
+          }}
+        />
       ) : null}
     </div>
   );
