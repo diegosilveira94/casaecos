@@ -4,7 +4,7 @@ import type { EventResponse } from '@casaecos/shared-types';
 
 import { toOffsetIsoString } from '../domain/calendar-dates.js';
 import { eventService } from '../services/event-service.js';
-import type { AgendaFilters } from './use-month-events.js';
+import type { AgendaFilters } from './use-agenda-events.js';
 
 const UPCOMING_COUNT = 4;
 
