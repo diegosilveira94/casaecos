@@ -36,6 +36,7 @@ function makePerson(id = 1): Person {
     role: new Role(2, 'Secretário'),
     individualRegistration: null,
     phone: '47999999999',
+    hasAccount: false,
     createdAt,
     updatedAt,
   });
@@ -118,6 +119,7 @@ describe('PersonService', () => {
         role: { id: 2, description: 'Secretário' },
         individualRegistration: null,
         phone: '47999999999',
+        hasAccount: false,
         createdAt: createdAt.toISOString(),
         updatedAt: updatedAt.toISOString(),
       },

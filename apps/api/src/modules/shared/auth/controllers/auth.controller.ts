@@ -43,6 +43,10 @@ export class AuthController {
     response.json(await authService.login(body));
   };
 
+  listAccounts: RequestHandler = async (_request, response) => {
+    response.json(await authService.listAccounts());
+  };
+
   createAccount: RequestHandler = async (_request, response) => {
     const { body } = this.createAccountValidator.data(response);
     response.status(201).json(await authService.createAccount(body));

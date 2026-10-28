@@ -42,6 +42,13 @@ authRouter.post(
 // Creating a credential is a coordinator action. The first coordinator is created
 // outside the API by `npm run db:seed:admin`, since there is nobody to authenticate
 // as before it exists.
+authRouter.get(
+  '/accounts',
+  authenticate.handle,
+  authorize('account:manage'),
+  authController.listAccounts,
+);
+
 authRouter.post(
   '/accounts',
   authenticate.handle,

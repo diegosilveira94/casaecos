@@ -2,6 +2,7 @@ import type {
   CreateUserAccountRequest,
   LoginRequest,
   LoginResponse,
+  UserAccountListItemResponse,
   UserAccountResponse,
 } from '@casaecos/shared-types';
 
@@ -58,6 +59,12 @@ export class AuthService {
       expiresInSeconds: issuedToken.expiresInSeconds,
       user: user.toResponse(),
     };
+  }
+
+  /** Everyone who can log in, ordered by name. */
+  async listAccounts(): Promise<UserAccountListItemResponse[]> {
+    const accounts = await this.repository.findAll();
+    return accounts.map((account) => account.toListItemResponse());
   }
 
   async createAccount(request: CreateUserAccountRequest): Promise<UserAccountResponse> {

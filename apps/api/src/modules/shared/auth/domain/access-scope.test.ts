@@ -22,8 +22,11 @@ describe('AccessScope', () => {
     expect(scope.canAccessEvent({ homeId: 99, participantIds: [] })).toBe(true);
   });
 
-  it('cuidador fica restrito às casas às quais está vinculado', () => {
-    const scope = scopeFor(ROLE_IDS.caregiver);
+  it.each([
+    ['cuidador', ROLE_IDS.caregiver],
+    ['colaborador', ROLE_IDS.collaborator],
+  ])('%s fica restrito às casas às quais está vinculado', (_label, roleId) => {
+    const scope = scopeFor(roleId);
 
     expect(scope.accessibleHomeIds()).toEqual([1, 2]);
     expect(scope.eventFilter()).toEqual({ kind: 'homes', homeIds: [1, 2] });

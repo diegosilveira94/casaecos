@@ -28,6 +28,7 @@ export interface PersonProperties {
   role: Role;
   individualRegistration: string | null;
   phone: string | null;
+  hasAccount: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -38,6 +39,7 @@ export class Person {
   readonly role: Role;
   readonly individualRegistration: string | null;
   readonly phone: string | null;
+  readonly hasAccount: boolean;
   readonly createdAt: Date;
   readonly updatedAt: Date;
 
@@ -47,6 +49,7 @@ export class Person {
     this.role = properties.role;
     this.individualRegistration = properties.individualRegistration;
     this.phone = properties.phone;
+    this.hasAccount = properties.hasAccount;
     this.createdAt = properties.createdAt;
     this.updatedAt = properties.updatedAt;
   }
@@ -58,6 +61,7 @@ export class Person {
       role: this.role.toResponse(),
       individualRegistration: this.individualRegistration,
       phone: this.phone,
+      hasAccount: this.hasAccount,
       createdAt: this.createdAt.toISOString(),
       updatedAt: this.updatedAt.toISOString(),
     };

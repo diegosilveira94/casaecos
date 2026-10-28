@@ -84,21 +84,22 @@ Módulos: `agenda` (em desenvolvimento), `medicamentos`, `prestacao-contas`,
 
 ## API de autenticação
 
-| Método | Rota             | Descrição                                                    |
-| ------ | ---------------- | ------------------------------------------------------------ |
-| `POST` | `/auth/login`    | E-mail + senha; devolve `{ token, expiresInSeconds, user }`  |
-| `POST` | `/auth/accounts` | Cria credencial para uma pessoa (exige token de Coordenador) |
-| `GET`  | `/auth/me`       | Devolve o usuário do token                                   |
+| Método | Rota             | Descrição                                                            |
+| ------ | ---------------- | -------------------------------------------------------------------- |
+| `POST` | `/auth/login`    | E-mail + senha; devolve `{ token, expiresInSeconds, user }`          |
+| `POST` | `/auth/accounts` | Cria credencial para uma pessoa (exige token de Coordenador)         |
+| `GET`  | `/auth/accounts` | Lista as credenciais com pessoa, papel e último acesso (Coordenador) |
+| `GET`  | `/auth/me`       | Devolve o usuário do token                                           |
 
 Nas rotas protegidas, envie `Authorization: Bearer <token>`. O token é um JWT
 HS256 de 8 horas, sem refresh token. O `user` do login e do `/auth/me` traz as
 `permissions` do papel, que a tela usa para esconder o que o usuário não pode fazer.
 
-O primeiro coordenador é criado fora da API — `POST /auth/accounts` exige um
-Coordenador autenticado:
+A organização e o primeiro coordenador são criados fora da API — `POST /auth/accounts`
+exige um Coordenador autenticado, e nenhuma tela cria organização:
 
 ```
-npm run db:seed:admin   # lê ADMIN_NAME, ADMIN_EMAIL e ADMIN_PASSWORD do .env
+npm run db:seed:admin   # lê ORGANIZATION_NAME, ADMIN_NAME, ADMIN_EMAIL e ADMIN_PASSWORD do .env
 ```
 
 ## API de pessoas
@@ -114,17 +115,18 @@ npm run db:seed:admin   # lê ADMIN_NAME, ADMIN_EMAIL e ADMIN_PASSWORD do .env
 
 ## API de casas
 
-| Método           | Rota                              | Descrição                               |
-| ---------------- | --------------------------------- | --------------------------------------- |
-| `POST`           | `/homes`                          | Cria uma casa                           |
-| `GET`            | `/homes`                          | Lista; aceita o filtro `organizationId` |
-| `GET`            | `/homes/:id`                      | Busca uma casa por id                   |
-| `PUT` ou `PATCH` | `/homes/:id`                      | Edita os campos informados              |
-| `DELETE`         | `/homes/:id`                      | Exclui uma casa sem eventos vinculados  |
-| `GET`            | `/homes/:homeId/people`           | Lista as pessoas vinculadas a uma casa  |
-| `POST`           | `/homes/:homeId/people/:personId` | Vincula uma pessoa a uma casa           |
-| `DELETE`         | `/homes/:homeId/people/:personId` | Desvincula uma pessoa de uma casa       |
-| `GET`            | `/people/:personId/homes`         | Lista as casas vinculadas a uma pessoa  |
+| Método           | Rota                              | Descrição                                   |
+| ---------------- | --------------------------------- | ------------------------------------------- |
+| `POST`           | `/homes`                          | Cria uma casa                               |
+| `GET`            | `/homes`                          | Lista; aceita o filtro `organizationId`     |
+| `GET`            | `/homes/:id`                      | Busca uma casa por id                       |
+| `PUT` ou `PATCH` | `/homes/:id`                      | Edita os campos informados                  |
+| `DELETE`         | `/homes/:id`                      | Exclui uma casa sem eventos vinculados      |
+| `GET`            | `/homes/:homeId/people`           | Lista as pessoas vinculadas a uma casa      |
+| `POST`           | `/homes/:homeId/people/:personId` | Vincula uma pessoa a uma casa               |
+| `DELETE`         | `/homes/:homeId/people/:personId` | Desvincula uma pessoa de uma casa           |
+| `GET`            | `/people/:personId/homes`         | Lista as casas vinculadas a uma pessoa      |
+| `GET`            | `/organizations`                  | Lista as organizações (quem cadastra casas) |
 
 ## API da agenda
 

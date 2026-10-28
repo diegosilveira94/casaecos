@@ -40,6 +40,11 @@ class FakeUserAccountRepository implements UserAccountRepository {
   searchedEmail: string | null = null;
   createdData: CreateUserAccountData | null = null;
   registeredLogin: { id: number; at: Date } | null = null;
+  accounts: UserAccount[] = [makeAccount()];
+
+  findAll(): Promise<UserAccount[]> {
+    return Promise.resolve(this.accounts);
+  }
 
   findByEmail(email: string): Promise<UserAccount | null> {
     this.searchedEmail = email;
@@ -207,6 +212,20 @@ describe('AuthService', () => {
       message: 'Esta pessoa já possui credencial de acesso',
     });
     expect(repository.createdData).toBeNull();
+  });
+
+  it('lista as credenciais com a pessoa, o papel e o último login, sem o hash da senha', async () => {
+    const accounts = await service.listAccounts();
+
+    expect(accounts).toEqual([
+      {
+        id: 5,
+        person: { id: 7, name: 'Maria Silva' },
+        role: { id: 2, description: 'Secretário' },
+        email: 'maria@ecos.org',
+        lastLoginAt: null,
+      },
+    ]);
   });
 
   it('distingue e-mail já usado de pessoa que já tem credencial na corrida do banco', async () => {

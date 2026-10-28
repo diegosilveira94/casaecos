@@ -1,4 +1,4 @@
-import type { RoleResponse } from './person.js';
+import type { PersonSummaryResponse, RoleResponse } from './person.js';
 
 export interface LoginRequest {
   email: string;
@@ -46,4 +46,13 @@ export interface UserAccountResponse {
   lastLoginAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** A credential as the access screen lists it: whose it is, their role and the last login. */
+export interface UserAccountListItemResponse {
+  id: number;
+  person: PersonSummaryResponse;
+  role: RoleResponse;
+  email: string;
+  lastLoginAt: string | null;
 }

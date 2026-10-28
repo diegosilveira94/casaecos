@@ -6,18 +6,31 @@ import { BcryptPasswordHasher } from '../src/modules/shared/auth/services/passwo
 import { PASSWORD_MIN_LENGTH } from '../src/modules/shared/auth/services/password-hasher.js';
 
 /**
- * Creates the first coordinator, credential included.
+ * Bootstraps the NGO: its organization and the first coordinator, credential included.
  *
- * It exists because `POST /auth/accounts` requires a coordinator token: without an
- * initial user created outside the API, nobody can create the first one. Running it
- * again overwrites nothing — if an account already uses the e-mail, it says so and
- * leaves the password alone.
+ * It exists because `POST /auth/accounts` requires a coordinator token, and a home
+ * requires an organization that no screen creates: without both, nobody can start
+ * registering. Running it again overwrites nothing — an existing organization stays,
+ * and if an account already uses the e-mail it says so and leaves the password alone.
  */
 const adminSchema = z.object({
+  ORGANIZATION_NAME: z.string().trim().min(1).max(150).default('Associação Ecos da Esperança'),
   ADMIN_NAME: z.string().trim().min(1).max(45).default('Coordenação'),
   ADMIN_EMAIL: z.string().trim().pipe(z.email().max(255)),
   ADMIN_PASSWORD: z.string().min(PASSWORD_MIN_LENGTH),
 });
+
+async function ensureOrganization(name: string): Promise<void> {
+  const existing = await prisma.organization.findFirst({ select: { id: true, name: true } });
+
+  if (existing) {
+    console.log(`Organização já existe: ${existing.name} (${String(existing.id)}).`);
+    return;
+  }
+
+  const organization = await prisma.organization.create({ data: { name }, select: { id: true } });
+  console.log(`Organização criada: ${name} (${String(organization.id)}).`);
+}
 
 async function main(): Promise<void> {
   const parsed = adminSchema.safeParse(process.env);
@@ -28,6 +41,8 @@ async function main(): Promise<void> {
       .join('\n');
     throw new Error(`Defina ADMIN_EMAIL e ADMIN_PASSWORD no .env:\n${issues}`);
   }
+
+  await ensureOrganization(parsed.data.ORGANIZATION_NAME);
 
   const email = parsed.data.ADMIN_EMAIL.toLowerCase();
 

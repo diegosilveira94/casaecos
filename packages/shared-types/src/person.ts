@@ -15,6 +15,8 @@ export interface PersonResponse {
   role: RoleResponse;
   individualRegistration: string | null;
   phone: string | null;
+  /** True when the person can log in. Only the coordination changes the role of such a person. */
+  hasAccount: boolean;
   createdAt: string;
   updatedAt: string;
 }

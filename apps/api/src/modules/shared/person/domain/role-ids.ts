@@ -9,4 +9,5 @@ export const ROLE_IDS = {
   caregiver: 3,
   driver: 4,
   sheltered: 5,
+  collaborator: 6,
 } as const;

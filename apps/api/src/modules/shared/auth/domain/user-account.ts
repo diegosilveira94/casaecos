@@ -1,6 +1,7 @@
 import type {
   AuthenticatedUserResponse,
   Permission,
+  UserAccountListItemResponse,
   UserAccountResponse,
 } from '@casaecos/shared-types';
 
@@ -108,6 +109,16 @@ export class UserAccount {
       lastLoginAt: this.lastLoginAt?.toISOString() ?? null,
       createdAt: this.createdAt.toISOString(),
       updatedAt: this.updatedAt.toISOString(),
+    };
+  }
+
+  toListItemResponse(): UserAccountListItemResponse {
+    return {
+      id: this.id,
+      person: { id: this.personId, name: this.personName },
+      role: this.role.toResponse(),
+      email: this.email,
+      lastLoginAt: this.lastLoginAt?.toISOString() ?? null,
     };
   }
 }

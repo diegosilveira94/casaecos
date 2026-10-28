@@ -11,6 +11,7 @@ export interface CreateUserAccountData {
 }
 
 export interface UserAccountRepository {
+  findAll(): Promise<UserAccount[]>;
   findByEmail(email: string): Promise<UserAccount | null>;
   findByPersonId(personId: number): Promise<UserAccount | null>;
   personExists(personId: number): Promise<boolean>;
@@ -67,6 +68,15 @@ function toUserAccount(record: UserAccountRecord): UserAccount {
 }
 
 export class PrismaUserAccountRepository implements UserAccountRepository {
+  async findAll(): Promise<UserAccount[]> {
+    const accounts = await prisma.userAccount.findMany({
+      select: userAccountSelection,
+      orderBy: [{ person: { name: 'asc' } }, { id: 'asc' }],
+    });
+
+    return accounts.map(toUserAccount);
+  }
+
   async findByEmail(email: string): Promise<UserAccount | null> {
     const account = await prisma.userAccount.findUnique({
       where: { email },

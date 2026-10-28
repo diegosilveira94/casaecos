@@ -1,7 +1,9 @@
 import { prisma } from '../../../../config/prisma.js';
 import { Prisma } from '../../../../generated/prisma/client.js';
-import { Person, Role } from '../../person/domain/person.js';
-import { Home, OrganizationSummary } from '../domain/home.js';
+import type { Person } from '../../person/domain/person.js';
+import { personSelection, toPerson } from '../../person/repositories/person-record.js';
+import { OrganizationSummary } from '../../organization/domain/organization.js';
+import { Home } from '../domain/home.js';
 
 export interface HomeFilters {
   organizationId?: number;
@@ -49,16 +51,6 @@ export class HomeHasEventsError extends Error {
   }
 }
 
-const personSelection = {
-  id: true,
-  name: true,
-  individualRegistration: true,
-  phone: true,
-  createdAt: true,
-  updatedAt: true,
-  role: { select: { id: true, description: true } },
-} satisfies Prisma.PersonSelect;
-
 const homeSelection = {
   id: true,
   name: true,
@@ -68,20 +60,7 @@ const homeSelection = {
   responsible: { select: personSelection },
 } satisfies Prisma.HomeSelect;
 
-type PersonRecord = Prisma.PersonGetPayload<{ select: typeof personSelection }>;
 type HomeRecord = Prisma.HomeGetPayload<{ select: typeof homeSelection }>;
-
-function toPerson(record: PersonRecord): Person {
-  return new Person({
-    id: record.id,
-    name: record.name,
-    role: new Role(record.role.id, record.role.description),
-    individualRegistration: record.individualRegistration,
-    phone: record.phone,
-    createdAt: record.createdAt,
-    updatedAt: record.updatedAt,
-  });
-}
 
 function toHome(record: HomeRecord): Home {
   return new Home({
