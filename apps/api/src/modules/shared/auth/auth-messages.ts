@@ -12,5 +12,6 @@ export const EVENT_NOT_FOUND = 'Compromisso não encontrado';
 export const PERSON_NOT_FOUND = 'Pessoa informada não existe';
 export const PERSON_ALREADY_HAS_ACCOUNT = 'Esta pessoa já possui credencial de acesso';
 export const EMAIL_IN_USE = 'Este e-mail já está em uso';
+export const ACCOUNT_NOT_FOUND = 'Credencial de acesso não encontrada';
 export const TOO_MANY_LOGIN_ATTEMPTS =
   'Muitas tentativas de login. Aguarde alguns minutos e tente novamente.';

@@ -84,11 +84,13 @@ Módulos: `agenda` (em desenvolvimento), `medicamentos`, `prestacao-contas`,
 
 ## API de autenticação
 
-| Método | Rota             | Descrição                                                    |
-| ------ | ---------------- | ------------------------------------------------------------ |
-| `POST` | `/auth/login`    | E-mail + senha; devolve `{ token, expiresInSeconds, user }`  |
-| `POST` | `/auth/accounts` | Cria credencial para uma pessoa (exige token de Coordenador) |
-| `GET`  | `/auth/me`       | Devolve o usuário do token                                   |
+| Método  | Rota                                | Descrição                                                   |
+| ------- | ----------------------------------- | ----------------------------------------------------------- |
+| `POST`  | `/auth/login`                       | E-mail + senha; devolve `{ token, expiresInSeconds, user }` |
+| `POST`  | `/auth/accounts`                    | Cria credencial para uma pessoa (somente Coordenador)       |
+| `GET`   | `/auth/accounts`                    | Lista as credenciais gerenciáveis (somente Coordenador)     |
+| `PATCH` | `/auth/accounts/:personId/password` | Redefine a senha de outra pessoa (somente Coordenador)      |
+| `GET`   | `/auth/me`                          | Devolve o usuário do token                                  |
 
 Nas rotas protegidas, envie `Authorization: Bearer <token>`. O token é um JWT
 HS256 de 8 horas, sem refresh token. O `user` do login e do `/auth/me` traz as
@@ -132,6 +134,7 @@ npm run db:seed:admin   # lê ADMIN_NAME, ADMIN_EMAIL e ADMIN_PASSWORD do .env
 | ---------------- | ------------------------------------------- | ----------------------------------------------------------------- |
 | `GET`            | `/agenda/events`                            | Lista; filtros `homeId`, `personId`, `eventTypeId`, `from` e `to` |
 | `POST`           | `/agenda/events`                            | Cria um compromisso                                               |
+| `POST`           | `/agenda/events/schedule-conflicts`         | Verifica sobreposição para os participantes antes de salvar       |
 | `GET`            | `/agenda/events/:id`                        | Busca um compromisso, com os participantes                        |
 | `PUT` ou `PATCH` | `/agenda/events/:id`                        | Edita os campos informados                                        |
 | `DELETE`         | `/agenda/events/:id`                        | Exclui (exclusão lógica)                                          |

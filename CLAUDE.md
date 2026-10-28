@@ -219,6 +219,8 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   revelar quais e-mails existem. Rate limit por IP na rota.
 - **`POST /auth/accounts`** — cria credencial para uma `person` existente. Exige
   token **e** papel Coordenador.
+- **`GET /auth/accounts`** e **`PATCH /auth/accounts/:personId/password`** — o
+  Coordenador lista quem tem credencial e redefine a senha sem depender de e-mail.
 - **`GET /auth/me`** — devolve o usuário do token; é o que a tela usa para restaurar
   a sessão ao recarregar a página. O `user` (aqui e no login) traz as `permissions`
   do papel (ECOS-8), calculadas do `permissions.ts`.
@@ -275,9 +277,9 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   exibido é o `ApiRequestError.message` (401, 429 e servidor fora do ar já chegam em
   português, #69).
 - **Visual**: segue o frame `login-desktop` do Figma (nodeId `77:450`), com a marca
-  "Casa Ecos" e a tagline "Cuidando de quem cuida.". O link "Esqueceu a senha?" do
-  Figma ficou de fora: não existe fluxo de recuperação. Tokens em inglês
-  (`--color-*`) no `index.css`, com o verde `#186949` do Figma.
+  "Casa Ecos" e a tagline "Cuidando de quem cuida.". O link "Esqueceu a senha?"
+  orienta a procurar a Coordenação; não há recuperação automática. Tokens em
+  inglês (`--color-*`) no `index.css`, com o verde `#186949` do Figma.
 
 ### Agenda — compromissos (ECOS-6)
 
@@ -369,6 +371,22 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   pessoa fora do escopo dá página vazia. Não existe `GET /people/:id/events`.
 - **Web**: `eventService.addParticipant()`, `updateParticipant()`,
   `removeParticipant()`, `listParticipationTypes()` e `personId` no `list()`.
+
+### Agenda — conflitos de horário (RF-33)
+
+- **Aviso, não bloqueio**: antes de criar ou editar, o formulário chama `POST
+  /agenda/events/schedule-conflicts` com início, término, ids dos participantes e,
+  na edição, o id a excluir. Se houver sobreposição, mostra as pessoas e os
+  compromissos encontrados; “Salvar mesmo assim” continua a gravação e “Revisar
+  horário” volta ao formulário.
+- **Intervalos semiabertos**: há conflito quando `existing.start < proposed.end` e
+  `existing.end > proposed.start`. Assim, terminar exatamente quando outro começa é
+  permitido. Compromisso sem `endDate` vale **60 minutos**, a mesma duração usada na
+  grade da visão Dia.
+- **Escopo e privacidade**: a rota exige `event:write`, aplica o `eventFilter()` do
+  usuário e devolve somente id/título/datas do compromisso e `{ id, name }` das
+  pessoas conflitantes. Eventos excluídos logicamente e o próprio evento em edição
+  não entram.
 
 ### Agenda — tela (ECOS-8 e ECOS-23)
 
@@ -610,6 +628,9 @@ os frames de criação e edição de compromisso.
   (`jose`, HS256, 8h), senha em hash `bcryptjs` (12 rounds), criação de credencial
   restrita a Coordenador, middleware que injeta o usuário na requisição e rate
   limit na rota de login.
+- **Redefinição de senha implementada em 27/10/2026**: somente o Coordenador lista
+  as credenciais e define uma nova senha. O usuário solicita a alteração à
+  Coordenação; não há troca da própria senha nem envio de e-mail.
 - **ECOS-22 concluída em 23/09/2026**: o módulo `person` passou a validar com
   `RequestValidator` nas rotas, como o `auth`, e os opcionais passaram a
   `.exactOptional()` (decisão #67).
@@ -664,6 +685,9 @@ os frames de criação e edição de compromisso.
   assim é mantido. Salvar é o compromisso e depois os
   participantes, um a um (`EventFormSaver`), porque a API os mantém em rotas próprias.
   O desenho foi validado num protótipo HTML antes do código.
+- **RF-33 implementado em 27/10/2026**: aviso não bloqueante de conflito de horário
+  entre participantes, com duração presumida de 60 minutos quando não há término e
+  opção de salvar mesmo assim.
 - **Deploy de homologação no ar em 01/10/2026**: Neon + Render + Vercel, plano gratuito
   (decisões #100 a #103).
 - Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-9, com ECOS-11 e
@@ -726,9 +750,9 @@ os frames de criação e edição de compromisso.
   resolveu no `person`. Alinhar ao `RequestValidator` com `.exactOptional()`.
 - **Sem refresh token** (decisão da própria ECOS-13). Se 8h virar atrito na prática,
   aí sim vira card.
-- **Recuperação de senha e troca de senha pelo próprio usuário não existem.** Hoje só
-  o Coordenador cria credencial; redefinir senha ainda não tem fluxo. Por isso o login
-  não mostra o "Esqueceu a senha?" do Figma (decisão #91).
+- **Recuperação de senha por e-mail ainda não existe.** O login mostra "Esqueceu a
+  senha?" e orienta a procurar a Coordenação, que pode redefini-la sem conhecer a
+  senha atual. O envio automático por e-mail fica para depois, se fizer falta.
 
 > O RF-31 (estrutura de `participation_type`) foi resolvido: lookup separado com
 > FK not null em `person_event`, seguindo a decisão #11. Já está no schema.

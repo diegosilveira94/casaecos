@@ -9,6 +9,7 @@ import {
   hasEventFormChanges,
   participantChanges,
   participantsLeftBehind,
+  toEventConflictRequest,
   toEventRequest,
   validateEventForm,
   type EventFormValues,
@@ -159,6 +160,17 @@ describe('toEventRequest', () => {
 
   it('recusa um formulário que não passou pela validação', () => {
     expect(() => toEventRequest({ ...filled, homeId: null })).toThrow();
+  });
+});
+
+describe('toEventConflictRequest', () => {
+  it('leva o intervalo, os participantes e o id excluído na edição', () => {
+    expect(toEventConflictRequest(filled, 7)).toEqual({
+      startDate: toOffsetIsoString(new Date(2026, 9, 1, 9, 0)),
+      endDate: toOffsetIsoString(new Date(2026, 9, 1, 10, 0)),
+      participantIds: [5],
+      excludedEventId: 7,
+    });
   });
 });
 

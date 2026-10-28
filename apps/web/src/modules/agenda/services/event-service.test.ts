@@ -117,6 +117,22 @@ describe('EventService', () => {
     });
   });
 
+  it('consulta conflitos de horário', async () => {
+    const request = {
+      startDate: '2026-10-01T10:00:00-03:00',
+      endDate: null,
+      participantIds: [40],
+      excludedEventId: 3,
+    };
+
+    await createService().checkScheduleConflicts(request);
+
+    expect(sentRequest()).toMatchObject({
+      url: 'http://api.test/agenda/events/schedule-conflicts',
+      init: { method: 'POST', body: JSON.stringify(request) },
+    });
+  });
+
   it('edita só os campos enviados', async () => {
     await createService().update(1, { endDate: null });
 

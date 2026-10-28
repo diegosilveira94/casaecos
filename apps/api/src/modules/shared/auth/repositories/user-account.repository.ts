@@ -11,11 +11,13 @@ export interface CreateUserAccountData {
 }
 
 export interface UserAccountRepository {
+  findAll(): Promise<UserAccount[]>;
   findByEmail(email: string): Promise<UserAccount | null>;
   findByPersonId(personId: number): Promise<UserAccount | null>;
   personExists(personId: number): Promise<boolean>;
   create(data: CreateUserAccountData): Promise<UserAccount>;
   registerLogin(id: number, at: Date): Promise<void>;
+  updatePassword(id: number, passwordHash: string): Promise<void>;
 }
 
 export class DuplicateEmailError extends Error {
@@ -67,6 +69,15 @@ function toUserAccount(record: UserAccountRecord): UserAccount {
 }
 
 export class PrismaUserAccountRepository implements UserAccountRepository {
+  async findAll(): Promise<UserAccount[]> {
+    const accounts = await prisma.userAccount.findMany({
+      select: userAccountSelection,
+      orderBy: [{ person: { name: 'asc' } }, { id: 'asc' }],
+    });
+
+    return accounts.map(toUserAccount);
+  }
+
   async findByEmail(email: string): Promise<UserAccount | null> {
     const account = await prisma.userAccount.findUnique({
       where: { email },
@@ -105,6 +116,10 @@ export class PrismaUserAccountRepository implements UserAccountRepository {
 
   async registerLogin(id: number, at: Date): Promise<void> {
     await prisma.userAccount.update({ where: { id }, data: { lastLoginAt: at } });
+  }
+
+  async updatePassword(id: number, passwordHash: string): Promise<void> {
+    await prisma.userAccount.update({ where: { id }, data: { passwordHash } });
   }
 
   /**
