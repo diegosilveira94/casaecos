@@ -2236,6 +2236,28 @@ button:disabled {
   font-weight: 600;
 }
 
+.schedule-conflicts {
+  display: grid;
+  gap: 0.75rem;
+  margin: -0.5rem 0 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.schedule-conflicts li {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.75rem;
+  border: 1px solid #e4c56a;
+  border-radius: 0.65rem;
+  background: #fff9e8;
+}
+
+.schedule-conflicts span {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
 .event-details__actions {
   display: flex;
   margin-top: 1.5rem;

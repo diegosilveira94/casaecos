@@ -1,4 +1,5 @@
 import type {
+  CheckEventConflictsRequest,
   CreateEventRequest,
   EventParticipantResponse,
   EventResponse,
@@ -161,6 +162,20 @@ export function toEventRequest(values: EventFormValues): CreateEventRequest {
         : toOffsetIsoString(localDateTime(endDayOf(values), values.endTime)),
     address: values.address.trim() || null,
     description: values.description.trim() || null,
+  };
+}
+
+/** The interval and people checked before the event itself is persisted. */
+export function toEventConflictRequest(
+  values: EventFormValues,
+  excludedEventId: number | null,
+): CheckEventConflictsRequest {
+  const request = toEventRequest(values);
+  return {
+    startDate: request.startDate,
+    endDate: request.endDate ?? null,
+    participantIds: values.participants.map(({ personId }) => personId),
+    ...(excludedEventId === null ? {} : { excludedEventId }),
   };
 }
 

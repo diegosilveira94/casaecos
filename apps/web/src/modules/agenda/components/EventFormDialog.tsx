@@ -1,6 +1,10 @@
 import { useState, type SyntheticEvent } from 'react';
 
-import type { EventResponse, EventTypeResponse } from '@casaecos/shared-types';
+import type {
+  EventResponse,
+  EventScheduleConflictResponse,
+  EventTypeResponse,
+} from '@casaecos/shared-types';
 
 import { ApiRequestError } from '../../../shared/http/api-request-error.js';
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js';
@@ -20,10 +24,12 @@ import {
   hasEventFormChanges,
   isSheltered,
   participantsLeftBehind,
+  toEventConflictRequest,
   validateEventForm,
   type EventFormParticipant,
   type EventFormValues,
 } from '../domain/event-form.js';
+import { formatDate, formatTimeRange } from '../domain/event-format.js';
 import { useDrivers } from '../hooks/use-drivers.js';
 import { eventFormSaver, EventParticipantsSaveError } from '../services/event-form-saver.js';
 import { eventService } from '../services/event-service.js';
@@ -56,11 +62,52 @@ interface PendingHomeChange {
   removesSheltered: boolean;
 }
 
+interface ScheduleConflictDialogProps {
+  conflicts: readonly EventScheduleConflictResponse[];
+  onReview: () => void;
+  onSaveAnyway: () => void;
+}
+
 // A second dialog is on top and answers Escape and the backdrop itself.
 const ignoreClose = (): void => undefined;
 
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof ApiRequestError ? error.message : fallback;
+}
+
+function ScheduleConflictDialog({
+  conflicts,
+  onReview,
+  onSaveAnyway,
+}: ScheduleConflictDialogProps): React.JSX.Element {
+  return (
+    <Dialog title="Conflito de horário" className="dialog__panel--confirm" onClose={onReview}>
+      <p>Uma ou mais pessoas já têm outro compromisso nesse horário:</p>
+      <ul className="schedule-conflicts">
+        {conflicts.map((conflict) => (
+          <li key={conflict.eventId}>
+            <strong>{conflict.participants.map(({ name }) => name).join(', ')}</strong>
+            <span>
+              {conflict.eventTitle} · {formatDate(conflict.startDate)} ·{' '}
+              {formatTimeRange(conflict)}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p>
+        Compromissos sem horário de término são considerados com 1 hora de duração. Você pode
+        salvar mesmo assim.
+      </p>
+      <div className="dialog__actions">
+        <button className="outline-button" type="button" onClick={onReview}>
+          Revisar horário
+        </button>
+        <button className="primary-button" type="button" onClick={onSaveAnyway}>
+          Salvar mesmo assim
+        </button>
+      </div>
+    </Dialog>
+  );
 }
 
 /** Creates or edits a commitment: bottom sheet on the phone, modal from 52rem. */
@@ -88,6 +135,9 @@ export function EventFormDialog({
   const [confirmation, setConfirmation] = useState<'discard' | 'delete' | null>(null);
   const [isCheckingHome, setIsCheckingHome] = useState(false);
   const [pendingHomeChange, setPendingHomeChange] = useState<PendingHomeChange | null>(null);
+  const [scheduleConflicts, setScheduleConflicts] = useState<
+    EventScheduleConflictResponse[] | null
+  >(null);
 
   const homePeople = useHomePeople(values.homeId);
   const drivers = useDrivers();
@@ -150,13 +200,7 @@ export function EventFormDialog({
     else onClose();
   };
 
-  async function save(submitEvent: SyntheticEvent<HTMLFormElement>): Promise<void> {
-    submitEvent.preventDefault();
-    setWasSubmitted(true);
-    setFailure(null);
-    if (Object.keys(validateEventForm(values)).length > 0) return;
-
-    setIsSaving(true);
+  async function storeEvent(): Promise<void> {
     try {
       onSaved(await eventFormSaver.save(storedEventId, values));
     } catch (error: unknown) {
@@ -169,6 +213,32 @@ export function EventFormDialog({
       }
       setIsSaving(false);
     }
+  }
+
+  async function save(submitEvent: SyntheticEvent<HTMLFormElement>): Promise<void> {
+    submitEvent.preventDefault();
+    setWasSubmitted(true);
+    setFailure(null);
+    if (Object.keys(validateEventForm(values)).length > 0) return;
+
+    setIsSaving(true);
+    try {
+      if (values.participants.length > 0) {
+        const { conflicts } = await eventService.checkScheduleConflicts(
+          toEventConflictRequest(values, storedEventId),
+        );
+        if (conflicts.length > 0) {
+          setScheduleConflicts(conflicts);
+          setIsSaving(false);
+          return;
+        }
+      }
+    } catch (error: unknown) {
+      setFailure(errorMessage(error, SAVE_ERROR_MESSAGE));
+      setIsSaving(false);
+      return;
+    }
+    await storeEvent();
   }
 
   async function deleteEvent(eventId: number): Promise<void> {
@@ -188,7 +258,11 @@ export function EventFormDialog({
       <Dialog
         title={isEditing ? 'Editar compromisso' : 'Novo compromisso'}
         className="dialog__panel--form"
-        onClose={confirmation === null && pendingHomeChange === null ? requestClose : ignoreClose}
+        onClose={
+          confirmation === null && pendingHomeChange === null && scheduleConflicts === null
+            ? requestClose
+            : ignoreClose
+        }
       >
         <form
           className="event-form"
@@ -458,6 +532,20 @@ export function EventFormDialog({
             ? 'Trocar a casa remove os acolhidos já vinculados. Continuar?'
             : 'Trocar a casa remove as pessoas já vinculadas. Continuar?'}
         </ConfirmDialog>
+      ) : null}
+
+      {scheduleConflicts ? (
+        <ScheduleConflictDialog
+          conflicts={scheduleConflicts}
+          onReview={() => {
+            setScheduleConflicts(null);
+          }}
+          onSaveAnyway={() => {
+            setScheduleConflicts(null);
+            setIsSaving(true);
+            void storeEvent();
+          }}
+        />
       ) : null}
 
       {confirmation === 'delete' && event ? (

@@ -372,6 +372,22 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
 - **Web**: `eventService.addParticipant()`, `updateParticipant()`,
   `removeParticipant()`, `listParticipationTypes()` e `personId` no `list()`.
 
+### Agenda — conflitos de horário (RF-33)
+
+- **Aviso, não bloqueio**: antes de criar ou editar, o formulário chama `POST
+  /agenda/events/schedule-conflicts` com início, término, ids dos participantes e,
+  na edição, o id a excluir. Se houver sobreposição, mostra as pessoas e os
+  compromissos encontrados; “Salvar mesmo assim” continua a gravação e “Revisar
+  horário” volta ao formulário.
+- **Intervalos semiabertos**: há conflito quando `existing.start < proposed.end` e
+  `existing.end > proposed.start`. Assim, terminar exatamente quando outro começa é
+  permitido. Compromisso sem `endDate` vale **60 minutos**, a mesma duração usada na
+  grade da visão Dia.
+- **Escopo e privacidade**: a rota exige `event:write`, aplica o `eventFilter()` do
+  usuário e devolve somente id/título/datas do compromisso e `{ id, name }` das
+  pessoas conflitantes. Eventos excluídos logicamente e o próprio evento em edição
+  não entram.
+
 ### Agenda — tela (ECOS-8 e ECOS-23)
 
 > Decisões #92 a #99 no Notion.
@@ -669,6 +685,9 @@ os frames de criação e edição de compromisso.
   assim é mantido. Salvar é o compromisso e depois os
   participantes, um a um (`EventFormSaver`), porque a API os mantém em rotas próprias.
   O desenho foi validado num protótipo HTML antes do código.
+- **RF-33 implementado em 27/10/2026**: aviso não bloqueante de conflito de horário
+  entre participantes, com duração presumida de 60 minutos quando não há término e
+  opção de salvar mesmo assim.
 - **Deploy de homologação no ar em 01/10/2026**: Neon + Render + Vercel, plano gratuito
   (decisões #100 a #103).
 - Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-9, com ECOS-11 e

@@ -2,6 +2,8 @@ import request from 'supertest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type {
+  CheckEventConflictsRequest,
+  CheckEventConflictsResponse,
   EventParticipantRequest,
   EventResponse,
   EventTypeResponse,
@@ -23,6 +25,7 @@ const {
   listEvents,
   listEventTypes,
   listParticipationTypes,
+  checkScheduleConflicts,
   addParticipant,
   updateParticipant,
   removeParticipant,
@@ -31,6 +34,13 @@ const {
     vi.fn<(request: ListEventsRequest, scope: AccessScope) => Promise<Paginated<EventResponse>>>(),
   listEventTypes: vi.fn<() => Promise<EventTypeResponse[]>>(),
   listParticipationTypes: vi.fn<() => Promise<ParticipationTypeResponse[]>>(),
+  checkScheduleConflicts:
+    vi.fn<
+      (
+        request: CheckEventConflictsRequest,
+        scope: AccessScope,
+      ) => Promise<CheckEventConflictsResponse>
+    >(),
   addParticipant: vi.fn<ParticipantWrite>(),
   updateParticipant: vi.fn<ParticipantWrite>(),
   removeParticipant:
@@ -47,6 +57,7 @@ vi.mock('../services/event.service.js', () => ({
     list: listEvents,
     listEventTypes,
     listParticipationTypes,
+    checkScheduleConflicts,
     addParticipant,
     updateParticipant,
     removeParticipant,
@@ -167,5 +178,40 @@ describe('participantes do compromisso', () => {
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ message: 'Pessoa removida do compromisso com sucesso' });
     expect(removeParticipant.mock.calls[0]?.slice(0, 2)).toEqual([3, 40]);
+  });
+});
+
+describe('conflitos de horário', () => {
+  beforeEach(() => {
+    fakeAuthentication.signInAs(ROLE_IDS.secretary);
+    checkScheduleConflicts.mockReset().mockResolvedValue({ conflicts: [] });
+  });
+
+  it('valida e consulta conflitos antes de salvar', async () => {
+    const body: CheckEventConflictsRequest = {
+      startDate: '2026-10-01T10:00:00-03:00',
+      endDate: null,
+      participantIds: [40, 7],
+      excludedEventId: 3,
+    };
+
+    const response = await request(createApp())
+      .post('/agenda/events/schedule-conflicts')
+      .send(body);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ conflicts: [] });
+    expect(checkScheduleConflicts.mock.calls[0]?.[0]).toEqual(body);
+    expect(checkScheduleConflicts.mock.calls[0]?.[1].eventFilter()).toEqual({ kind: 'all' });
+  });
+
+  it('recusa participante repetido', async () => {
+    const response = await request(createApp()).post('/agenda/events/schedule-conflicts').send({
+      startDate: '2026-10-01T10:00:00-03:00',
+      participantIds: [40, 40],
+    });
+
+    expect(response.status).toBe(400);
+    expect(checkScheduleConflicts).not.toHaveBeenCalled();
   });
 });

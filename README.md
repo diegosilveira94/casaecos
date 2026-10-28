@@ -134,6 +134,7 @@ npm run db:seed:admin   # lê ADMIN_NAME, ADMIN_EMAIL e ADMIN_PASSWORD do .env
 | ---------------- | ------------------------------------------- | ----------------------------------------------------------------- |
 | `GET`            | `/agenda/events`                            | Lista; filtros `homeId`, `personId`, `eventTypeId`, `from` e `to` |
 | `POST`           | `/agenda/events`                            | Cria um compromisso                                               |
+| `POST`           | `/agenda/events/schedule-conflicts`         | Verifica sobreposição para os participantes antes de salvar       |
 | `GET`            | `/agenda/events/:id`                        | Busca um compromisso, com os participantes                        |
 | `PUT` ou `PATCH` | `/agenda/events/:id`                        | Edita os campos informados                                        |
 | `DELETE`         | `/agenda/events/:id`                        | Exclui (exclusão lógica)                                          |

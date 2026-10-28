@@ -9,6 +9,7 @@ import type { PageRequest } from '../../../shared/pagination.js';
 import {
   DuplicateEventParticipantError,
   type CreateEventData,
+  type EventConflictCriteria,
   type EventListCriteria,
   type EventPage,
   type EventRepository,
@@ -70,10 +71,17 @@ class FakeEventRepository implements EventRepository {
   updatedData: { id: number; data: UpdateEventData } | null = null;
   softDeletedId: number | null = null;
   listedWith: { criteria: EventListCriteria; page: PageRequest } | null = null;
+  conflictEvents: Event[] = [];
+  conflictsWith: EventConflictCriteria | null = null;
 
   findPage(criteria: EventListCriteria, page: PageRequest): Promise<EventPage> {
     this.listedWith = { criteria, page };
     return Promise.resolve({ events: this.events, total: 42 });
+  }
+
+  findScheduleConflicts(criteria: EventConflictCriteria): Promise<Event[]> {
+    this.conflictsWith = criteria;
+    return Promise.resolve(this.conflictEvents);
   }
 
   listEventTypes(): Promise<EventType[]> {
@@ -219,6 +227,59 @@ describe('EventService', () => {
         { id: 1, description: 'Organizador' },
         { id: 4, description: 'Motorista' },
       ]);
+    });
+  });
+
+  describe('conflitos de horário', () => {
+    it('assume uma hora sem término, exclui a edição e devolve só as pessoas conflitantes', async () => {
+      repository.conflictEvents = [makeEvent(7, 1, [DRIVER_ID, CHILD_ID])];
+
+      const result = await service.checkScheduleConflicts(
+        {
+          startDate: '2026-10-01T10:00:00-03:00',
+          endDate: null,
+          participantIds: [CHILD_ID],
+          excludedEventId: 9,
+        },
+        coordination,
+      );
+
+      expect(repository.conflictsWith).toEqual({
+        scope: { kind: 'all' },
+        participantIds: [CHILD_ID],
+        excludedEventId: 9,
+        startsBefore: new Date('2026-10-01T14:00:00.000Z'),
+        endsAfter: new Date('2026-10-01T13:00:00.000Z'),
+        noEndStartsAfter: new Date('2026-10-01T12:00:00.000Z'),
+      });
+      expect(result).toEqual({
+        conflicts: [
+          {
+            eventId: 7,
+            eventTitle: 'Consulta pediatra',
+            startDate: storedStart.toISOString(),
+            endDate: storedEnd.toISOString(),
+            participants: [{ id: CHILD_ID, name: 'João Motorista' }],
+          },
+        ],
+      });
+    });
+
+    it('usa o término informado e respeita o escopo de acesso', async () => {
+      await service.checkScheduleConflicts(
+        {
+          startDate: '2026-10-01T10:00:00Z',
+          endDate: '2026-10-01T10:30:00Z',
+          participantIds: [DRIVER_ID],
+        },
+        caregiverOfHomeOne,
+      );
+
+      expect(repository.conflictsWith).toMatchObject({
+        scope: { kind: 'homes', homeIds: [1] },
+        startsBefore: new Date('2026-10-01T10:30:00Z'),
+        endsAfter: new Date('2026-10-01T10:00:00Z'),
+      });
     });
   });
 
