@@ -127,6 +127,7 @@ function makePerson(id: number, name: string, roleId: number, role: string): Per
     role: { id: roleId, description: role },
     individualRegistration: null,
     phone: null,
+    hasAccount: false,
     createdAt: at(8, 1, 8),
     updatedAt: at(8, 1, 8),
   };
@@ -164,7 +165,13 @@ function renderPage(
   render(
     <AuthContext value={auth}>
       <HomeSelectionContext
-        value={{ homes, selectedHomeId, canChooseHome: true, selectHome: vi.fn() }}
+        value={{
+          homes,
+          selectedHomeId,
+          canChooseHome: true,
+          selectHome: vi.fn(),
+          reloadHomes: vi.fn(),
+        }}
       >
         <AgendaPage />
       </HomeSelectionContext>

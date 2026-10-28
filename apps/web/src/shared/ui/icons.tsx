@@ -40,8 +40,8 @@ export const DollarIcon = (): React.JSX.Element => (
 
 export const GearIcon = (): React.JSX.Element => (
   <Icon>
+    <path d="M10.31 5.21 10.56 2.91 13.44 2.91 13.69 5.21 15.61 6 17.41 4.56 19.44 6.59 18 8.39 18.79 10.31 21.09 10.56 21.09 13.44 18.79 13.69 18 15.61 19.44 17.41 17.41 19.44 15.61 18 13.69 18.79 13.44 21.09 10.56 21.09 10.31 18.79 8.39 18 6.59 19.44 4.56 17.41 6 15.61 5.21 13.69 2.91 13.44 2.91 10.56 5.21 10.31 6 8.39 4.56 6.59 6.59 4.56 8.39 6Z" />
     <circle cx="12" cy="12" r="3" />
-    <path d="M12 2.8v2.4M12 18.8v2.4M4.6 4.6l1.7 1.7M17.7 17.7l1.7 1.7M2.8 12h2.4M18.8 12h2.4M4.6 19.4l1.7-1.7M17.7 6.3l1.7-1.7" />
   </Icon>
 );
 
@@ -97,6 +97,13 @@ export const FilterIcon = (): React.JSX.Element => (
 export const UploadIcon = (): React.JSX.Element => (
   <Icon>
     <path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M4.5 14v4.5a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5V14" />
+  </Icon>
+);
+
+export const SearchIcon = (): React.JSX.Element => (
+  <Icon>
+    <circle cx="11" cy="11" r="6.5" />
+    <path d="m20 20-4.4-4.4" />
   </Icon>
 );
 

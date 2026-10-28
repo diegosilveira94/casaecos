@@ -26,4 +26,32 @@ describe('PersonService', () => {
     expect(url).toBe('http://api.test/people?roleId=4');
     expect(init?.method).toBe('GET');
   });
+
+  it.each([
+    ['lista todos', (service: PersonService) => service.list(), 'GET', '/people'],
+    ['lista os papéis', (service: PersonService) => service.listRoles(), 'GET', '/roles'],
+    [
+      'lista as casas da pessoa',
+      (service: PersonService) => service.listHomes(6),
+      'GET',
+      '/people/6/homes',
+    ],
+    [
+      'cadastra',
+      (service: PersonService) => service.create({ name: 'Ana', roleId: 3 }),
+      'POST',
+      '/people',
+    ],
+    ['edita', (service: PersonService) => service.update(6, { roleId: 2 }), 'PATCH', '/people/6'],
+    ['exclui', (service: PersonService) => service.delete(6), 'DELETE', '/people/6'],
+  ] as const)('%s', async (_label, call, method, path) => {
+    const service = new PersonService(
+      new HttpClient('http://api.test', { readAccessToken: () => 'token' }),
+    );
+
+    await call(service);
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe(`http://api.test${path}`);
+    expect(init?.method).toBe(method);
+  });
 });

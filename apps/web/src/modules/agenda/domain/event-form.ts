@@ -5,6 +5,7 @@ import type {
   PersonResponse,
 } from '@casaecos/shared-types';
 
+import { ROLE_IDS } from '../../shared/person/domain/roles.js';
 import { dayKey, isSameDay, toOffsetIsoString } from './calendar-dates.js';
 
 // Column sizes of `event` (schema.prisma), which the API also validates.
@@ -12,11 +13,7 @@ export const EVENT_TITLE_MAX_LENGTH = 45;
 export const EVENT_ADDRESS_MAX_LENGTH = 100;
 export const EVENT_DESCRIPTION_MAX_LENGTH = 300;
 
-// Lookup ids are fixed by the seed (#37).
-const SHELTERED_ROLE_ID = 5;
-export const DRIVER_ROLE_ID = 4;
-
-/** `participation_type`: the role of a person in one commitment. */
+/** `participation_type`: the role of a person in one commitment. Ids fixed by the seed (#37). */
 export const PARTICIPATION_TYPE_IDS = { participant: 2, responsible: 3, driver: 4 } as const;
 
 export interface EventFormParticipant {
@@ -187,11 +184,11 @@ export function participantChanges(
 }
 
 export function isSheltered(person: PersonResponse): boolean {
-  return person.role.id === SHELTERED_ROLE_ID;
+  return person.role.id === ROLE_IDS.sheltered;
 }
 
 export function isDriver(person: PersonResponse): boolean {
-  return person.role.id === DRIVER_ROLE_ID;
+  return person.role.id === ROLE_IDS.driver;
 }
 
 /**

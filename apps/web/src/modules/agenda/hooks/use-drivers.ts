@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import type { PersonResponse } from '@casaecos/shared-types';
 
 import { personService } from '../../shared/person/services/person-service.js';
-import { DRIVER_ROLE_ID } from '../domain/event-form.js';
+import { ROLE_IDS } from '../../shared/person/domain/roles.js';
 
 /**
  * Every driver of the organization: they serve any home, so they are offered in a
@@ -15,7 +15,7 @@ export function useDrivers(): PersonResponse[] {
 
   useEffect(() => {
     let current = true;
-    personService.listByRole(DRIVER_ROLE_ID).then(
+    personService.listByRole(ROLE_IDS.driver).then(
       (loaded) => {
         if (current) setDrivers(loaded);
       },
