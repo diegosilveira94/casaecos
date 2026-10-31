@@ -34,9 +34,17 @@ const createAccountSchema = z
   })
   .strict();
 
+const resetPasswordSchema = z.object({ password: newPasswordSchema }).strict();
+
+const accountPersonIdSchema = z.object({ personId: z.coerce.number().int().positive() });
+
 export class AuthController {
   readonly loginValidator = new RequestValidator({ body: loginSchema });
   readonly createAccountValidator = new RequestValidator({ body: createAccountSchema });
+  readonly resetPasswordValidator = new RequestValidator({
+    params: accountPersonIdSchema,
+    body: resetPasswordSchema,
+  });
 
   login: RequestHandler = async (_request, response) => {
     const { body } = this.loginValidator.data(response);
@@ -46,6 +54,15 @@ export class AuthController {
   createAccount: RequestHandler = async (_request, response) => {
     const { body } = this.createAccountValidator.data(response);
     response.status(201).json(await authService.createAccount(body));
+  };
+
+  listAccounts: RequestHandler = async (_request, response) => {
+    response.json(await authService.listAccounts());
+  };
+
+  resetPassword: RequestHandler = async (_request, response) => {
+    const { params, body } = this.resetPasswordValidator.data(response);
+    response.json(await authService.resetPassword(params.personId, body));
   };
 
   getCurrentUser: RequestHandler = (request, response) => {

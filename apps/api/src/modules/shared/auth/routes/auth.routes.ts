@@ -50,4 +50,19 @@ authRouter.post(
   authController.createAccount,
 );
 
+authRouter.get(
+  '/accounts',
+  authenticate.handle,
+  authorize('account:manage'),
+  authController.listAccounts,
+);
+
+authRouter.patch(
+  '/accounts/:personId/password',
+  authenticate.handle,
+  authorize('account:manage'),
+  authController.resetPasswordValidator.handle,
+  authController.resetPassword,
+);
+
 authRouter.get('/me', authenticate.handle, authController.getCurrentUser);

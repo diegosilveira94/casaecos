@@ -2,7 +2,9 @@ import { useState, type SyntheticEvent } from 'react';
 import { Navigate, useLocation } from 'react-router';
 
 import { ApiRequestError } from '../../../../shared/http/api-request-error.js';
+import { Dialog } from '../../../../shared/ui/Dialog.js';
 import { BrandMark } from '../../layout/BrandMark.js';
+import { PasswordInput } from '../components/PasswordInput.js';
 import { SessionRestoring } from '../components/SessionRestoring.js';
 import { useAuth } from '../context/use-auth.js';
 
@@ -26,16 +28,6 @@ function BrandLockup({ variant }: { variant: 'light' | 'mobile' }): React.JSX.El
   );
 }
 
-function EyeIcon({ crossed }: { crossed: boolean }): React.JSX.Element {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
-      <circle cx="12" cy="12" r="2.6" />
-      {crossed ? <path d="m4 4 16 16" /> : null}
-    </svg>
-  );
-}
-
 // ApiRequestError already carries the Portuguese text (wrong password, too many
 // attempts, server offline); anything else is a defect of ours.
 function loginErrorMessage(error: unknown): string {
@@ -47,9 +39,9 @@ export function LoginPage(): React.JSX.Element {
   const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showsPasswordHelp, setShowsPasswordHelp] = useState(false);
 
   if (auth.status === 'restoring') return <SessionRestoring />;
 
@@ -125,33 +117,30 @@ export function LoginPage(): React.JSX.Element {
             </div>
 
             <div className="form-field">
-              <label htmlFor="password">Senha</label>
-              <div className="password-input">
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  placeholder="Digite sua senha"
-                  value={password}
-                  onChange={(event) => {
-                    setPassword(event.target.value);
-                  }}
-                  disabled={isSubmitting}
-                  required
-                />
+              <div className="login-password-heading">
+                <label htmlFor="password">Senha</label>
                 <button
+                  className="forgot-password-button"
                   type="button"
-                  className="password-toggle"
                   onClick={() => {
-                    setShowPassword((current) => !current);
+                    setShowsPasswordHelp(true);
                   }}
-                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                  disabled={isSubmitting}
                 >
-                  <EyeIcon crossed={showPassword} />
+                  Esqueceu a senha?
                 </button>
               </div>
+              <PasswordInput
+                id="password"
+                name="password"
+                autoComplete="current-password"
+                placeholder="Digite sua senha"
+                value={password}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                }}
+                disabled={isSubmitting}
+                required
+              />
             </div>
 
             {error ? (
@@ -173,10 +162,34 @@ export function LoginPage(): React.JSX.Element {
           </form>
 
           <p className="login-support">
-            Problemas para acessar? <strong>Fale com a secretaria.</strong>
+            Problemas para acessar? <strong>Fale com a Coordenação.</strong>
           </p>
         </div>
       </section>
+
+      {showsPasswordHelp ? (
+        <Dialog
+          title="Esqueceu a senha?"
+          className="dialog__panel--login-help"
+          onClose={() => {
+            setShowsPasswordHelp(false);
+          }}
+        >
+          <div className="login-password-help">
+            <p>Por enquanto, a recuperação automática por e-mail não está disponível.</p>
+            <p>Solicite à Coordenação uma nova senha.</p>
+            <button
+              className="primary-button"
+              type="button"
+              onClick={() => {
+                setShowsPasswordHelp(false);
+              }}
+            >
+              Entendi
+            </button>
+          </div>
+        </Dialog>
+      ) : null}
     </main>
   );
 }

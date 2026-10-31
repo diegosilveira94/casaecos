@@ -145,6 +145,21 @@ describe('App', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('orienta quem esqueceu a senha a pedir uma redefinição à Coordenação', async () => {
+    const user = userEvent.setup();
+    renderApp();
+
+    await user.click(screen.getByRole('button', { name: 'Esqueceu a senha?' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Esqueceu a senha?' });
+    expect(dialog).toHaveTextContent('recuperação automática por e-mail não está disponível');
+    expect(dialog).toHaveTextContent('Solicite à Coordenação uma nova senha');
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Entendi' }));
+    expect(screen.queryByRole('dialog', { name: 'Esqueceu a senha?' })).not.toBeInTheDocument();
+  });
+
   it('mostra o carregamento e bloqueia o botão durante o login', async () => {
     let answerLogin: (response: Response) => void = () => undefined;
     fetchMock.mockReturnValue(
