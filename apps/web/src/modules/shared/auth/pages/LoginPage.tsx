@@ -177,7 +177,7 @@ export function LoginPage(): React.JSX.Element {
         >
           <div className="login-password-help">
             <p>Por enquanto, a recuperação automática por e-mail não está disponível.</p>
-            <p>Solicite à Coordenação uma nova senha. Não é necessário informar sua senha atual.</p>
+            <p>Solicite à Coordenação uma nova senha.</p>
             <button
               className="primary-button"
               type="button"
