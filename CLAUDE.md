@@ -688,7 +688,7 @@ os frames de criação e edição de compromisso.
   buscas recortadas com `from`/`to`.
 - **ECOS-32 implementada em 31/10/2026**: "Enviar agenda" monta a mensagem de agenda
   (Geral, Motoristas ou Uma pessoa) para a secretaria conferir, personalizar e enviar
-  pelo WhatsApp, sem bot e sem custo. O lembrete automático ficou em card próprio.
+  pelo WhatsApp, sem bot e sem custo. O lembrete automático ficou na ECOS-37.
 - **ECOS-9 implementada em 06/10/2026**: formulário de compromisso em `/agenda` —
   "+ Novo Compromisso" e "Editar" (no detalhe) abrem o `EventFormDialog`, bottom sheet
   no celular e modal no desktop; tipo em cartões, término opcional com "Termina em
