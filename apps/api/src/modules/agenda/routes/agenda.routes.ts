@@ -27,6 +27,12 @@ agendaRouter.post(
   eventController.createValidator.handle,
   eventController.create,
 );
+agendaRouter.post(
+  '/events/schedule-conflicts',
+  authorize('event:write'),
+  eventController.checkConflictsValidator.handle,
+  eventController.checkScheduleConflicts,
+);
 agendaRouter.get(
   '/events/:id',
   authorize('event:read'),

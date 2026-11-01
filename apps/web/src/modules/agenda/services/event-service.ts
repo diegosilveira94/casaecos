@@ -1,5 +1,7 @@
 import type {
   ApiMessage,
+  CheckEventConflictsRequest,
+  CheckEventConflictsResponse,
   CreateEventRequest,
   EventParticipantRequest,
   EventResponse,
@@ -16,6 +18,7 @@ import type { HttpClient } from '../../../shared/http/http-client.js';
 const EVENTS_PATH = '/agenda/events';
 const EVENT_TYPES_PATH = '/agenda/event-types';
 const PARTICIPATION_TYPES_PATH = '/agenda/participation-types';
+const SCHEDULE_CONFLICTS_PATH = `${EVENTS_PATH}/schedule-conflicts`;
 // The API maximum (`src/shared/pagination.ts`): a month of the agenda fits in one page.
 const MAX_PAGE_SIZE = 200;
 
@@ -68,6 +71,12 @@ export class EventService {
 
   create(request: CreateEventRequest): Promise<EventResponse> {
     return this.http.post(EVENTS_PATH, request);
+  }
+
+  checkScheduleConflicts(
+    request: CheckEventConflictsRequest,
+  ): Promise<CheckEventConflictsResponse> {
+    return this.http.post(SCHEDULE_CONFLICTS_PATH, request);
   }
 
   update(id: number, request: UpdateEventRequest): Promise<EventResponse> {

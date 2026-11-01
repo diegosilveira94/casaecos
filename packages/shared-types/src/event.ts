@@ -78,3 +78,25 @@ export interface UpdateEventRequest {
 export interface EventParticipantRequest {
   participationTypeId: number;
 }
+
+/** Data needed to preview schedule conflicts before an event and its participants are saved. */
+export interface CheckEventConflictsRequest {
+  startDate: string;
+  endDate?: string | null;
+  participantIds: number[];
+  /** The event being edited must not conflict with itself. */
+  excludedEventId?: number;
+}
+
+/** One existing event that overlaps the proposed interval for at least one participant. */
+export interface EventScheduleConflictResponse {
+  eventId: number;
+  eventTitle: string;
+  startDate: string;
+  endDate: string | null;
+  participants: PersonSummaryResponse[];
+}
+
+export interface CheckEventConflictsResponse {
+  conflicts: EventScheduleConflictResponse[];
+}

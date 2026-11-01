@@ -41,8 +41,21 @@ export interface EventPage {
   total: number;
 }
 
+export interface EventConflictCriteria {
+  scope: EventScopeFilter;
+  participantIds: readonly number[];
+  excludedEventId?: number;
+  /** Existing events must start before this exclusive boundary. */
+  startsBefore: Date;
+  /** Existing events with an explicit end must end after this exclusive boundary. */
+  endsAfter: Date;
+  /** An event without an end lasts one hour and must start after this boundary. */
+  noEndStartsAfter: Date;
+}
+
 export interface EventRepository {
   findPage(criteria: EventListCriteria, page: PageRequest): Promise<EventPage>;
+  findScheduleConflicts(criteria: EventConflictCriteria): Promise<Event[]>;
   findById(id: number): Promise<Event | null>;
   listEventTypes(): Promise<EventType[]>;
   listParticipationTypes(): Promise<ParticipationType[]>;
@@ -158,6 +171,29 @@ export class PrismaEventRepository implements EventRepository {
       prisma.event.count({ where }),
     ]);
     return { events: events.map(toEvent), total };
+  }
+
+  async findScheduleConflicts(criteria: EventConflictCriteria): Promise<Event[]> {
+    const events = await prisma.event.findMany({
+      where: {
+        deletedAt: null,
+        AND: [
+          scopeWhere(criteria.scope),
+          { personLinks: { some: { personId: { in: [...criteria.participantIds] } } } },
+          { startDate: { lt: criteria.startsBefore } },
+          {
+            OR: [
+              { endDate: { gt: criteria.endsAfter } },
+              { endDate: null, startDate: { gt: criteria.noEndStartsAfter } },
+            ],
+          },
+          criteria.excludedEventId === undefined ? {} : { id: { not: criteria.excludedEventId } },
+        ],
+      },
+      select: eventSelection,
+      orderBy: [{ startDate: 'asc' }, { id: 'asc' }],
+    });
+    return events.map(toEvent);
   }
 
   async findById(id: number): Promise<Event | null> {

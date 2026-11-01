@@ -1,4 +1,6 @@
 import type {
+  CheckEventConflictsRequest,
+  CheckEventConflictsResponse,
   CreateEventRequest,
   EventParticipantRequest,
   EventResponse,
@@ -19,6 +21,7 @@ import {
   PrismaEventRepository,
   type CreateEventData,
   type EventListCriteria,
+  type EventConflictCriteria,
   type EventRepository,
   type UpdateEventData,
 } from '../repositories/event.repository.js';
@@ -28,6 +31,7 @@ export type ListEventsRequest = ListEventsQuery & PageRequest;
 
 const END_NOT_AFTER_START_MESSAGE = 'O término do compromisso precisa ser depois do início';
 const DUPLICATE_PARTICIPANT_MESSAGE = 'Pessoa já participa deste compromisso';
+export const ASSUMED_EVENT_DURATION_MINUTES = 60;
 
 function toNullableDate(value: string | null | undefined): Date | null {
   return value ? new Date(value) : null;
@@ -57,6 +61,44 @@ export class EventService {
   async listParticipationTypes(): Promise<ParticipationTypeResponse[]> {
     const participationTypes = await this.repository.listParticipationTypes();
     return participationTypes.map((participationType) => participationType.toResponse());
+  }
+
+  async checkScheduleConflicts(
+    request: CheckEventConflictsRequest,
+    scope: AccessScope,
+  ): Promise<CheckEventConflictsResponse> {
+    const startDate = new Date(request.startDate);
+    const endDate =
+      toNullableDate(request.endDate) ??
+      new Date(startDate.getTime() + ASSUMED_EVENT_DURATION_MINUTES * 60_000);
+    this.ensureEndsAfterStart(startDate, endDate);
+
+    const criteria: EventConflictCriteria = {
+      scope: scope.eventFilter(),
+      participantIds: request.participantIds,
+      startsBefore: endDate,
+      endsAfter: startDate,
+      noEndStartsAfter: new Date(
+        startDate.getTime() - ASSUMED_EVENT_DURATION_MINUTES * 60_000,
+      ),
+      ...(request.excludedEventId === undefined
+        ? {}
+        : { excludedEventId: request.excludedEventId }),
+    };
+    const participantIds = new Set(request.participantIds);
+    const conflicts = await this.repository.findScheduleConflicts(criteria);
+
+    return {
+      conflicts: conflicts.map((event) => ({
+        eventId: event.id,
+        eventTitle: event.title,
+        startDate: event.startDate.toISOString(),
+        endDate: event.endDate?.toISOString() ?? null,
+        participants: event.participants
+          .filter(({ person }) => participantIds.has(person.id))
+          .map(({ person }) => person.toResponse()),
+      })),
+    };
   }
 
   async getById(id: number, scope: AccessScope): Promise<EventResponse> {

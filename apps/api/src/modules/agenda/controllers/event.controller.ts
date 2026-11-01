@@ -67,10 +67,24 @@ const updateEventSchema = z
 
 const participantSchema = z.object({ participationTypeId: idSchema }).strict();
 
+const checkConflictsSchema = z
+  .object({
+    startDate: dateTimeSchema,
+    endDate: z.union([dateTimeSchema, z.null()]).exactOptional(),
+    participantIds: z.array(idSchema).min(1).max(100),
+    excludedEventId: idSchema.exactOptional(),
+  })
+  .strict()
+  .refine(({ participantIds }) => new Set(participantIds).size === participantIds.length, {
+    path: ['participantIds'],
+    message: 'Não repita participantes',
+  });
+
 export class EventController {
   readonly listValidator = new RequestValidator({ query: listEventsQuerySchema });
   readonly eventIdValidator = new RequestValidator({ params: eventIdParamsSchema });
   readonly createValidator = new RequestValidator({ body: createEventSchema });
+  readonly checkConflictsValidator = new RequestValidator({ body: checkConflictsSchema });
   readonly updateValidator = new RequestValidator({
     params: eventIdParamsSchema,
     body: updateEventSchema,
@@ -92,6 +106,11 @@ export class EventController {
 
   listParticipationTypes: RequestHandler = async (_request, response) => {
     response.json(await eventService.listParticipationTypes());
+  };
+
+  checkScheduleConflicts: RequestHandler = async (request, response) => {
+    const { body } = this.checkConflictsValidator.data(response);
+    response.json(await eventService.checkScheduleConflicts(body, currentUser(request).scope));
   };
 
   getById: RequestHandler = async (request, response) => {

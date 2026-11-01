@@ -25,6 +25,7 @@ vi.mock('../services/event-service.js', () => ({
     list: vi.fn(),
     listAll: vi.fn(),
     listEventTypes: vi.fn(),
+    checkScheduleConflicts: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
@@ -42,6 +43,7 @@ vi.mock('../../shared/person/services/person-service.js', () => ({
 
 const listAll = vi.mocked(eventService.listAll);
 const listEventTypes = vi.mocked(eventService.listEventTypes);
+const checkScheduleConflicts = vi.mocked(eventService.checkScheduleConflicts);
 const listEvents = vi.mocked(eventService.list);
 const createEvent = vi.mocked(eventService.create);
 const updateEvent = vi.mocked(eventService.update);
@@ -205,6 +207,7 @@ describe('AgendaPage', () => {
     });
     listHomePeople.mockResolvedValue([anaSouza, joaoPedro]);
     listPeopleByRole.mockResolvedValue([carlosLima]);
+    checkScheduleConflicts.mockResolvedValue({ conflicts: [] });
     addParticipant.mockResolvedValue({ message: 'ok' });
     removeParticipant.mockResolvedValue({ message: 'ok' });
     deleteEvent.mockResolvedValue({ message: 'ok' });
@@ -496,9 +499,56 @@ describe('AgendaPage', () => {
         [9, 2, { participationTypeId: 3 }],
         [9, 4, { participationTypeId: 4 }],
       ]);
+      expect(checkScheduleConflicts).toHaveBeenCalledWith({
+        startDate: toOffsetIsoString(new Date(2026, 9, 5, 9, 0)),
+        endDate: null,
+        participantIds: [5, 2, 4],
+      });
       expect(within(dayList()).getByRole('heading')).toHaveTextContent(
         'Segunda-feira, 5 de outubro',
       );
+    });
+
+    it('avisa sobre conflito e deixa revisar ou salvar mesmo assim', async () => {
+      const user = userEvent.setup();
+      const created = makeEvent({ id: 9, title: 'Vacinação' });
+      createEvent.mockResolvedValue(created);
+      checkScheduleConflicts.mockResolvedValue({
+        conflicts: [
+          {
+            eventId: 1,
+            eventTitle: 'Consulta pediátrica',
+            startDate: at(8, 30, 9),
+            endDate: at(8, 30, 10),
+            participants: [{ id: 5, name: 'João Pedro' }],
+          },
+        ],
+      });
+      renderPage();
+      const form = await openNewForm(user);
+
+      await user.type(within(form).getByLabelText(/^Título/), 'Vacinação');
+      await user.click(within(form).getByRole('radio', { name: 'Consulta médica' }));
+      await user.type(within(form).getByLabelText(/^Início/), '09:30');
+      await user.selectOptions(within(form).getByLabelText(/^Casa/), 'Casa Esperança');
+      await user.click(await within(form).findByRole('checkbox', { name: 'João Pedro' }));
+      await user.click(within(form).getByRole('button', { name: 'Salvar compromisso' }));
+
+      let warning = await screen.findByRole('dialog', { name: 'Conflito de horário' });
+      expect(warning).toHaveTextContent('João Pedro');
+      expect(warning).toHaveTextContent('Consulta pediátrica');
+      expect(createEvent).not.toHaveBeenCalled();
+
+      await user.click(within(warning).getByRole('button', { name: 'Revisar horário' }));
+      expect(screen.queryByRole('dialog', { name: 'Conflito de horário' })).not.toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: 'Novo compromisso' })).toBeInTheDocument();
+
+      await user.click(within(form).getByRole('button', { name: 'Salvar compromisso' }));
+      warning = await screen.findByRole('dialog', { name: 'Conflito de horário' });
+      await user.click(within(warning).getByRole('button', { name: 'Salvar mesmo assim' }));
+
+      expect(createEvent).toHaveBeenCalledTimes(1);
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
     it('já vem com a casa escolhida na sidebar', async () => {
