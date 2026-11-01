@@ -84,12 +84,13 @@ Módulos: `agenda` (em desenvolvimento), `medicamentos`, `prestacao-contas`,
 
 ## API de autenticação
 
-| Método | Rota             | Descrição                                                            |
-| ------ | ---------------- | -------------------------------------------------------------------- |
-| `POST` | `/auth/login`    | E-mail + senha; devolve `{ token, expiresInSeconds, user }`          |
-| `POST` | `/auth/accounts` | Cria credencial para uma pessoa (exige token de Coordenador)         |
-| `GET`  | `/auth/accounts` | Lista as credenciais com pessoa, papel e último acesso (Coordenador) |
-| `GET`  | `/auth/me`       | Devolve o usuário do token                                           |
+| Método  | Rota                                | Descrição                                                                    |
+| ------- | ----------------------------------- | ---------------------------------------------------------------------------- |
+| `POST`  | `/auth/login`                       | E-mail + senha; devolve `{ token, expiresInSeconds, user }`                  |
+| `POST`  | `/auth/accounts`                    | Cria credencial para uma pessoa (somente Coordenador)                        |
+| `GET`   | `/auth/accounts`                    | Lista as credenciais com pessoa, papel e último acesso (somente Coordenador) |
+| `PATCH` | `/auth/accounts/:personId/password` | Redefine a senha de outra pessoa (somente Coordenador)                       |
+| `GET`   | `/auth/me`                          | Devolve o usuário do token                                                   |
 
 Nas rotas protegidas, envie `Authorization: Bearer <token>`. O token é um JWT
 HS256 de 8 horas, sem refresh token. O `user` do login e do `/auth/me` traz as

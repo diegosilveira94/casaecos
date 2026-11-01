@@ -22,8 +22,11 @@ function at(days: number, time: string): Date {
   return new Date(today.getFullYear(), today.getMonth(), today.getDate() + days, hours, minutes);
 }
 
-async function createPerson(name: string, roleId: number): Promise<number> {
-  const person = await prisma.person.create({ data: { name, roleId }, select: { id: true } });
+async function createPerson(name: string, roleId: number, phone?: string): Promise<number> {
+  const person = await prisma.person.create({
+    data: { name, roleId, phone: phone ?? null },
+    select: { id: true },
+  });
   return person.id;
 }
 
@@ -80,9 +83,10 @@ async function main(): Promise<void> {
 
   const passwordHash = await new BcryptPasswordHasher().hash(DEMO_PASSWORD);
 
-  const secretary = await createPerson('Maria Silva', ROLE_IDS.secretary);
-  const caregiver = await createPerson('Ana Souza', ROLE_IDS.caregiver);
-  const driver = await createPerson('Carlos Lima', ROLE_IDS.driver);
+  // Fictional numbers, in the free format people type: "Enviar agenda" needs a valid phone.
+  const secretary = await createPerson('Maria Silva', ROLE_IDS.secretary, '(47) 90000-0001');
+  const caregiver = await createPerson('Ana Souza', ROLE_IDS.caregiver, '(47) 90000-0002');
+  const driver = await createPerson('Carlos Lima', ROLE_IDS.driver, '(47) 90000-0003');
   const joao = await createPerson('João Pedro', ROLE_IDS.sheltered);
   const lucas = await createPerson('Lucas Gabriel', ROLE_IDS.sheltered);
   const clara = await createPerson('Maria Clara', ROLE_IDS.sheltered);

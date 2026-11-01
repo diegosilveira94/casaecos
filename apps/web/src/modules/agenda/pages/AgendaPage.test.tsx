@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -228,6 +228,16 @@ describe('AgendaPage', () => {
       from: toOffsetIsoString(new Date(2026, 8, 1)),
       to: toOffsetIsoString(new Date(2026, 9, 1)),
     });
+  });
+
+  it('mostra "Enviar agenda" só para quem lê pessoas', async () => {
+    renderPage();
+    expect(await screen.findByRole('button', { name: 'Enviar agenda' })).toBeInTheDocument();
+    cleanup();
+
+    renderPage({ ...secretary, permissions: ['event:read', 'home:read'] });
+    await within(dayList()).findByText('Consulta pediátrica');
+    expect(screen.queryByRole('button', { name: 'Enviar agenda' })).not.toBeInTheDocument();
   });
 
   it('marca hoje como selecionado e conta os compromissos de cada dia', async () => {

@@ -58,6 +58,10 @@ class StubRepository implements UserAccountRepository {
   registerLogin(_id: number, _at: Date): Promise<void> {
     return Promise.resolve();
   }
+
+  updatePassword(_id: number, _passwordHash: string): Promise<void> {
+    return Promise.resolve();
+  }
 }
 
 class StubTokenIssuer implements TokenIssuer {

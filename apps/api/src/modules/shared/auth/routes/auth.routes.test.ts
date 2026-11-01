@@ -35,6 +35,13 @@ describe('rotas de autenticação', () => {
         .post('/auth/accounts')
         .send({ personId: 1, email: 'maria@ecos.org', password: 'senha-nova-123' }),
     ).resolves.toMatchObject({ status: 401 });
+
+    await expect(request(createApp()).get('/auth/accounts')).resolves.toMatchObject({
+      status: 401,
+    });
+    await expect(
+      request(createApp()).patch('/auth/accounts/1/password').send({ password: 'senha-nova-123' }),
+    ).resolves.toMatchObject({ status: 401 });
   });
 
   it('recusa token inválido antes de validar o corpo', async () => {

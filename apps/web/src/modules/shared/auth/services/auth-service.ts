@@ -1,8 +1,10 @@
 import type {
+  ApiMessage,
   AuthenticatedUserResponse,
   CreateUserAccountRequest,
   LoginRequest,
   LoginResponse,
+  ResetPasswordRequest,
   UserAccountListItemResponse,
   UserAccountResponse,
 } from '@casaecos/shared-types';
@@ -31,6 +33,11 @@ export class AuthService {
   /** Gives a person a credential: needs `account:manage`. */
   createAccount(request: CreateUserAccountRequest): Promise<UserAccountResponse> {
     return this.http.post(ACCOUNTS_PATH, request);
+  }
+
+  /** Sets a new password without knowing the current one: needs `account:manage`. */
+  resetPassword(personId: number, request: ResetPasswordRequest): Promise<ApiMessage> {
+    return this.http.patch(`${ACCOUNTS_PATH}/${String(personId)}/password`, request);
   }
 }
 

@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import type { EventResponse } from '@casaecos/shared-types';
 
 import { COMING_SOON_PROPS } from '../../../shared/ui/coming-soon.js';
-import { PlusIcon, UploadIcon } from '../../../shared/ui/icons.js';
+import { PlusIcon, SendIcon, UploadIcon } from '../../../shared/ui/icons.js';
 import { useIsDesktop } from '../../../shared/ui/use-media-query.js';
 import { useAuth } from '../../shared/auth/context/use-auth.js';
 import { useHomeSelection } from '../../shared/home/context/use-home-selection.js';
@@ -15,6 +15,7 @@ import { EventFormDialog } from '../components/EventFormDialog.js';
 import { FiltersMenu } from '../components/FiltersMenu.js';
 import { MonthGrid } from '../components/MonthGrid.js';
 import { MonthLoadError } from '../components/MonthLoadError.js';
+import { SendAgendaDialog } from '../components/SendAgendaDialog.js';
 import { TimeGrid } from '../components/TimeGrid.js';
 import { UpcomingEventsPanel } from '../components/UpcomingEventsPanel.js';
 import { WeekEventList } from '../components/WeekEventList.js';
@@ -70,8 +71,11 @@ export function AgendaPage(): React.JSX.Element {
   const [openEvent, setOpenEvent] = useState<EventResponse | null>(null);
   const [openDay, setOpenDay] = useState<Date | null>(null);
   const [formTarget, setFormTarget] = useState<EventFormTarget | null>(null);
+  const [isSendOpen, setIsSendOpen] = useState(false);
   const [upcomingReloadCount, setUpcomingReloadCount] = useState(0);
   const canWriteEvents = can('event:write');
+  // Sending needs the phones of the staff, which only `person:read` can see.
+  const canSendAgenda = can('person:read');
 
   const eventTypes = useEventTypes();
   const filters = useMemo<AgendaFilters>(
@@ -157,6 +161,18 @@ export function AgendaPage(): React.JSX.Element {
               <UploadIcon />
               Exportar
             </button>
+            {canSendAgenda ? (
+              <button
+                className="outline-button"
+                type="button"
+                onClick={() => {
+                  setIsSendOpen(true);
+                }}
+              >
+                <SendIcon />
+                Enviar agenda
+              </button>
+            ) : null}
             {canWriteEvents ? (
               <button
                 className="primary-button primary-button--compact"
@@ -290,6 +306,14 @@ export function AgendaPage(): React.JSX.Element {
           }}
           onStored={reloadEvents}
           onClose={closeForm}
+        />
+      ) : null}
+      {isSendOpen ? (
+        <SendAgendaDialog
+          today={today}
+          onClose={() => {
+            setIsSendOpen(false);
+          }}
         />
       ) : null}
     </>

@@ -17,6 +17,7 @@ export interface UserAccountRepository {
   personExists(personId: number): Promise<boolean>;
   create(data: CreateUserAccountData): Promise<UserAccount>;
   registerLogin(id: number, at: Date): Promise<void>;
+  updatePassword(id: number, passwordHash: string): Promise<void>;
 }
 
 export class DuplicateEmailError extends Error {
@@ -115,6 +116,10 @@ export class PrismaUserAccountRepository implements UserAccountRepository {
 
   async registerLogin(id: number, at: Date): Promise<void> {
     await prisma.userAccount.update({ where: { id }, data: { lastLoginAt: at } });
+  }
+
+  async updatePassword(id: number, passwordHash: string): Promise<void> {
+    await prisma.userAccount.update({ where: { id }, data: { passwordHash } });
   }
 
   /**

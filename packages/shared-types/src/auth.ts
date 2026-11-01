@@ -38,6 +38,10 @@ export interface CreateUserAccountRequest {
   password: string;
 }
 
+export interface ResetPasswordRequest {
+  password: string;
+}
+
 /** Never carries the password hash: it does not leave the database. */
 export interface UserAccountResponse {
   id: number;

@@ -44,4 +44,13 @@ describe('AuthService', () => {
       password: 'flor-rio-1234',
     });
   });
+
+  it('redefine a senha pelo identificador da pessoa', async () => {
+    await service().resetPassword(9, { password: 'temporaria-123' });
+
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe('http://api.test/auth/accounts/9/password');
+    expect(init?.method).toBe('PATCH');
+    expect(JSON.parse(init?.body as string)).toEqual({ password: 'temporaria-123' });
+  });
 });
