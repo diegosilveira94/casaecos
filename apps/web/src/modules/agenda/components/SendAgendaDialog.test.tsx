@@ -157,7 +157,9 @@ describe('SendAgendaDialog', () => {
     await user.selectOptions(screen.getByLabelText('Pessoa'), String(carlos.id));
 
     expect(screen.getByText(/Boa tarde, Carlos!/)).toBeInTheDocument();
-    expect(whatsAppHref()).toMatch(/^https:\/\/wa\.me\/5547900000003\?text=/);
+    expect(whatsAppHref()).toMatch(
+      /^https:\/\/api\.whatsapp\.com\/send\?phone=5547900000003&text=/,
+    );
   });
 
   it('avisa quando a pessoa não tem compromissos no período', async () => {

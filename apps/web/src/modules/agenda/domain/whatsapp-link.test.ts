@@ -24,13 +24,19 @@ describe('toWhatsAppNumber', () => {
 
 describe('whatsAppLink', () => {
   it('codifica o texto e aponta para o número', () => {
-    expect(whatsAppLink('Olá, *João*\n➡️ Às 08:30', '5547997345521')).toBe(
-      `https://wa.me/5547997345521?text=${encodeURIComponent('Olá, *João*\n➡️ Às 08:30')}`,
+    expect(whatsAppLink('Olá, *João*\nÀs 08:30', '5547997345521')).toBe(
+      'https://api.whatsapp.com/send?phone=5547997345521&text=Ol%C3%A1%2C%20*Jo%C3%A3o*%0A%C3%80s%2008%3A30',
+    );
+  });
+
+  it('mantém os emojis codificados, sem passar pelo redirecionamento do wa.me', () => {
+    expect(whatsAppLink('🔴 ➡️ 📍')).toBe(
+      'https://api.whatsapp.com/send?text=%F0%9F%94%B4%20%E2%9E%A1%EF%B8%8F%20%F0%9F%93%8D',
     );
   });
 
   it('sem número deixa o WhatsApp perguntar a conversa', () => {
-    expect(whatsAppLink('Oi')).toBe('https://wa.me/?text=Oi');
+    expect(whatsAppLink('Oi')).toBe('https://api.whatsapp.com/send?text=Oi');
   });
 });
 

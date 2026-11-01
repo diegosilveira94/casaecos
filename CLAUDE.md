@@ -431,11 +431,13 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
 
 - **Fase 1 do RF-32: o envio é manual.** "Enviar agenda" (barra da Agenda, com
   `can('person:read')`, porque precisa do telefone da equipe) abre o `SendAgendaDialog`:
-  ele monta o texto e abre o `wa.me`, e quem envia é a pessoa, no WhatsApp. O sistema não
+  ele monta o texto e abre o WhatsApp, e quem envia é a pessoa, lá. O sistema não
   sabe se a mensagem saiu, então não há histórico nem "enviado". Sem mudança na API:
   usa `GET /people` e `GET /agenda/events`. O lembrete automático e o bot seguem em
   aberto (#06) e o sino do header continua "Disponível em breve".
-- **Três públicos** (`AgendaAudience`): Geral e Motoristas usam `wa.me/?text=`, sem
+- **O link é `api.whatsapp.com/send`, não `wa.me`** (#120): o redirecionamento do `wa.me`
+  troca todo emoji do texto por "�".
+- **Três públicos** (`AgendaAudience`): Geral e Motoristas usam o link sem `phone`, sem
   número, para a pessoa escolher o grupo; Uma pessoa usa o número dela. "Copiar mensagem"
   fica sempre ao lado. Só a equipe é oferecida, sem acolhidos, e quem não tem telefone
   válido aparece desabilitado com o motivo.
