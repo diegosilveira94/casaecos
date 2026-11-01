@@ -35,7 +35,7 @@ export function ConfirmDialog({
       onClose={onKeep}
       actions={
         <>
-          <Button color="error" variant="outlined" disabled={isBusy} onClick={onConfirm}>
+          <Button color="error" variant="contained" disabled={isBusy} onClick={onConfirm}>
             {destructiveLabel}
           </Button>
           <Button variant="contained" disabled={isBusy} onClick={onKeep}>

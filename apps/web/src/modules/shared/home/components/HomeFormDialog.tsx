@@ -141,7 +141,7 @@ export function HomeFormDialog({
               <Button
                 sx={{ mr: 'auto' }}
                 color="error"
-                variant="outlined"
+                variant="contained"
                 disabled={isBusy}
                 onClick={() => {
                   setConfirmation('delete');

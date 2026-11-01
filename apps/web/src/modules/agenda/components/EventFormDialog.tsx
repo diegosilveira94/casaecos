@@ -196,7 +196,7 @@ export function EventFormDialog({
               <Button
                 sx={{ mr: 'auto' }}
                 color="error"
-                variant="outlined"
+                variant="contained"
                 disabled={isSaving}
                 onClick={() => {
                   setConfirmation('delete');
