@@ -1,3 +1,4 @@
+import { Button, FormHelperText, Stack } from '@mui/material';
 import { useState } from 'react';
 
 import type { RoleResponse, UserAccountListItemResponse } from '@casaecos/shared-types';
@@ -53,22 +54,29 @@ export function ChangeRoleDialog({
   return (
     <Dialog
       title="Trocar papel"
-      className="dialog__panel--form"
       onClose={() => {
         if (!isSaving) onClose();
       }}
+      onSubmit={(submitEvent) => {
+        submitEvent.preventDefault();
+        void save();
+      }}
+      actions={
+        <>
+          {failure === null ? null : <AlertMessage>{failure}</AlertMessage>}
+          <Button color="inherit" disabled={isSaving} onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button type="submit" variant="contained" loading={isSaving} loadingPosition="start">
+            {isSaving ? 'Salvando...' : 'Trocar papel'}
+          </Button>
+        </>
+      }
     >
-      <form
-        className="event-form"
-        noValidate
-        onSubmit={(submitEvent) => {
-          submitEvent.preventDefault();
-          void save();
-        }}
-      >
-        <p className="form-field__hint">
+      <Stack spacing={2.5}>
+        <FormHelperText>
           {account.person.name} · {account.email}
-        </p>
+        </FormHelperText>
         <RolePicker
           name="account-role"
           legend="Novo papel"
@@ -79,24 +87,7 @@ export function ChangeRoleDialog({
           hint="Vale na próxima ação da pessoa no sistema, sem precisar sair e entrar de novo."
           onChange={setRoleId}
         />
-        <footer className="dialog__footer">
-          {failure === null ? null : <AlertMessage>{failure}</AlertMessage>}
-          <div className="dialog__actions">
-            <button className="outline-button" type="button" disabled={isSaving} onClick={onClose}>
-              Cancelar
-            </button>
-            <button
-              className="primary-button"
-              type="submit"
-              disabled={isSaving}
-              aria-busy={isSaving}
-            >
-              {isSaving ? <span className="spinner" aria-hidden="true" /> : null}
-              {isSaving ? 'Salvando...' : 'Trocar papel'}
-            </button>
-          </div>
-        </footer>
-      </form>
+      </Stack>
     </Dialog>
   );
 }

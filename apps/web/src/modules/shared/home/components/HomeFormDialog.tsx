@@ -1,3 +1,4 @@
+import { Button, Stack, TextField } from '@mui/material';
 import { useState, type SyntheticEvent } from 'react';
 
 import type { HomeResponse, PersonResponse } from '@casaecos/shared-types';
@@ -7,8 +8,6 @@ import { useApiResource } from '../../../../shared/http/use-api-resource.js';
 import { AlertMessage } from '../../../../shared/ui/AlertMessage.js';
 import { ConfirmDialog } from '../../../../shared/ui/ConfirmDialog.js';
 import { Dialog } from '../../../../shared/ui/Dialog.js';
-import { fieldErrorProps } from '../../../../shared/ui/field-error-props.js';
-import { FormField } from '../../../../shared/ui/FormField.js';
 import { FormSelect } from '../../../../shared/ui/FormSelect.js';
 import { organizationService } from '../../organization/services/organization-service.js';
 import { canBeResponsible } from '../../person/domain/roles.js';
@@ -34,8 +33,6 @@ interface HomeFormDialogProps {
   onDeleted: () => void;
   onClose: () => void;
 }
-
-const ignoreClose = (): void => undefined;
 
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof ApiRequestError ? error.message : fallback;
@@ -133,100 +130,86 @@ export function HomeFormDialog({
     <>
       <Dialog
         title={isEditing ? 'Editar casa' : 'Nova casa'}
-        className="dialog__panel--form"
-        onClose={confirmation === null ? requestClose : ignoreClose}
+        onClose={requestClose}
+        onSubmit={(submitEvent) => {
+          void save(submitEvent);
+        }}
+        actions={
+          <>
+            {failure === null ? null : <AlertMessage>{failure}</AlertMessage>}
+            {isEditing ? (
+              <Button
+                sx={{ mr: 'auto' }}
+                color="error"
+                variant="outlined"
+                disabled={isBusy}
+                onClick={() => {
+                  setConfirmation('delete');
+                }}
+              >
+                Excluir
+              </Button>
+            ) : null}
+            <Button color="inherit" disabled={isBusy} onClick={requestClose}>
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              loading={isSaving}
+              loadingPosition="start"
+              disabled={isDeleting || (!isEditing && organizations.resource.status === 'loading')}
+            >
+              {isSaving ? 'Salvando...' : isEditing ? 'Salvar alterações' : 'Cadastrar casa'}
+            </Button>
+          </>
+        }
       >
-        <form
-          className="event-form"
-          noValidate
-          onSubmit={(submitEvent) => {
-            void save(submitEvent);
-          }}
-        >
-          <FormField id="home-name" label="Nome da casa" isRequired error={errors.name}>
-            <input
-              id="home-name"
-              maxLength={HOME_NAME_MAX_LENGTH}
-              autoComplete="off"
-              placeholder="Ex.: Casa Esperança"
-              value={name}
-              disabled={isBusy}
-              {...fieldErrorProps('home-name', errors.name)}
-              onChange={(inputEvent) => {
-                setName(inputEvent.target.value);
-              }}
-            />
-          </FormField>
-          <FormField
-            id="home-responsible"
+        <Stack spacing={2.5}>
+          <TextField
+            label="Nome da casa"
+            required
+            autoComplete="off"
+            placeholder="Ex.: Casa Esperança"
+            error={errors.name !== undefined}
+            helperText={errors.name}
+            value={name}
+            disabled={isBusy}
+            slotProps={{ htmlInput: { maxLength: HOME_NAME_MAX_LENGTH } }}
+            onChange={(inputEvent) => {
+              setName(inputEvent.target.value);
+            }}
+          />
+          <FormSelect
             label="Responsável"
-            isRequired
-            error={errors.responsible}
-            hint={
-              staff.length === 0
+            required
+            error={errors.responsible !== undefined}
+            helperText={
+              errors.responsible ??
+              (staff.length === 0
                 ? 'Cadastre a equipe em Pessoas antes de criar a casa.'
                 : isEditing
                   ? 'A lista traz a equipe cadastrada em Pessoas.'
-                  : 'A lista traz a equipe cadastrada em Pessoas. O responsável já entra vinculado à casa.'
+                  : 'A lista traz a equipe cadastrada em Pessoas. O responsável já entra vinculado à casa.')
             }
+            value={responsibleId ?? NOBODY}
+            disabled={isBusy}
+            onChange={(changeEvent) => {
+              const value = changeEvent.target.value;
+              setResponsibleId(value === NOBODY ? null : Number(value));
+            }}
           >
-            <FormSelect
-              id="home-responsible"
-              showsPrompt={responsibleId === null}
-              value={responsibleId ?? NOBODY}
-              disabled={isBusy}
-              {...fieldErrorProps('home-responsible', errors.responsible)}
-              onChange={(changeEvent) => {
-                const value = changeEvent.target.value;
-                setResponsibleId(value === NOBODY ? null : Number(value));
-              }}
-            >
-              <option value={NOBODY}>Escolha quem responde pela casa</option>
-              {responsibleOptions.map((person) => (
-                <option key={person.id} value={person.id}>
-                  {person.name} · {person.role.description}
-                </option>
-              ))}
-            </FormSelect>
-          </FormField>
+            <option value={NOBODY}>Escolha quem responde pela casa</option>
+            {responsibleOptions.map((person) => (
+              <option key={person.id} value={person.id}>
+                {person.name} · {person.role.description}
+              </option>
+            ))}
+          </FormSelect>
           {organizations.resource.status === 'failed' ? (
             <AlertMessage>{organizations.resource.message}</AlertMessage>
           ) : null}
-          <footer className="dialog__footer">
-            {failure === null ? null : <AlertMessage>{failure}</AlertMessage>}
-            <div className="dialog__actions">
-              {isEditing ? (
-                <button
-                  className="outline-button outline-button--danger dialog__delete"
-                  type="button"
-                  disabled={isBusy}
-                  onClick={() => {
-                    setConfirmation('delete');
-                  }}
-                >
-                  Excluir
-                </button>
-              ) : null}
-              <button
-                className="outline-button"
-                type="button"
-                disabled={isBusy}
-                onClick={requestClose}
-              >
-                Cancelar
-              </button>
-              <button
-                className="primary-button"
-                type="submit"
-                disabled={isBusy || (!isEditing && organizations.resource.status === 'loading')}
-                aria-busy={isSaving}
-              >
-                {isSaving ? <span className="spinner" aria-hidden="true" /> : null}
-                {isSaving ? 'Salvando...' : isEditing ? 'Salvar alterações' : 'Cadastrar casa'}
-              </button>
-            </div>
-          </footer>
-        </form>
+        </Stack>
       </Dialog>
       {confirmation === 'discard' ? (
         <ConfirmDialog

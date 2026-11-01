@@ -1,3 +1,4 @@
+import { Box, Button, Chip, FormHelperText, Stack, Typography } from '@mui/material';
 import { useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
 
@@ -9,6 +10,7 @@ import { AlertMessage } from '../../../../shared/ui/AlertMessage.js';
 import { ConfirmDialog } from '../../../../shared/ui/ConfirmDialog.js';
 import { ChevronLeftIcon, PlusIcon } from '../../../../shared/ui/icons.js';
 import { LoadError } from '../../../../shared/ui/LoadError.js';
+import { LoadingStatus } from '../../../../shared/ui/LoadingStatus.js';
 import { useAuth } from '../../auth/context/use-auth.js';
 import { RoleLabel } from '../../person/components/RoleLabel.js';
 import { isStaff } from '../../person/domain/roles.js';
@@ -18,6 +20,19 @@ import { LinkPeopleDialog } from '../components/LinkPeopleDialog.js';
 import { useHomeSelection } from '../context/use-home-selection.js';
 import { HOMES_PATH } from '../home-paths.js';
 import { homeService } from '../services/home-service.js';
+
+function BackToHomes(): React.JSX.Element {
+  return (
+    <Button
+      component={Link}
+      to={HOMES_PATH}
+      startIcon={<ChevronLeftIcon />}
+      sx={{ mt: 2.5, mb: 1 }}
+    >
+      Casas
+    </Button>
+  );
+}
 
 const UNLINK_ERROR_MESSAGE = 'Não foi possível remover a pessoa da casa. Tente novamente.';
 
@@ -50,29 +65,55 @@ function MemberGroup({
   onRemove,
 }: MemberGroupProps): React.JSX.Element {
   return (
-    <section className="member-group">
-      <h3>
-        {title} <span className="tab-count">{members.length}</span>
-      </h3>
+    <Box component="section" sx={{ mt: 3 }}>
+      <Stack
+        component="h3"
+        direction="row"
+        spacing={1}
+        sx={{ alignItems: 'center', m: 0, mb: 1, fontSize: '0.95rem', fontWeight: 700 }}
+      >
+        {title} <Chip size="small" label={members.length} />
+      </Stack>
       {members.length === 0 ? (
-        <p className="form-field__hint">Ninguém vinculado ainda.</p>
+        <FormHelperText>Ninguém vinculado ainda.</FormHelperText>
       ) : (
-        <ul className="member-list">
+        <Stack component="ul" spacing={1}>
           {members.map((person) => {
             const isResponsible = person.id === responsibleId;
             return (
-              <li key={person.id} className="member-row">
-                <span className="member-row__name">
+              <Box
+                component="li"
+                key={person.id}
+                sx={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  columnGap: 1.5,
+                  rowGap: 0.5,
+                  minHeight: '3.25rem',
+                  py: 1,
+                  pr: 1,
+                  pl: 2,
+                  bgcolor: 'background.paper',
+                  border: 1,
+                  borderColor: 'divider',
+                  borderRadius: 3,
+                }}
+              >
+                <Typography noWrap component="span" sx={{ flex: 1, minWidth: '8rem' }}>
                   {person.name}
                   {isResponsible ? (
-                    <span className="member-row__responsible"> · responsável</span>
+                    <Typography component="span" variant="body2" sx={{ color: 'text.secondary' }}>
+                      {' '}
+                      · responsável
+                    </Typography>
                   ) : null}
-                </span>
+                </Typography>
                 <RoleLabel role={person.role} />
                 {canWrite ? (
-                  <button
-                    className="text-button"
-                    type="button"
+                  <Button
+                    color="inherit"
+                    size="small"
                     disabled={isResponsible}
                     title={isResponsible ? 'Troque o responsável antes de remover' : undefined}
                     aria-label={`Remover ${person.name} da casa`}
@@ -81,14 +122,14 @@ function MemberGroup({
                     }}
                   >
                     Remover
-                  </button>
+                  </Button>
                 ) : null}
-              </li>
+              </Box>
             );
           })}
-        </ul>
+        </Stack>
       )}
-    </section>
+    </Box>
   );
 }
 
@@ -117,17 +158,11 @@ function HomeDetail({ homeId }: { homeId: number }): React.JSX.Element {
   if (detail.resource.status !== 'loaded') {
     return (
       <>
-        <Link className="back-link" to={HOMES_PATH}>
-          <ChevronLeftIcon />
-          Casas
-        </Link>
+        <BackToHomes />
         {detail.resource.status === 'failed' ? (
           <LoadError message={detail.resource.message} onRetry={detail.reload} />
         ) : (
-          <p className="day-events__status" role="status">
-            <span className="spinner spinner--primary spinner--small" aria-hidden="true" />
-            Carregando casa...
-          </p>
+          <LoadingStatus>Carregando casa...</LoadingStatus>
         )}
       </>
     );
@@ -158,43 +193,55 @@ function HomeDetail({ homeId }: { homeId: number }): React.JSX.Element {
 
   return (
     <>
-      <Link className="back-link" to={HOMES_PATH}>
-        <ChevronLeftIcon />
-        Casas
-      </Link>
-      <div className="home-detail__heading">
+      <BackToHomes />
+      <Box
+        sx={{
+          display: 'grid',
+          gap: 1.5,
+          gridTemplateColumns: { md: 'minmax(0, 1fr) auto' },
+          alignItems: { md: 'end' },
+        }}
+      >
         <div>
-          <h2>{home.name}</h2>
-          <p>Responsável: {home.responsible.name}</p>
+          <Typography component="h2" variant="h5" sx={{ fontWeight: 700 }}>
+            {home.name}
+          </Typography>
+          <Typography sx={{ color: 'text.secondary', mt: 0.25 }}>
+            Responsável: {home.responsible.name}
+          </Typography>
         </div>
         {canWrite ? (
-          <div className="home-detail__actions">
-            <button
-              className="outline-button"
-              type="button"
+          <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1.25 }}>
+            <Button
+              variant="outlined"
               disabled={allPeople === null}
               onClick={() => {
                 setDialog('edit');
               }}
             >
               Editar casa
-            </button>
-            <button
-              className="primary-button primary-button--compact"
-              type="button"
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<PlusIcon />}
               disabled={allPeople === null}
               onClick={() => {
                 setDialog('link');
               }}
             >
-              <PlusIcon />
               Adicionar pessoas
-            </button>
-          </div>
+            </Button>
+          </Stack>
         ) : null}
-      </div>
+      </Box>
       {failure === null ? null : <AlertMessage>{failure}</AlertMessage>}
-      <div className="member-groups">
+      <Box
+        sx={{
+          display: { md: 'grid' },
+          gridTemplateColumns: { md: 'repeat(2, minmax(0, 1fr))' },
+          columnGap: 3,
+        }}
+      >
         <MemberGroup
           title="Acolhidos"
           members={members.filter((person) => !isStaff(person.role.id))}
@@ -209,7 +256,7 @@ function HomeDetail({ homeId }: { homeId: number }): React.JSX.Element {
           canWrite={canWrite}
           onRemove={setLeaving}
         />
-      </div>
+      </Box>
 
       {dialog === 'edit' && allPeople ? (
         <HomeFormDialog

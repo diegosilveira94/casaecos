@@ -411,7 +411,7 @@ describe('AgendaPage', () => {
     const dialog = screen.getByRole('dialog', { name: 'Consulta pediátrica' });
     expect(within(dialog).getByText('Rua das Flores, 100')).toBeInTheDocument();
     expect(within(dialog).getByText('Levar a carteirinha de vacinação.')).toBeInTheDocument();
-    expect(within(dialog).getByText('· Responsável')).toBeInTheDocument();
+    expect(within(dialog).getByText(/· Responsável/)).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Fechar' })).toHaveFocus();
 
     await user.keyboard('{Escape}');
@@ -462,10 +462,12 @@ describe('AgendaPage', () => {
 
       await user.type(within(form).getByLabelText(/^Título/), 'Vacinação');
       await user.click(within(form).getByRole('radio', { name: 'Consulta médica' }));
-      const startDay = within(form).getByLabelText(/^Data/);
-      expect(startDay).toHaveValue('2026-09-30');
-      await user.clear(startDay);
-      await user.type(startDay, '2026-10-05');
+      const startDay = within(form).getByRole('group', { name: /^Data/ });
+      expect(startDay).toHaveTextContent('30/09/2026');
+      await user.click(within(startDay).getByRole('button', { name: /^Escolha uma data/ }));
+      await user.click(await screen.findByRole('button', { name: 'Próximo mês' }));
+      await user.click(await screen.findByRole('gridcell', { name: '5' }));
+      await user.click(screen.getByRole('button', { name: 'OK' }));
       await user.type(within(form).getByLabelText(/^Início/), '09:00');
       await user.selectOptions(within(form).getByLabelText(/^Casa/), 'Casa Fé');
       await user.click(await within(form).findByRole('checkbox', { name: 'João Pedro' }));

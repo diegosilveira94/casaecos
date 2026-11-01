@@ -1,3 +1,4 @@
+import { Box, Typography } from '@mui/material';
 import { useCallback, useState } from 'react';
 import { Outlet } from 'react-router';
 
@@ -24,32 +25,38 @@ export function AppLayout(): React.JSX.Element {
     else setIsDrawerOpen((current) => !current);
   };
 
-  const shellClassName = [
-    'app-shell',
-    isSidebarCollapsed ? 'is-sidebar-collapsed' : '',
-    isDrawerOpen ? 'is-drawer-open' : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
-
   return (
     <HomeSelectionProvider>
-      <div className={shellClassName}>
-        <AppSidebar onNavigate={closeDrawer} />
-        {isDrawerOpen ? (
-          <div className="app-shell__backdrop" aria-hidden="true" onClick={closeDrawer} />
-        ) : null}
-        <div className="app-shell__content">
+      <Box
+        sx={{
+          minHeight: '100dvh',
+          bgcolor: 'background.default',
+          display: { md: 'grid' },
+          gridTemplateColumns: {
+            md: isSidebarCollapsed ? 'minmax(0, 1fr)' : '14.25rem minmax(0, 1fr)',
+          },
+        }}
+      >
+        <AppSidebar
+          isDrawerOpen={isDrawerOpen}
+          isCollapsed={isSidebarCollapsed}
+          onCloseDrawer={closeDrawer}
+        />
+        <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: '100dvh' }}>
           <AppHeader
             isMenuOpen={isDesktop ? !isSidebarCollapsed : isDrawerOpen}
             onToggleMenu={toggleMenu}
           />
           <Outlet />
-          <footer className="app-footer">
+          <Typography
+            component="footer"
+            variant="caption"
+            sx={{ color: 'text.secondary', mt: 'auto', px: { xs: 2, md: 4.5 }, py: 2 }}
+          >
             © {new Date().getFullYear()} Casa Ecos. Todos os direitos reservados.
-          </footer>
-        </div>
-      </div>
+          </Typography>
+        </Box>
+      </Box>
     </HomeSelectionProvider>
   );
 }

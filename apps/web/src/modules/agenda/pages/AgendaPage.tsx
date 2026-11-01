@@ -1,9 +1,11 @@
+import { Box, Button, Paper, Stack, Typography } from '@mui/material';
 import { useCallback, useMemo, useState } from 'react';
 
 import type { EventResponse } from '@casaecos/shared-types';
 
 import { COMING_SOON_PROPS } from '../../../shared/ui/coming-soon.js';
 import { PlusIcon, SendIcon, UploadIcon } from '../../../shared/ui/icons.js';
+import { LoadError } from '../../../shared/ui/LoadError.js';
 import { useIsDesktop } from '../../../shared/ui/use-media-query.js';
 import { useAuth } from '../../shared/auth/context/use-auth.js';
 import { useHomeSelection } from '../../shared/home/context/use-home-selection.js';
@@ -14,7 +16,6 @@ import { EventDetailsDialog } from '../components/EventDetailsDialog.js';
 import { EventFormDialog } from '../components/EventFormDialog.js';
 import { FiltersMenu } from '../components/FiltersMenu.js';
 import { MonthGrid } from '../components/MonthGrid.js';
-import { MonthLoadError } from '../components/MonthLoadError.js';
 import { SendAgendaDialog } from '../components/SendAgendaDialog.js';
 import { TimeGrid } from '../components/TimeGrid.js';
 import { UpcomingEventsPanel } from '../components/UpcomingEventsPanel.js';
@@ -145,51 +146,93 @@ export function AgendaPage(): React.JSX.Element {
 
   return (
     <>
-      <main className="agenda-main">
-        <div className="agenda-heading">
+      <Box
+        component="main"
+        sx={{
+          width: '100%',
+          maxWidth: '90rem',
+          px: { xs: 2, md: 4 },
+          pt: { xs: 2.5, md: 3 },
+          pb: { xs: 3, md: 4 },
+        }}
+      >
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 2,
+            gridTemplateColumns: { md: 'minmax(0, 1fr) auto' },
+            alignItems: { md: 'start' },
+          }}
+        >
           <div>
-            <h1>Agenda</h1>
-            <p>Visualize e gerencie os compromissos.</p>
+            <Typography component="h1" variant="h4" sx={{ fontWeight: 600 }}>
+              Agenda
+            </Typography>
+            <Typography sx={{ color: 'text.secondary', mt: 0.5 }}>
+              Visualize e gerencie os compromissos.
+            </Typography>
           </div>
-          <div className="agenda-actions">
+          <Stack direction="row" sx={{ flexWrap: { xs: 'wrap', md: 'nowrap' }, gap: 1.25 }}>
             <FiltersMenu
               eventTypes={eventTypes}
               eventTypeId={eventTypeId}
               onChangeEventType={setEventTypeId}
             />
-            <button className="outline-button" {...COMING_SOON_PROPS}>
-              <UploadIcon />
+            <Button
+              variant="outlined"
+              color="inherit"
+              startIcon={<UploadIcon />}
+              {...COMING_SOON_PROPS}
+            >
               Exportar
-            </button>
+            </Button>
             {canSendAgenda ? (
-              <button
-                className="outline-button"
-                type="button"
+              <Button
+                variant="outlined"
+                color="inherit"
+                startIcon={<SendIcon />}
                 onClick={() => {
                   setIsSendOpen(true);
                 }}
               >
-                <SendIcon />
                 Enviar agenda
-              </button>
+              </Button>
             ) : null}
             {canWriteEvents ? (
-              <button
-                className="primary-button primary-button--compact"
-                type="button"
+              <Button
+                variant="contained"
+                startIcon={<PlusIcon />}
                 onClick={() => {
                   setFormTarget({ event: null });
                 }}
               >
-                <PlusIcon />
                 Novo Compromisso
-              </button>
+              </Button>
             ) : null}
-          </div>
-        </div>
+          </Stack>
+        </Box>
 
-        <div className="agenda-layout">
-          <section className="agenda-calendar" aria-label="Calendário">
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 2,
+            gridTemplateColumns: { md: 'minmax(0, 1fr) 18.5rem' },
+            alignItems: { md: 'start' },
+            mt: { xs: 2.5, md: 3.5 },
+          }}
+        >
+          <Paper
+            component="section"
+            aria-label="Calendário"
+            variant={isDesktop ? 'outlined' : 'elevation'}
+            elevation={0}
+            sx={{
+              minWidth: 0,
+              overflow: { md: 'hidden' },
+              bgcolor: { xs: 'transparent', md: 'background.paper' },
+              borderRadius: { md: 3 },
+            }}
+          >
             <AgendaNavigation
               view={view}
               label={navigationLabel}
@@ -209,7 +252,7 @@ export function AgendaPage(): React.JSX.Element {
               }}
             />
             {isDesktop && agendaEvents.status === 'failed' ? (
-              <MonthLoadError message={agendaEvents.message} onRetry={reloadAgenda} />
+              <LoadError message={agendaEvents.message} onRetry={reloadAgenda} />
             ) : null}
             {view === 'month' ? (
               <MonthGrid
@@ -249,7 +292,7 @@ export function AgendaPage(): React.JSX.Element {
                 onOpenEvent={openEventDetails}
               />
             ) : null}
-          </section>
+          </Paper>
 
           {isDesktop ? (
             <UpcomingEvents
@@ -267,8 +310,8 @@ export function AgendaPage(): React.JSX.Element {
               onOpenEvent={openEventDetails}
             />
           ) : null}
-        </div>
-      </main>
+        </Box>
+      </Box>
 
       {openDay ? (
         <DayEventsDialog

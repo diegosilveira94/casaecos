@@ -1,8 +1,19 @@
-import { useCallback, useRef, useState } from 'react';
+import {
+  AppBar,
+  Avatar,
+  Box,
+  ButtonBase,
+  IconButton,
+  Menu,
+  MenuItem,
+  Stack,
+  Toolbar,
+  Typography,
+} from '@mui/material';
+import { useState } from 'react';
 
 import { COMING_SOON_PROPS } from '../../../shared/ui/coming-soon.js';
 import { BellIcon, ChevronDownIcon, MenuIcon, UserIcon } from '../../../shared/ui/icons.js';
-import { useDismiss } from '../../../shared/ui/use-dismiss.js';
 import { useAuth } from '../auth/context/use-auth.js';
 import { ResetPasswordDialog } from '../auth/components/PasswordDialogs.js';
 import { AppBrand } from './AppBrand.js';
@@ -14,56 +25,57 @@ interface AppHeaderProps {
 
 function UserMenu(): React.JSX.Element | null {
   const auth = useAuth();
-  const [isOpen, setIsOpen] = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
-  const menu = useRef<HTMLDivElement>(null);
-
-  const close = useCallback(() => {
-    setIsOpen(false);
-  }, []);
-  useDismiss(menu, isOpen, close);
 
   if (auth.status !== 'authenticated') return null;
 
+  const closeMenu = (): void => {
+    setMenuAnchor(null);
+  };
+
   return (
-    <div className="user-menu" ref={menu}>
-      <button
-        className="user-menu__trigger"
-        type="button"
+    <>
+      <ButtonBase
         aria-haspopup="menu"
-        aria-expanded={isOpen}
-        onClick={() => {
-          setIsOpen((current) => !current);
+        aria-expanded={menuAnchor !== null}
+        onClick={(clickEvent) => {
+          setMenuAnchor(clickEvent.currentTarget);
         }}
+        sx={{ gap: 1, minWidth: 0, p: 0.5, borderRadius: 2, textAlign: 'left' }}
       >
-        <span className="user-menu__avatar">
+        <Avatar sx={{ bgcolor: 'primary.main' }}>
           <UserIcon />
-        </span>
-        <span className="user-menu__identity">
-          <strong>{auth.user.name}</strong>
-          <span>{auth.user.role.description}</span>
-        </span>
+        </Avatar>
+        <Box sx={{ display: { xs: 'none', md: 'block' }, minWidth: 0 }}>
+          <Typography noWrap variant="body2" sx={{ fontWeight: 600 }}>
+            {auth.user.name}
+          </Typography>
+          <Typography noWrap variant="caption" component="p" sx={{ color: 'text.secondary' }}>
+            {auth.user.role.description}
+          </Typography>
+        </Box>
         <ChevronDownIcon />
-      </button>
-      {isOpen ? (
-        <div className="user-menu__popover" role="menu">
-          {auth.can('account:manage') ? (
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setIsOpen(false);
-                setIsResetPasswordOpen(true);
-              }}
-            >
-              Redefinir senha
-            </button>
-          ) : null}
-          <button type="button" role="menuitem" onClick={auth.logout}>
-            Sair
-          </button>
-        </div>
-      ) : null}
+      </ButtonBase>
+      <Menu
+        anchorEl={menuAnchor}
+        open={menuAnchor !== null}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        onClose={closeMenu}
+      >
+        {auth.can('account:manage') ? (
+          <MenuItem
+            onClick={() => {
+              closeMenu();
+              setIsResetPasswordOpen(true);
+            }}
+          >
+            Redefinir senha
+          </MenuItem>
+        ) : null}
+        <MenuItem onClick={auth.logout}>Sair</MenuItem>
+      </Menu>
       {isResetPasswordOpen ? (
         <ResetPasswordDialog
           onClose={() => {
@@ -71,40 +83,45 @@ function UserMenu(): React.JSX.Element | null {
           }}
         />
       ) : null}
-    </div>
+    </>
   );
 }
 
 /** Top bar: the menu toggle, notifications (not built yet) and the user's menu. */
 export function AppHeader({ isMenuOpen, onToggleMenu }: AppHeaderProps): React.JSX.Element {
   return (
-    <header className="app-header">
-      <div className="app-header__start">
-        <button
-          className="app-header__icon-button"
-          type="button"
-          aria-label="Menu"
-          aria-controls="app-sidebar"
-          aria-expanded={isMenuOpen}
-          onClick={onToggleMenu}
-        >
-          <MenuIcon />
-        </button>
-        <div className="app-header__brand">
-          <AppBrand layout="inline" />
-        </div>
-      </div>
+    <AppBar
+      color="inherit"
+      elevation={0}
+      position="sticky"
+      sx={{ borderBottom: 1, borderColor: 'divider' }}
+    >
+      <Toolbar sx={{ justifyContent: 'space-between', gap: 1 }}>
+        <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', minWidth: 0 }}>
+          <IconButton
+            aria-label="Menu"
+            aria-controls="app-sidebar"
+            aria-expanded={isMenuOpen}
+            onClick={onToggleMenu}
+          >
+            <MenuIcon />
+          </IconButton>
+          <Box sx={{ display: { md: 'none' } }}>
+            <AppBrand layout="inline" />
+          </Box>
+        </Stack>
 
-      <div className="app-header__end">
-        <button
-          className="app-header__icon-button"
-          aria-label="Notificações"
-          {...COMING_SOON_PROPS}
+        <Stack
+          direction="row"
+          spacing={{ xs: 0.5, md: 3 }}
+          sx={{ alignItems: 'center', minWidth: 0 }}
         >
-          <BellIcon />
-        </button>
-        <UserMenu />
-      </div>
-    </header>
+          <IconButton aria-label="Notificações" {...COMING_SOON_PROPS}>
+            <BellIcon />
+          </IconButton>
+          <UserMenu />
+        </Stack>
+      </Toolbar>
+    </AppBar>
   );
 }

@@ -1,3 +1,5 @@
+import { Button, Typography } from '@mui/material';
+
 import { Dialog } from './Dialog.js';
 
 interface ConfirmDialogProps {
@@ -27,22 +29,24 @@ export function ConfirmDialog({
   onKeep,
 }: ConfirmDialogProps): React.JSX.Element {
   return (
-    <Dialog title={title} className="dialog__panel--confirm" onClose={onKeep}>
-      <p>{children}</p>
-      <div className="dialog__actions">
-        <button
-          className="outline-button outline-button--danger"
-          type="button"
-          disabled={isBusy}
-          aria-busy={isBusy}
-          onClick={onConfirm}
-        >
-          {destructiveLabel}
-        </button>
-        <button className="primary-button" type="button" disabled={isBusy} onClick={onKeep}>
-          {keepLabel}
-        </button>
-      </div>
+    <Dialog
+      title={title}
+      size="small"
+      onClose={onKeep}
+      actions={
+        <>
+          <Button color="error" variant="outlined" disabled={isBusy} onClick={onConfirm}>
+            {destructiveLabel}
+          </Button>
+          <Button variant="contained" disabled={isBusy} onClick={onKeep}>
+            {keepLabel}
+          </Button>
+        </>
+      }
+    >
+      <Typography sx={{ color: 'text.secondary', '& strong': { color: 'text.primary' } }}>
+        {children}
+      </Typography>
     </Dialog>
   );
 }

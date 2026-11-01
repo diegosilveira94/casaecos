@@ -1,3 +1,4 @@
+import { Box, Button, Stack, TextField } from '@mui/material';
 import { useState, type SyntheticEvent } from 'react';
 
 import type { HomeResponse, PersonResponse, RoleResponse } from '@casaecos/shared-types';
@@ -6,8 +7,8 @@ import { ApiRequestError } from '../../../../shared/http/api-request-error.js';
 import { AlertMessage } from '../../../../shared/ui/AlertMessage.js';
 import { ConfirmDialog } from '../../../../shared/ui/ConfirmDialog.js';
 import { Dialog } from '../../../../shared/ui/Dialog.js';
-import { fieldErrorProps } from '../../../../shared/ui/field-error-props.js';
-import { FormField } from '../../../../shared/ui/FormField.js';
+import { ChoiceCard } from '../../../../shared/ui/ChoiceCard.js';
+import { FieldGroup } from '../../../../shared/ui/FieldGroup.js';
 import { useAuth } from '../../auth/context/use-auth.js';
 import {
   emptyPersonForm,
@@ -41,9 +42,6 @@ interface PersonFormDialogProps {
   onStored: () => void;
   onClose: () => void;
 }
-
-// A second dialog is on top and answers Escape and the backdrop itself.
-const ignoreClose = (): void => undefined;
 
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof ApiRequestError ? error.message : fallback;
@@ -138,59 +136,88 @@ export function PersonFormDialog({
     <>
       <Dialog
         title={isEditing ? 'Editar pessoa' : 'Nova pessoa'}
-        className="dialog__panel--form"
-        onClose={confirmation === null ? requestClose : ignoreClose}
+        onClose={requestClose}
+        onSubmit={(submitEvent) => {
+          void save(submitEvent);
+        }}
+        actions={
+          <>
+            {failure === null ? null : <AlertMessage>{failure}</AlertMessage>}
+            {isEditing ? (
+              <Button
+                sx={{ mr: 'auto' }}
+                color="error"
+                variant="outlined"
+                disabled={isBusy}
+                onClick={() => {
+                  setConfirmation('delete');
+                }}
+              >
+                Excluir
+              </Button>
+            ) : null}
+            <Button color="inherit" disabled={isBusy} onClick={requestClose}>
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              loading={isSaving}
+              loadingPosition="start"
+              disabled={isDeleting}
+            >
+              {isSaving ? 'Salvando...' : isEditing ? 'Salvar alterações' : 'Cadastrar pessoa'}
+            </Button>
+          </>
+        }
       >
-        <form
-          className="event-form"
-          noValidate
-          onSubmit={(submitEvent) => {
-            void save(submitEvent);
-          }}
-        >
-          <FormField id="person-name" label="Nome" isRequired error={errors.name}>
-            <input
-              id="person-name"
-              maxLength={PERSON_NAME_MAX_LENGTH}
-              autoComplete="off"
-              placeholder="Nome completo"
-              value={values.name}
+        <Stack spacing={2.5}>
+          <TextField
+            label="Nome"
+            required
+            autoComplete="off"
+            placeholder="Nome completo"
+            error={errors.name !== undefined}
+            helperText={errors.name}
+            value={values.name}
+            disabled={isBusy}
+            slotProps={{ htmlInput: { maxLength: PERSON_NAME_MAX_LENGTH } }}
+            onChange={(inputEvent) => {
+              change({ name: inputEvent.target.value });
+            }}
+          />
+          <Box
+            sx={{
+              display: 'grid',
+              gap: '1rem 0.75rem',
+              alignItems: 'start',
+              gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            }}
+          >
+            <TextField
+              label="CPF"
+              placeholder="000.000.000-00"
+              value={values.individualRegistration}
               disabled={isBusy}
-              {...fieldErrorProps('person-name', errors.name)}
+              slotProps={{
+                htmlInput: { inputMode: 'numeric', maxLength: PERSON_REGISTRATION_MAX_LENGTH },
+              }}
               onChange={(inputEvent) => {
-                change({ name: inputEvent.target.value });
+                change({ individualRegistration: inputEvent.target.value });
               }}
             />
-          </FormField>
-          <div className="event-form__row event-form__row--pairs">
-            <FormField id="person-registration" label="CPF">
-              <input
-                id="person-registration"
-                inputMode="numeric"
-                maxLength={PERSON_REGISTRATION_MAX_LENGTH}
-                placeholder="000.000.000-00"
-                value={values.individualRegistration}
-                disabled={isBusy}
-                onChange={(inputEvent) => {
-                  change({ individualRegistration: inputEvent.target.value });
-                }}
-              />
-            </FormField>
-            <FormField id="person-phone" label="Telefone">
-              <input
-                id="person-phone"
-                type="tel"
-                inputMode="tel"
-                maxLength={PERSON_PHONE_MAX_LENGTH}
-                placeholder="(47) 99999-0000"
-                value={values.phone}
-                disabled={isBusy}
-                onChange={(inputEvent) => {
-                  change({ phone: inputEvent.target.value });
-                }}
-              />
-            </FormField>
-          </div>
+            <TextField
+              label="Telefone"
+              type="tel"
+              placeholder="(47) 99999-0000"
+              value={values.phone}
+              disabled={isBusy}
+              slotProps={{ htmlInput: { inputMode: 'tel', maxLength: PERSON_PHONE_MAX_LENGTH } }}
+              onChange={(inputEvent) => {
+                change({ phone: inputEvent.target.value });
+              }}
+            />
+          </Box>
           <RolePicker
             name="person-role"
             legend="Papel"
@@ -217,65 +244,40 @@ export function PersonFormDialog({
             }}
           />
           {values.roleId === null || choosesHomesInPersonForm(values.roleId) ? (
-            <fieldset className="type-field">
-              <legend>Casas</legend>
-              {homes.length === 0 ? (
-                <p className="form-field__hint">Nenhuma casa cadastrada ainda.</p>
-              ) : (
-                <div className="person-chips">
-                  {homes.map((home) => (
-                    <label key={home.id} className="person-chip">
-                      <input
-                        type="checkbox"
-                        checked={values.homeIds.includes(home.id)}
-                        disabled={isBusy}
-                        onChange={(inputEvent) => {
-                          toggleHome(home.id, inputEvent.target.checked);
-                        }}
-                      />
-                      <span>{home.name}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-              <p className="form-field__hint">Onde a pessoa mora ou trabalha.</p>
-            </fieldset>
+            <FieldGroup
+              legend="Casas"
+              hint={
+                homes.length === 0
+                  ? 'Nenhuma casa cadastrada ainda.'
+                  : 'Onde a pessoa mora ou trabalha.'
+              }
+            >
+              <Box
+                sx={{
+                  display: 'grid',
+                  gap: 1,
+                  gridTemplateColumns: {
+                    xs: 'repeat(2, minmax(0, 1fr))',
+                    md: 'repeat(3, minmax(0, 1fr))',
+                  },
+                }}
+              >
+                {homes.map((home) => (
+                  <ChoiceCard
+                    key={home.id}
+                    kind="checkbox"
+                    label={home.name}
+                    isChecked={values.homeIds.includes(home.id)}
+                    isDisabled={isBusy}
+                    onChange={(isChecked) => {
+                      toggleHome(home.id, isChecked);
+                    }}
+                  />
+                ))}
+              </Box>
+            </FieldGroup>
           ) : null}
-          <footer className="dialog__footer">
-            {failure === null ? null : <AlertMessage>{failure}</AlertMessage>}
-            <div className="dialog__actions">
-              {isEditing ? (
-                <button
-                  className="outline-button outline-button--danger dialog__delete"
-                  type="button"
-                  disabled={isBusy}
-                  onClick={() => {
-                    setConfirmation('delete');
-                  }}
-                >
-                  Excluir
-                </button>
-              ) : null}
-              <button
-                className="outline-button"
-                type="button"
-                disabled={isBusy}
-                onClick={requestClose}
-              >
-                Cancelar
-              </button>
-              <button
-                className="primary-button"
-                type="submit"
-                disabled={isBusy}
-                aria-busy={isSaving}
-              >
-                {isSaving ? <span className="spinner" aria-hidden="true" /> : null}
-                {isSaving ? 'Salvando...' : isEditing ? 'Salvar alterações' : 'Cadastrar pessoa'}
-              </button>
-            </div>
-          </footer>
-        </form>
+        </Stack>
       </Dialog>
       {confirmation === 'discard' ? (
         <ConfirmDialog

@@ -1,4 +1,6 @@
-import { BuildingIcon, ChevronDownIcon } from '../../../shared/ui/icons.js';
+import { InputAdornment, TextField } from '@mui/material';
+
+import { BuildingIcon } from '../../../shared/ui/icons.js';
 import { useHomeSelection } from '../home/context/use-home-selection.js';
 
 const ALL_HOMES = '';
@@ -10,30 +12,38 @@ export function HomePicker(): React.JSX.Element {
   const onlyHome = homes.length === 1 ? homes[0] : undefined;
 
   return (
-    <label className="home-picker">
-      <span className="visually-hidden">Casa</span>
-      <BuildingIcon />
-      <select
-        value={selectedHomeId ?? ALL_HOMES}
-        disabled={!canChooseHome}
-        onChange={(event) => {
-          selectHome(event.target.value === ALL_HOMES ? null : Number(event.target.value));
-        }}
-      >
-        {onlyHome ? (
-          <option value={ALL_HOMES}>{onlyHome.name}</option>
-        ) : (
-          <option value={ALL_HOMES}>Todas as casas</option>
-        )}
-        {canChooseHome
-          ? homes.map((home) => (
-              <option key={home.id} value={home.id}>
-                {home.name}
-              </option>
-            ))
-          : null}
-      </select>
-      <ChevronDownIcon />
-    </label>
+    <TextField
+      select
+      size="small"
+      label="Casa"
+      value={selectedHomeId ?? ALL_HOMES}
+      disabled={!canChooseHome}
+      onChange={(event) => {
+        selectHome(event.target.value === ALL_HOMES ? null : Number(event.target.value));
+      }}
+      slotProps={{
+        select: { native: true },
+        input: {
+          startAdornment: (
+            <InputAdornment position="start">
+              <BuildingIcon fontSize="small" />
+            </InputAdornment>
+          ),
+        },
+      }}
+    >
+      {onlyHome ? (
+        <option value={ALL_HOMES}>{onlyHome.name}</option>
+      ) : (
+        <option value={ALL_HOMES}>Todas as casas</option>
+      )}
+      {canChooseHome
+        ? homes.map((home) => (
+            <option key={home.id} value={home.id}>
+              {home.name}
+            </option>
+          ))
+        : null}
+    </TextField>
   );
 }

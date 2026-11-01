@@ -1,7 +1,9 @@
+import { Box, Button, Link, Stack, TextField, Typography } from '@mui/material';
 import { useState, type SyntheticEvent } from 'react';
 import { Navigate, useLocation } from 'react-router';
 
 import { ApiRequestError } from '../../../../shared/http/api-request-error.js';
+import { AlertMessage } from '../../../../shared/ui/AlertMessage.js';
 import { Dialog } from '../../../../shared/ui/Dialog.js';
 import { BrandMark } from '../../layout/BrandMark.js';
 import { PasswordInput } from '../components/PasswordInput.js';
@@ -16,15 +18,31 @@ interface RedirectState {
   from?: { pathname: string };
 }
 
-function BrandLockup({ variant }: { variant: 'light' | 'mobile' }): React.JSX.Element {
+function BrandLockup({ isOnBrandPanel }: { isOnBrandPanel: boolean }): React.JSX.Element {
   return (
-    <div className={`brand-lockup brand-lockup--${variant}`}>
+    <Stack
+      direction="row"
+      spacing={1.5}
+      sx={{
+        alignItems: 'center',
+        color: isOnBrandPanel ? 'common.white' : 'primary.main',
+        // The panel only exists on the desktop, where it carries the brand instead.
+        display: isOnBrandPanel ? 'flex' : { xs: 'flex', md: 'none' },
+      }}
+    >
       <BrandMark />
       <div>
-        <strong>Casa Ecos</strong>
-        <span>Ecos da Esperança</span>
+        <Typography component="strong" sx={{ display: 'block', fontWeight: 700 }}>
+          Casa Ecos
+        </Typography>
+        <Typography
+          variant="caption"
+          sx={{ textTransform: 'uppercase', color: isOnBrandPanel ? 'inherit' : 'text.secondary' }}
+        >
+          Ecos da Esperança
+        </Typography>
       </div>
-    </div>
+    </Stack>
   );
 }
 
@@ -72,65 +90,75 @@ export function LoginPage(): React.JSX.Element {
   }
 
   return (
-    <main className="login-page">
-      <section className="login-brand" aria-label="Casa Ecos">
-        <div className="login-brand__content">
-          <BrandLockup variant="light" />
-          <div className="login-brand__message">
-            <h2>Cuidando de quem cuida.</h2>
-          </div>
-        </div>
-      </section>
+    <Box
+      component="main"
+      sx={{
+        minHeight: '100dvh',
+        bgcolor: 'background.paper',
+        display: { md: 'grid' },
+        gridTemplateColumns: { md: 'minmax(20rem, 0.95fr) minmax(28rem, 1.05fr)' },
+      }}
+    >
+      <Stack
+        component="section"
+        aria-label="Casa Ecos"
+        sx={{
+          display: { xs: 'none', md: 'flex' },
+          justifyContent: 'space-between',
+          minHeight: '100dvh',
+          p: 'clamp(2rem, 5vw, 4.5rem)',
+          background: 'linear-gradient(145deg, #1d7352, #0d4832)',
+          color: 'common.white',
+        }}
+      >
+        <BrandLockup isOnBrandPanel />
+        <Typography component="h2" variant="h2" sx={{ mb: '9vh', fontWeight: 700 }}>
+          Cuidando de quem cuida.
+        </Typography>
+      </Stack>
 
-      <section className="login-panel">
-        <div className="login-panel__content">
-          <BrandLockup variant="mobile" />
+      <Box
+        component="section"
+        sx={{ display: 'flex', minHeight: '100dvh', px: 2.5, py: 4, p: { md: 6 } }}
+      >
+        <Box sx={{ flex: '1 1 0', minWidth: 0, maxWidth: '27rem', m: 'auto' }}>
+          <BrandLockup isOnBrandPanel={false} />
 
-          <div className="login-heading">
-            <span className="login-heading__eyebrow">Bem-vindo de volta</span>
-            <h1>Acesse sua conta</h1>
-          </div>
+          <Box sx={{ mt: { xs: 6, md: 0 } }}>
+            <Typography color="primary" variant="overline" sx={{ fontWeight: 700 }}>
+              Bem-vindo de volta
+            </Typography>
+            <Typography component="h1" variant="h4" sx={{ fontWeight: 700 }}>
+              Acesse sua conta
+            </Typography>
+          </Box>
 
-          <form
-            className="login-form"
+          <Stack
+            component="form"
+            spacing={2.5}
+            sx={{ mt: 4 }}
             onSubmit={(event) => {
               void handleSubmit(event);
             }}
             noValidate
           >
-            <div className="form-field">
-              <label htmlFor="email">E-mail</label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                placeholder="seuemail@exemplo.com"
-                value={email}
-                onChange={(event) => {
-                  setEmail(event.target.value);
-                }}
-                disabled={isSubmitting}
-                required
-              />
-            </div>
+            <TextField
+              label="E-mail"
+              name="email"
+              type="email"
+              autoComplete="email"
+              placeholder="seuemail@exemplo.com"
+              value={email}
+              onChange={(event) => {
+                setEmail(event.target.value);
+              }}
+              disabled={isSubmitting}
+              slotProps={{ htmlInput: { inputMode: 'email' } }}
+            />
 
-            <div className="form-field">
-              <div className="login-password-heading">
-                <label htmlFor="password">Senha</label>
-                <button
-                  className="forgot-password-button"
-                  type="button"
-                  onClick={() => {
-                    setShowsPasswordHelp(true);
-                  }}
-                >
-                  Esqueceu a senha?
-                </button>
-              </div>
+            <Stack spacing={0.5} sx={{ alignItems: 'flex-end' }}>
               <PasswordInput
-                id="password"
+                label="Senha"
                 name="password"
                 autoComplete="current-password"
                 placeholder="Digite sua senha"
@@ -139,57 +167,70 @@ export function LoginPage(): React.JSX.Element {
                   setPassword(event.target.value);
                 }}
                 disabled={isSubmitting}
-                required
               />
-            </div>
+              <Link
+                variant="body2"
+                sx={{ fontWeight: 700 }}
+                component="button"
+                type="button"
+                onClick={() => {
+                  setShowsPasswordHelp(true);
+                }}
+              >
+                Esqueceu a senha?
+              </Link>
+            </Stack>
 
-            {error ? (
-              <div className="login-error" role="alert">
-                <span aria-hidden="true">!</span>
-                <p>{error}</p>
-              </div>
-            ) : null}
+            {error ? <AlertMessage>{error}</AlertMessage> : null}
 
-            <button
-              className="primary-button"
+            <Button
               type="submit"
-              disabled={isSubmitting || !email.trim() || !password}
-              aria-busy={isSubmitting}
+              size="large"
+              variant="contained"
+              loading={isSubmitting}
+              loadingPosition="start"
+              disabled={!email.trim() || !password}
             >
-              {isSubmitting ? <span className="spinner" aria-hidden="true" /> : null}
               {isSubmitting ? 'Entrando...' : 'Entrar'}
-            </button>
-          </form>
+            </Button>
+          </Stack>
 
-          <p className="login-support">
-            Problemas para acessar? <strong>Fale com a Coordenação.</strong>
-          </p>
-        </div>
-      </section>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 4, textAlign: 'center' }}>
+            Problemas para acessar?{' '}
+            <Box component="strong" sx={{ color: 'primary.main' }}>
+              Fale com a Coordenação.
+            </Box>
+          </Typography>
+        </Box>
+      </Box>
 
       {showsPasswordHelp ? (
         <Dialog
           title="Esqueceu a senha?"
-          className="dialog__panel--login-help"
           onClose={() => {
             setShowsPasswordHelp(false);
           }}
-        >
-          <div className="login-password-help">
-            <p>Por enquanto, a recuperação automática por e-mail não está disponível.</p>
-            <p>Solicite à Coordenação uma nova senha.</p>
-            <button
-              className="primary-button"
-              type="button"
+          actions={
+            <Button
+              variant="contained"
               onClick={() => {
                 setShowsPasswordHelp(false);
               }}
             >
               Entendi
-            </button>
-          </div>
+            </Button>
+          }
+        >
+          <Stack spacing={2}>
+            <Typography sx={{ color: 'text.secondary' }}>
+              Por enquanto, a recuperação automática por e-mail não está disponível.
+            </Typography>
+            <Typography sx={{ color: 'text.secondary' }}>
+              Solicite à Coordenação uma nova senha.
+            </Typography>
+          </Stack>
         </Dialog>
       ) : null}
-    </main>
+    </Box>
   );
 }

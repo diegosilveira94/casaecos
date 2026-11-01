@@ -1,17 +1,33 @@
+import { Box, Button, Link, Stack, TextField, Typography } from '@mui/material';
 import { useMemo, useRef, useState } from 'react';
 
 import type { PersonResponse } from '@casaecos/shared-types';
 
+import { ChoiceCard } from '../../../shared/ui/ChoiceCard.js';
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js';
 import { Dialog } from '../../../shared/ui/Dialog.js';
-import { FormField } from '../../../shared/ui/FormField.js';
+import { LoadError } from '../../../shared/ui/LoadError.js';
+import { FieldGroup } from '../../../shared/ui/FieldGroup.js';
 import { FormSelect } from '../../../shared/ui/FormSelect.js';
 import { ROLE_IDS } from '../../shared/person/domain/roles.js';
 import { AgendaMessage, type AgendaAudience } from '../domain/agenda-message.js';
 import { SEND_PERIOD_LABELS, sendPeriodFor, type SendPeriodKey } from '../domain/send-period.js';
 import { splitWhatsAppBold, toWhatsAppNumber, whatsAppLink } from '../domain/whatsapp-link.js';
 import { useSendAgendaData } from '../hooks/use-send-agenda-data.js';
-import { MonthLoadError } from './MonthLoadError.js';
+
+const MESSAGE_BUBBLE_SX = {
+  m: 0,
+  maxHeight: { xs: '19rem', md: '24rem' },
+  overflowY: 'auto',
+  px: 2,
+  py: 1.75,
+  borderRadius: '0.2rem 0.9rem 0.9rem',
+  fontFamily: 'inherit',
+  fontSize: '0.9rem',
+  lineHeight: 1.45,
+  overflowWrap: 'anywhere',
+  whiteSpace: 'pre-wrap',
+};
 
 type AudienceKind = AgendaAudience['kind'];
 
@@ -38,10 +54,6 @@ const PERIOD_KEYS = Object.keys(SEND_PERIOD_LABELS) as SendPeriodKey[];
 function personOptionLabel(person: PersonResponse): string {
   if (toWhatsAppNumber(person.phone) !== null) return `${person.name} · ${person.role.description}`;
   return `${person.name} · ${person.phone === null ? 'sem telefone' : 'telefone inválido'}`;
-}
-
-function ignoreClose(): void {
-  // The confirmation on top answers Escape first.
 }
 
 interface SendAgendaDialogProps {
@@ -154,123 +166,179 @@ export function SendAgendaDialog({ today, onClose }: SendAgendaDialogProps): Rea
     <>
       <Dialog
         title="Enviar agenda pelo WhatsApp"
-        className="dialog__panel--form dialog__panel--send-agenda"
-        onClose={confirmation === null ? requestClose : ignoreClose}
+        size="large"
+        onClose={requestClose}
+        actions={
+          <>
+            <Button
+              variant="outlined"
+              disabled={!hasText}
+              onClick={() => {
+                void copyMessage();
+              }}
+            >
+              Copiar mensagem
+            </Button>
+            {hasText ? (
+              <Button
+                variant="contained"
+                href={whatsAppLink(text, whatsAppNumber)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => {
+                  setFeedback('A mensagem só é enviada quando você confirmar no WhatsApp.');
+                }}
+              >
+                Abrir no WhatsApp
+              </Button>
+            ) : (
+              <Button variant="contained" disabled>
+                Abrir no WhatsApp
+              </Button>
+            )}
+          </>
+        }
       >
-        <p className="send-agenda__intro">Confira a mensagem. Envie no WhatsApp.</p>
+        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+          Confira a mensagem. Envie no WhatsApp.
+        </Typography>
 
-        <div className="send-agenda">
-          <div className="send-agenda__controls">
-            <fieldset className="send-agenda__group" disabled={isEditing}>
-              <legend>Para quem</legend>
-              <div className="send-agenda__choices">
+        <Box
+          sx={{
+            display: 'grid',
+            gap: { xs: 2.5, md: 3.5 },
+            alignContent: 'start',
+            gridTemplateColumns: { md: 'minmax(0, 20rem) minmax(0, 1fr)' },
+            minWidth: 0,
+          }}
+        >
+          <Stack spacing={2} sx={{ minWidth: 0 }}>
+            <FieldGroup legend="Para quem" hint={audienceHint}>
+              <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
                 {AUDIENCE_OPTIONS.map(({ kind, label }) => (
-                  <label className="send-agenda__choice" key={kind}>
-                    <input
-                      type="radio"
-                      name="send-audience"
-                      checked={audienceKind === kind}
-                      onChange={() => {
-                        setFeedback('');
-                        setAudienceKind(kind);
-                      }}
-                    />
-                    <span>{label}</span>
-                  </label>
+                  <ChoiceCard
+                    key={kind}
+                    kind="radio"
+                    name="send-audience"
+                    label={label}
+                    isChecked={audienceKind === kind}
+                    isDisabled={isEditing}
+                    onChange={() => {
+                      setFeedback('');
+                      setAudienceKind(kind);
+                    }}
+                  />
                 ))}
-              </div>
-              <p className="form-field__hint">{audienceHint}</p>
-            </fieldset>
+              </Stack>
+            </FieldGroup>
 
             {audienceKind === 'person' ? (
-              <FormField id="send-person" label="Pessoa">
-                <FormSelect
-                  id="send-person"
-                  value={personId ?? ''}
-                  showsPrompt={personId === null}
-                  disabled={isEditing || people.status !== 'loaded'}
-                  onChange={(changeEvent) => {
-                    setFeedback('');
-                    setPersonId(Number(changeEvent.target.value));
-                  }}
-                >
-                  <option value="" disabled>
-                    Selecione a pessoa
+              <FormSelect
+                label="Pessoa"
+                value={personId ?? ''}
+                disabled={isEditing || people.status !== 'loaded'}
+                onChange={(changeEvent) => {
+                  setFeedback('');
+                  setPersonId(Number(changeEvent.target.value));
+                }}
+              >
+                <option value="" disabled>
+                  Selecione a pessoa
+                </option>
+                {recipients.map((recipient) => (
+                  <option
+                    key={recipient.id}
+                    value={recipient.id}
+                    disabled={toWhatsAppNumber(recipient.phone) === null}
+                  >
+                    {personOptionLabel(recipient)}
                   </option>
-                  {recipients.map((recipient) => (
-                    <option
-                      key={recipient.id}
-                      value={recipient.id}
-                      disabled={toWhatsAppNumber(recipient.phone) === null}
-                    >
-                      {personOptionLabel(recipient)}
-                    </option>
-                  ))}
-                </FormSelect>
-              </FormField>
+                ))}
+              </FormSelect>
             ) : null}
 
-            <fieldset className="send-agenda__group" disabled={isEditing}>
-              <legend>Período</legend>
-              <div className="send-agenda__choices">
+            <FieldGroup legend="Período">
+              <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
                 {PERIOD_KEYS.map((key) => (
-                  <label className="send-agenda__choice" key={key}>
-                    <input
-                      type="radio"
-                      name="send-period"
-                      checked={periodKey === key}
-                      onChange={() => {
-                        setFeedback('');
-                        setPeriodKey(key);
-                      }}
-                    />
-                    <span>{SEND_PERIOD_LABELS[key]}</span>
-                  </label>
+                  <ChoiceCard
+                    key={key}
+                    kind="radio"
+                    name="send-period"
+                    label={SEND_PERIOD_LABELS[key]}
+                    isChecked={periodKey === key}
+                    isDisabled={isEditing}
+                    onChange={() => {
+                      setFeedback('');
+                      setPeriodKey(key);
+                    }}
+                  />
                 ))}
-              </div>
-            </fieldset>
-          </div>
+              </Stack>
+            </FieldGroup>
+          </Stack>
 
-          <div className="send-agenda__preview">
-            <div className="send-agenda__preview-heading">
-              <span id="send-message-label">Mensagem</span>
+          <Stack spacing={1} sx={{ minWidth: 0 }}>
+            <Stack
+              direction="row"
+              spacing={1.5}
+              sx={{ alignItems: 'baseline', justifyContent: 'space-between' }}
+            >
+              <Typography
+                id="send-message-label"
+                component="span"
+                variant="body2"
+                sx={{ fontWeight: 600 }}
+              >
+                Mensagem
+              </Typography>
               {hasText ? (
-                <span className="send-agenda__count">{text.length} caracteres</span>
+                <Typography component="span" variant="caption" sx={{ color: 'text.secondary' }}>
+                  {text.length} caracteres
+                </Typography>
               ) : null}
-            </div>
+            </Stack>
 
             {failureMessage !== null ? (
-              <MonthLoadError message={failureMessage} onRetry={reload} />
+              <LoadError message={failureMessage} onRetry={reload} />
             ) : isEditing ? (
-              <textarea
-                ref={editor}
-                className="send-agenda__editor"
-                aria-labelledby="send-message-label"
+              <TextField
+                multiline
+                rows={12}
+                inputRef={editor}
+                helperText="Para deixar em negrito, use *texto*. Para trocar quem recebe ou o período, volte ao modelo."
                 value={customText}
+                slotProps={{ htmlInput: { 'aria-labelledby': 'send-message-label' } }}
                 onChange={(changeEvent) => {
                   setFeedback('');
                   setCustomText(changeEvent.target.value);
                 }}
               />
             ) : template !== null ? (
-              <pre ref={preview} className="send-agenda__bubble">
+              <Box
+                component="pre"
+                ref={preview}
+                sx={{ ...MESSAGE_BUBBLE_SX, bgcolor: 'primary.light' }}
+              >
                 {splitWhatsAppBold(template).map(({ text: segment, isBold }, index) =>
                   isBold ? <strong key={index}>{segment}</strong> : segment,
                 )}
-              </pre>
+              </Box>
             ) : (
-              <p className="send-agenda__bubble send-agenda__bubble--empty">{emptyMessage()}</p>
+              <Box
+                sx={{
+                  ...MESSAGE_BUBBLE_SX,
+                  bgcolor: 'background.default',
+                  color: 'text.secondary',
+                }}
+              >
+                {emptyMessage()}
+              </Box>
             )}
 
-            {isEditing ? (
-              <p className="form-field__hint">
-                Para deixar em negrito, use *texto*. Para trocar quem recebe ou o período, volte ao
-                modelo.
-              </p>
-            ) : null}
             {template !== null && failureMessage === null ? (
-              <button
-                className="send-agenda__toggle"
+              <Link
+                sx={{ alignSelf: 'flex-start', minHeight: '2.75rem', fontWeight: 600 }}
+                component="button"
                 type="button"
                 onClick={() => {
                   if (!isEditing) startEditing();
@@ -279,44 +347,19 @@ export function SendAgendaDialog({ today, onClose }: SendAgendaDialogProps): Rea
                 }}
               >
                 {isEditing ? 'Voltar ao modelo' : 'Personalizar mensagem'}
-              </button>
+              </Link>
             ) : null}
-          </div>
-        </div>
+          </Stack>
+        </Box>
 
-        <p className="send-agenda__feedback" role="status">
+        <Typography
+          role="status"
+          variant="body2"
+          color="primary"
+          sx={{ mt: 1, minHeight: '1.3rem' }}
+        >
           {feedback}
-        </p>
-
-        <div className="dialog__actions">
-          <button
-            className="outline-button"
-            type="button"
-            disabled={!hasText}
-            onClick={() => {
-              void copyMessage();
-            }}
-          >
-            Copiar mensagem
-          </button>
-          {hasText ? (
-            <a
-              className="primary-button"
-              href={whatsAppLink(text, whatsAppNumber)}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => {
-                setFeedback('A mensagem só é enviada quando você confirmar no WhatsApp.');
-              }}
-            >
-              Abrir no WhatsApp
-            </a>
-          ) : (
-            <button className="primary-button" type="button" disabled>
-              Abrir no WhatsApp
-            </button>
-          )}
-        </div>
+        </Typography>
       </Dialog>
 
       {confirmation === null ? null : (

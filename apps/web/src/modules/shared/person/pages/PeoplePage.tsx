@@ -1,12 +1,22 @@
+import { Box, Button, InputAdornment, TextField, Typography } from '@mui/material';
 import { useState } from 'react';
 
 import type { PersonResponse } from '@casaecos/shared-types';
 
 import { useApiResource } from '../../../../shared/http/use-api-resource.js';
-import { ChevronDownIcon, PlusIcon, SearchIcon } from '../../../../shared/ui/icons.js';
+import { FormSelect } from '../../../../shared/ui/FormSelect.js';
+import { PlusIcon, SearchIcon } from '../../../../shared/ui/icons.js';
+import { LoadingStatus } from '../../../../shared/ui/LoadingStatus.js';
+import { EmptyState } from '../../../../shared/ui/EmptyState.js';
 import { LoadError } from '../../../../shared/ui/LoadError.js';
 import { Pager } from '../../../../shared/ui/Pager.js';
 import { PAGE_SIZES, paginate, type PageSize } from '../../../../shared/ui/pagination.js';
+import { RecordList, RecordRow, RecordRowButton } from '../../../../shared/ui/RecordList.js';
+import {
+  RECORD_CELL_SX,
+  RECORD_META_SX,
+  RECORD_NAME_SX,
+} from '../../../../shared/ui/record-list-sx.js';
 import { useAuth } from '../../auth/context/use-auth.js';
 import { useHomeMemberships, type HomeMemberships } from '../../home/hooks/use-home-memberships.js';
 import { PersonFormDialog } from '../components/PersonFormDialog.js';
@@ -68,54 +78,65 @@ export function PeoplePage(): React.JSX.Element {
 
   return (
     <>
-      <div className="list-toolbar">
-        <label className="search-input">
-          <span className="visually-hidden">Buscar por nome</span>
-          <SearchIcon />
-          <input
-            type="search"
-            placeholder="Buscar por nome"
-            value={search}
-            onChange={(inputEvent) => {
-              setSearch(inputEvent.target.value);
-              setPage(1);
-            }}
-          />
-        </label>
-        <label>
-          <span className="visually-hidden">Papel</span>
-          <span className="form-select form-select--compact">
-            <select
-              value={roleFilter}
-              onChange={(changeEvent) => {
-                setRoleFilter(changeEvent.target.value);
-                setPage(1);
-              }}
-            >
-              <option value={ALL_ROLES}>Todos os papéis</option>
-              {roleOptions.map((role) => (
-                <option key={role.id} value={role.id}>
-                  {role.description}
-                </option>
-              ))}
-            </select>
-            <ChevronDownIcon />
-          </span>
-        </label>
+      <Box
+        sx={{
+          display: 'grid',
+          gap: 1.25,
+          gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 22rem) 14rem auto' },
+          justifyContent: { md: 'space-between' },
+          mt: 2.5,
+          mb: 2,
+        }}
+      >
+        <TextField
+          size="small"
+          type="search"
+          label="Buscar por nome"
+          placeholder="Buscar por nome"
+          value={search}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            },
+          }}
+          onChange={(inputEvent) => {
+            setSearch(inputEvent.target.value);
+            setPage(1);
+          }}
+        />
+        <FormSelect
+          size="small"
+          label="Papel"
+          value={roleFilter}
+          onChange={(changeEvent) => {
+            setRoleFilter(changeEvent.target.value);
+            setPage(1);
+          }}
+        >
+          <option value={ALL_ROLES}>Todos os papéis</option>
+          {roleOptions.map((role) => (
+            <option key={role.id} value={role.id}>
+              {role.description}
+            </option>
+          ))}
+        </FormSelect>
         {canWrite ? (
-          <button
-            className="primary-button primary-button--compact"
-            type="button"
+          <Button
+            variant="contained"
+            startIcon={<PlusIcon />}
             disabled={!canOpenForm}
             onClick={() => {
               setFormTarget({ person: null });
             }}
           >
-            <PlusIcon />
             Nova pessoa
-          </button>
+          </Button>
         ) : null}
-      </div>
+      </Box>
 
       {memberships.status === 'failed' ? (
         <LoadError message={memberships.message} onRetry={reloadMemberships} />
@@ -123,73 +144,77 @@ export function PeoplePage(): React.JSX.Element {
       {people.resource.status === 'failed' ? (
         <LoadError message={people.resource.message} onRetry={people.reload} />
       ) : people.resource.status === 'loading' ? (
-        <p className="day-events__status" role="status">
-          <span className="spinner spinner--primary spinner--small" aria-hidden="true" />
-          Carregando pessoas...
-        </p>
+        <LoadingStatus>Carregando pessoas...</LoadingStatus>
       ) : visible.length === 0 ? (
-        <div className="empty-state">
-          <strong>
-            {allPeople.length === 0
+        <EmptyState
+          title={
+            allPeople.length === 0
               ? 'Nenhuma pessoa cadastrada.'
-              : 'Ninguém com esse nome ou papel.'}
-          </strong>
+              : 'Ninguém com esse nome ou papel.'
+          }
+        >
           {allPeople.length === 0
             ? 'Cadastre a equipe e os acolhidos para montar as casas.'
             : 'Confira a busca ou cadastre a pessoa.'}
-        </div>
+        </EmptyState>
       ) : (
         <>
           {visible.length === allPeople.length ? null : (
-            <p className="list-summary">
+            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
               {visible.length} de {allPeople.length} pessoas com esse filtro
-            </p>
+            </Typography>
           )}
-          <ul className="record-list people-columns">
-            <li className="record-list__header" aria-hidden="true">
-              <span>Nome</span>
-              <span>Papel</span>
-              <span>Casas</span>
-              <span>Telefone</span>
-              <span>Sistema</span>
-            </li>
+          <RecordList
+            columns="minmax(0, 1.6fr) 10rem minmax(0, 1.4fr) 9.5rem 6rem"
+            headers={['Nome', 'Papel', 'Casas', 'Telefone', 'Sistema']}
+          >
             {pageWindow.items.map((person) => {
               const homes = homesText(person, loadedMemberships);
               const cells = (
                 <>
-                  <span className="record-row__name">{person.name}</span>
+                  <Box component="span" sx={RECORD_NAME_SX}>
+                    {person.name}
+                  </Box>
                   <RoleLabel role={person.role} />
-                  <span className="record-row__cell--desktop">{homes}</span>
-                  <span className="record-row__cell--desktop">{person.phone ?? '—'}</span>
-                  <span className="record-row__cell--desktop">
-                    {person.hasAccount ? <span className="access-mark">Acessa</span> : '—'}
-                  </span>
-                  <span className="record-row__meta">
+                  <Box component="span" sx={RECORD_CELL_SX}>
+                    {homes}
+                  </Box>
+                  <Box component="span" sx={RECORD_CELL_SX}>
+                    {person.phone ?? '—'}
+                  </Box>
+                  <Box component="span" sx={RECORD_CELL_SX}>
+                    {person.hasAccount ? (
+                      <Typography color="primary" component="span" variant="body2">
+                        Acessa
+                      </Typography>
+                    ) : (
+                      '—'
+                    )}
+                  </Box>
+                  <Box component="span" sx={RECORD_META_SX}>
                     {homes}
                     {person.hasAccount ? ' · acessa o sistema' : ''}
-                  </span>
+                  </Box>
                 </>
               );
               return (
                 <li key={person.id}>
                   {canWrite ? (
-                    <button
-                      className="record-row"
-                      type="button"
-                      disabled={!canOpenForm}
+                    <RecordRowButton
+                      isDisabled={!canOpenForm}
                       onClick={() => {
                         setFormTarget({ person });
                       }}
                     >
                       {cells}
-                    </button>
+                    </RecordRowButton>
                   ) : (
-                    <div className="record-row">{cells}</div>
+                    <RecordRow>{cells}</RecordRow>
                   )}
                 </li>
               );
             })}
-          </ul>
+          </RecordList>
           <Pager
             window={pageWindow}
             pageSize={pageSize}

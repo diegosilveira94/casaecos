@@ -4,6 +4,7 @@
  */
 export const COMING_SOON_PROPS = {
   type: 'button',
+  disableRipple: true,
   'aria-disabled': true,
   title: 'Disponível em breve',
 } as const;

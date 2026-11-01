@@ -11,7 +11,7 @@ Contexto completo do produto e das convenções: [`CLAUDE.md`](./CLAUDE.md).
 | Camada  | Tecnologias                                         |
 | ------- | --------------------------------------------------- |
 | Backend | Node 22, Express 5, TypeScript, Prisma 7 (Postgres) |
-| Web     | React 19, TypeScript, Vite                          |
+| Web     | React 19, TypeScript, Vite, Material UI             |
 | Testes  | Vitest (+ Supertest na API, Testing Library na web) |
 | Estilo  | typescript-eslint strict-type-checked + Prettier    |
 
