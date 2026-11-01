@@ -41,9 +41,10 @@ class FakeUserAccountRepository implements UserAccountRepository {
   createdData: CreateUserAccountData | null = null;
   registeredLogin: { id: number; at: Date } | null = null;
   updatedPassword: { id: number; passwordHash: string } | null = null;
+  accounts: UserAccount[] = [makeAccount()];
 
   findAll(): Promise<UserAccount[]> {
-    return Promise.resolve(this.accountByEmail ? [this.accountByEmail] : []);
+    return Promise.resolve(this.accounts);
   }
 
   findByEmail(email: string): Promise<UserAccount | null> {
@@ -219,6 +220,20 @@ describe('AuthService', () => {
     expect(repository.createdData).toBeNull();
   });
 
+  it('lista as credenciais com a pessoa, o papel e o último login, sem o hash da senha', async () => {
+    const accounts = await service.listAccounts();
+
+    expect(accounts).toEqual([
+      {
+        id: 5,
+        person: { id: 7, name: 'Maria Silva' },
+        role: { id: 2, description: 'Secretário' },
+        email: 'maria@ecos.org',
+        lastLoginAt: null,
+      },
+    ]);
+  });
+
   it('distingue e-mail já usado de pessoa que já tem credencial na corrida do banco', async () => {
     repository.writeError = new DuplicateEmailError();
     await expect(
@@ -232,12 +247,6 @@ describe('AuthService', () => {
       status: 409,
       message: 'Esta pessoa já possui credencial de acesso',
     });
-  });
-
-  it('lista somente os dados necessários para a coordenação escolher uma conta', async () => {
-    await expect(service.listAccounts()).resolves.toEqual([
-      { personId: 7, personName: 'Maria Silva', email: 'maria@ecos.org' },
-    ]);
   });
 
   it('deixa a coordenação redefinir a senha sem conhecer a atual', async () => {

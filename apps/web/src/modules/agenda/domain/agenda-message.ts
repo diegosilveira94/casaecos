@@ -1,7 +1,8 @@
 import type { EventResponse, PersonResponse, PersonSummaryResponse } from '@casaecos/shared-types';
 
+import { ROLE_IDS } from '../../shared/person/domain/roles.js';
 import { isSameDay } from './calendar-dates.js';
-import { PARTICIPATION_TYPE_IDS, SHELTERED_ROLE_ID } from './event-form.js';
+import { PARTICIPATION_TYPE_IDS } from './event-form.js';
 import { formatTime, groupEventsByDay } from './event-format.js';
 import type { SendPeriod } from './send-period.js';
 
@@ -79,7 +80,7 @@ export class AgendaMessage {
     people: readonly PersonResponse[],
   ) {
     this.shelteredNames = new Map(
-      people.filter(({ role }) => role.id === SHELTERED_ROLE_ID).map(({ id, name }) => [id, name]),
+      people.filter(({ role }) => role.id === ROLE_IDS.sheltered).map(({ id, name }) => [id, name]),
     );
   }
 

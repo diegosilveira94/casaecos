@@ -3,8 +3,8 @@ import type {
   CreateUserAccountRequest,
   LoginRequest,
   LoginResponse,
-  ManagedUserAccountResponse,
   ResetPasswordRequest,
+  UserAccountListItemResponse,
   UserAccountResponse,
 } from '@casaecos/shared-types';
 
@@ -64,6 +64,12 @@ export class AuthService {
     };
   }
 
+  /** Everyone who can log in, ordered by name. */
+  async listAccounts(): Promise<UserAccountListItemResponse[]> {
+    const accounts = await this.repository.findAll();
+    return accounts.map((account) => account.toListItemResponse());
+  }
+
   async createAccount(request: CreateUserAccountRequest): Promise<UserAccountResponse> {
     await this.ensurePersonCanReceiveCredential(request.personId);
 
@@ -80,14 +86,6 @@ export class AuthService {
     } catch (error: unknown) {
       this.translatePersistenceError(error);
     }
-  }
-
-  async listAccounts(): Promise<ManagedUserAccountResponse[]> {
-    return (await this.repository.findAll()).map((account) => ({
-      personId: account.personId,
-      personName: account.personName,
-      email: account.email,
-    }));
   }
 
   async resetPassword(personId: number, request: ResetPasswordRequest): Promise<ApiMessage> {

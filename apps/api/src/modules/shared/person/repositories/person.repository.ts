@@ -1,6 +1,7 @@
 import { Prisma } from '../../../../generated/prisma/client.js';
 import { prisma } from '../../../../config/prisma.js';
-import { Person, Role } from '../domain/person.js';
+import { type Person, Role } from '../domain/person.js';
+import { personSelection, toPerson } from './person-record.js';
 
 export interface PersonFilters {
   roleId?: number;
@@ -44,30 +45,6 @@ export class DuplicatePhoneError extends Error {
     super('Phone already exists');
     this.name = 'DuplicatePhoneError';
   }
-}
-
-const personSelection = {
-  id: true,
-  name: true,
-  individualRegistration: true,
-  phone: true,
-  createdAt: true,
-  updatedAt: true,
-  role: { select: { id: true, description: true } },
-} satisfies Prisma.PersonSelect;
-
-type PersonRecord = Prisma.PersonGetPayload<{ select: typeof personSelection }>;
-
-function toPerson(record: PersonRecord): Person {
-  return new Person({
-    id: record.id,
-    name: record.name,
-    role: new Role(record.role.id, record.role.description),
-    individualRegistration: record.individualRegistration,
-    phone: record.phone,
-    createdAt: record.createdAt,
-    updatedAt: record.updatedAt,
-  });
 }
 
 function isUniqueConstraintError(error: unknown): boolean {

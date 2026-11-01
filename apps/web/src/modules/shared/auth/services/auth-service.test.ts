@@ -5,20 +5,10 @@ import { AuthService } from './auth-service.js';
 
 const fetchMock = vi.fn<typeof fetch>();
 
-describe('AuthService password operations', () => {
-  let service: AuthService;
-
+describe('AuthService', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', fetchMock);
-    fetchMock.mockResolvedValue(
-      new Response(JSON.stringify({ message: 'ok' }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }),
-    );
-    service = new AuthService(
-      new HttpClient('http://api.test', { readAccessToken: () => 'token' }),
-    );
+    fetchMock.mockResolvedValue(new Response(JSON.stringify([]), { status: 200 }));
   });
 
   afterEach(() => {
@@ -26,32 +16,41 @@ describe('AuthService password operations', () => {
     vi.unstubAllGlobals();
   });
 
-  it('lista contas e redefine a senha pelo identificador da pessoa', async () => {
-    fetchMock
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify([]), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }),
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ message: 'ok' }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }),
-      );
+  const service = (): AuthService =>
+    new AuthService(new HttpClient('http://api.test', { readAccessToken: () => 'token' }));
 
-    await service.listAccounts();
-    await service.resetPassword(9, { password: 'temporaria-123' });
+  it('lista as credenciais em GET /auth/accounts', async () => {
+    await service().listAccounts();
 
-    expect(fetchMock.mock.calls[0]?.[0]).toBe('http://api.test/auth/accounts');
-    expect(fetchMock.mock.calls[0]?.[1]?.method).toBe('GET');
-    expect(fetchMock.mock.calls[1]?.[0]).toBe('http://api.test/auth/accounts/9/password');
-    expect(fetchMock.mock.calls[1]?.[1]).toEqual(
-      expect.objectContaining({
-        method: 'PATCH',
-        body: JSON.stringify({ password: 'temporaria-123' }),
-      }),
-    );
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe('http://api.test/auth/accounts');
+    expect(init?.method).toBe('GET');
+  });
+
+  it('cria a credencial em POST /auth/accounts, com o token de quem está logado', async () => {
+    await service().createAccount({
+      personId: 3,
+      email: 'ana@ecos.org',
+      password: 'flor-rio-1234',
+    });
+
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe('http://api.test/auth/accounts');
+    expect(init?.method).toBe('POST');
+    expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer token');
+    expect(JSON.parse(init?.body as string)).toEqual({
+      personId: 3,
+      email: 'ana@ecos.org',
+      password: 'flor-rio-1234',
+    });
+  });
+
+  it('redefine a senha pelo identificador da pessoa', async () => {
+    await service().resetPassword(9, { password: 'temporaria-123' });
+
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe('http://api.test/auth/accounts/9/password');
+    expect(init?.method).toBe('PATCH');
+    expect(JSON.parse(init?.body as string)).toEqual({ password: 'temporaria-123' });
   });
 });

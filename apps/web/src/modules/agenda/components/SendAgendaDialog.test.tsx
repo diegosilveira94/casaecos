@@ -36,6 +36,7 @@ function makePerson(
     role: { id: roleId, description: role },
     individualRegistration: null,
     phone,
+    hasAccount: false,
     createdAt: '2026-11-01T08:00:00.000Z',
     updatedAt: '2026-11-01T08:00:00.000Z',
   };

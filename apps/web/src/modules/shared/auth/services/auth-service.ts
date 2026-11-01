@@ -1,14 +1,18 @@
 import type {
   ApiMessage,
   AuthenticatedUserResponse,
+  CreateUserAccountRequest,
   LoginRequest,
   LoginResponse,
-  ManagedUserAccountResponse,
   ResetPasswordRequest,
+  UserAccountListItemResponse,
+  UserAccountResponse,
 } from '@casaecos/shared-types';
 
 import { apiClient } from '../../../../shared/http/api-client.js';
 import type { HttpClient } from '../../../../shared/http/http-client.js';
+
+const ACCOUNTS_PATH = '/auth/accounts';
 
 export class AuthService {
   constructor(private readonly http: HttpClient) {}
@@ -21,12 +25,19 @@ export class AuthService {
     return this.http.get('/auth/me');
   }
 
-  listAccounts(): Promise<ManagedUserAccountResponse[]> {
-    return this.http.get('/auth/accounts');
+  /** Who can log in: needs `account:manage`. */
+  listAccounts(): Promise<UserAccountListItemResponse[]> {
+    return this.http.get(ACCOUNTS_PATH);
   }
 
+  /** Gives a person a credential: needs `account:manage`. */
+  createAccount(request: CreateUserAccountRequest): Promise<UserAccountResponse> {
+    return this.http.post(ACCOUNTS_PATH, request);
+  }
+
+  /** Sets a new password without knowing the current one: needs `account:manage`. */
   resetPassword(personId: number, request: ResetPasswordRequest): Promise<ApiMessage> {
-    return this.http.patch(`/auth/accounts/${String(personId)}/password`, request);
+    return this.http.patch(`${ACCOUNTS_PATH}/${String(personId)}/password`, request);
   }
 }
 

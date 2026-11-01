@@ -1,4 +1,4 @@
-import type { RoleResponse } from './person.js';
+import type { PersonSummaryResponse, RoleResponse } from './person.js';
 
 export interface LoginRequest {
   email: string;
@@ -42,13 +42,6 @@ export interface ResetPasswordRequest {
   password: string;
 }
 
-/** The information a coordinator needs to choose whose password to reset. */
-export interface ManagedUserAccountResponse {
-  personId: number;
-  personName: string;
-  email: string;
-}
-
 /** Never carries the password hash: it does not leave the database. */
 export interface UserAccountResponse {
   id: number;
@@ -57,4 +50,13 @@ export interface UserAccountResponse {
   lastLoginAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** A credential as the access screen lists it: whose it is, their role and the last login. */
+export interface UserAccountListItemResponse {
+  id: number;
+  person: PersonSummaryResponse;
+  role: RoleResponse;
+  email: string;
+  lastLoginAt: string | null;
 }

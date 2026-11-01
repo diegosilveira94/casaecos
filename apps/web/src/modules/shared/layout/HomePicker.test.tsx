@@ -26,6 +26,7 @@ function makeHome(id: number, name: string): HomeResponse {
       role: { id: 3, description: 'Cuidador/Monitor' },
       individualRegistration: null,
       phone: null,
+      hasAccount: false,
       createdAt,
       updatedAt: createdAt,
     },

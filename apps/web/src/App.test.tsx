@@ -37,6 +37,9 @@ function jsonResponse(status: number, body: unknown): Response {
 const EMPTY_AGENDA: Record<string, unknown> = {
   '/agenda/events': { items: [], page: 1, pageSize: 200, total: 0 },
   '/agenda/event-types': [],
+  '/homes': [],
+  '/people': [],
+  '/roles': [],
 };
 
 function answerAuthWith(body: unknown): void {
@@ -176,26 +179,57 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'Agenda' })).toBeInTheDocument();
   });
 
-  it('leva à Agenda pela navegação e mostra os outros módulos ainda sem ação', async () => {
+  it('leva à Agenda e às Configurações pela navegação e mostra os outros módulos sem ação', async () => {
     sessionStore.save({ token: 'token-salvo', expiresInSeconds: 3600 });
     answerAuthWith(maria);
     renderApp('/agenda');
 
     const navigation = await screen.findByRole('navigation', { name: 'Módulos' });
     const links = within(navigation).getAllByRole('link');
-    expect(links.map((link) => link.textContent)).toEqual(['Agenda']);
+    expect(links.map((link) => link.textContent)).toEqual(['Agenda', 'Configurações']);
     expect(links[0]).toHaveAttribute('aria-current', 'page');
     const upcomingModules = within(navigation).getAllByRole('button');
     expect(upcomingModules.map((button) => button.textContent)).toEqual([
       'Medicamentos',
       'Relatórios',
       'Prestação de Contas',
-      'Configurações',
       'Ajuda',
     ]);
     expect(upcomingModules.every((button) => button.getAttribute('aria-disabled') === 'true')).toBe(
       true,
     );
+  });
+
+  it('abre as Configurações em Pessoas, sem a aba Acessos para a secretaria', async () => {
+    sessionStore.save({ token: 'token-salvo', expiresInSeconds: 3600 });
+    answerAuthWith(maria);
+    renderApp('/settings');
+
+    expect(await screen.findByRole('heading', { name: 'Configurações' })).toBeInTheDocument();
+    const tabs = screen.getByRole('navigation', { name: 'Cadastros' });
+    expect(
+      within(tabs)
+        .getAllByRole('link')
+        .map((link) => link.textContent),
+    ).toEqual(['Pessoas', 'Casas']);
+    // The index route redirects to Pessoas right after the first render.
+    expect(
+      await within(tabs).findByRole('link', { name: 'Pessoas', current: 'page' }),
+    ).toBeInTheDocument();
+  });
+
+  it('esconde as Configurações de quem não cadastra e manda de volta para a Agenda', async () => {
+    sessionStore.save({ token: 'token-salvo', expiresInSeconds: 3600 });
+    answerAuthWith({
+      ...maria,
+      role: { id: 3, description: 'Cuidador/Monitor' },
+      permissions: ['home:read', 'event:read'],
+    });
+    renderApp('/settings/access');
+
+    expect(await screen.findByRole('heading', { name: 'Agenda' })).toBeInTheDocument();
+    const navigation = screen.getByRole('navigation', { name: 'Módulos' });
+    expect(within(navigation).queryByRole('link', { name: 'Configurações' })).toBeNull();
   });
 
   it('volta para o login ao sair', async () => {

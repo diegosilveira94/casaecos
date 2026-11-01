@@ -5,19 +5,19 @@ import type { Permission } from '@casaecos/shared-types';
 import { ROLE_IDS } from '../../person/domain/role-ids.js';
 import { permissionsForRole, roleHasPermission } from './permissions.js';
 
-const { coordinator, secretary, caregiver, driver, sheltered } = ROLE_IDS;
+const { coordinator, secretary, caregiver, driver, sheltered, collaborator } = ROLE_IDS;
 
 const expectedRoleIds: Record<Permission, readonly number[]> = {
   'account:manage': [coordinator],
   'person:read': [coordinator, secretary],
   'person:write': [coordinator, secretary],
-  'home:read': [coordinator, secretary, caregiver],
+  'home:read': [coordinator, secretary, caregiver, collaborator],
   'home:write': [coordinator, secretary],
-  'event:read': [coordinator, secretary, caregiver, driver],
+  'event:read': [coordinator, secretary, caregiver, driver, collaborator],
   'event:write': [coordinator, secretary],
 };
 
-const allRoleIds = [coordinator, secretary, caregiver, driver, sheltered];
+const allRoleIds = [coordinator, secretary, caregiver, driver, sheltered, collaborator];
 
 describe('matriz de permissões', () => {
   it.each(Object.entries(expectedRoleIds) as [Permission, readonly number[]][])(

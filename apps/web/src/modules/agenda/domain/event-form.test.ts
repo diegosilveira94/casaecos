@@ -207,6 +207,7 @@ describe('participantsLeftBehind', () => {
     role: { id: 5, description: 'Acolhido' },
     individualRegistration: null,
     phone: null,
+    hasAccount: false,
     createdAt: consultation.createdAt,
     updatedAt: consultation.updatedAt,
   });

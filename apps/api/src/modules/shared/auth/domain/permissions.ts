@@ -3,14 +3,17 @@ import type { Permission } from '@casaecos/shared-types';
 import { ROLE_IDS } from '../../person/domain/role-ids.js';
 
 const COORDINATION_ROLE_IDS = [ROLE_IDS.coordinator, ROLE_IDS.secretary];
+// The collaborator is a stand-in for any staff gap, so it starts with the caregiver's
+// reading access; more than that is a matter of changing the person's role.
+const HOME_STAFF_ROLE_IDS = [ROLE_IDS.caregiver, ROLE_IDS.collaborator];
 
 const ALLOWED_ROLE_IDS: Record<Permission, ReadonlySet<number>> = {
   'account:manage': new Set([ROLE_IDS.coordinator]),
   'person:read': new Set(COORDINATION_ROLE_IDS),
   'person:write': new Set(COORDINATION_ROLE_IDS),
-  'home:read': new Set([...COORDINATION_ROLE_IDS, ROLE_IDS.caregiver]),
+  'home:read': new Set([...COORDINATION_ROLE_IDS, ...HOME_STAFF_ROLE_IDS]),
   'home:write': new Set(COORDINATION_ROLE_IDS),
-  'event:read': new Set([...COORDINATION_ROLE_IDS, ROLE_IDS.caregiver, ROLE_IDS.driver]),
+  'event:read': new Set([...COORDINATION_ROLE_IDS, ...HOME_STAFF_ROLE_IDS, ROLE_IDS.driver]),
   'event:write': new Set(COORDINATION_ROLE_IDS),
 };
 

@@ -24,6 +24,7 @@ function makePerson(id: number, name: string, roleId: number): PersonResponse {
     role: { id: roleId, description: 'Papel' },
     individualRegistration: null,
     phone: null,
+    hasAccount: false,
     createdAt: at(1, 8),
     updatedAt: at(1, 8),
   };

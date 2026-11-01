@@ -18,8 +18,20 @@ const resetPassword = vi.mocked(authService.resetPassword);
 describe('PasswordDialogs', () => {
   beforeEach(() => {
     listAccounts.mockResolvedValue([
-      { personId: 7, personName: 'Maria Silva', email: 'maria@ecos.org' },
-      { personId: 9, personName: 'João Santos', email: 'joao@ecos.org' },
+      {
+        id: 1,
+        person: { id: 7, name: 'Maria Silva' },
+        role: { id: 2, description: 'Secretário' },
+        email: 'maria@ecos.org',
+        lastLoginAt: null,
+      },
+      {
+        id: 2,
+        person: { id: 9, name: 'João Santos' },
+        role: { id: 3, description: 'Cuidador' },
+        email: 'joao@ecos.org',
+        lastLoginAt: null,
+      },
     ]);
     resetPassword.mockResolvedValue({ message: 'Senha redefinida com sucesso' });
   });

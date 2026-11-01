@@ -1,7 +1,14 @@
 import { prisma } from '../src/config/prisma.js';
 
 // Domain content stays in Portuguese: it is what the NGO reads on screen.
-const roles = ['Coordenador', 'Secretário', 'Cuidador/Monitor', 'Motorista', 'Acolhido'];
+const roles = [
+  'Coordenador',
+  'Secretário',
+  'Cuidador/Monitor',
+  'Motorista',
+  'Acolhido',
+  'Colaborador',
+];
 
 const eventTypes = [
   'Consulta médica',

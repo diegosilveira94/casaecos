@@ -1,6 +1,6 @@
 import { useEffect, useState, type SyntheticEvent } from 'react';
 
-import type { ManagedUserAccountResponse } from '@casaecos/shared-types';
+import type { UserAccountListItemResponse } from '@casaecos/shared-types';
 
 import { ApiRequestError } from '../../../../shared/http/api-request-error.js';
 import { Dialog } from '../../../../shared/ui/Dialog.js';
@@ -70,7 +70,7 @@ function SuccessContent({ message, onClose }: { message: string; onClose: () => 
 }
 
 export function ResetPasswordDialog({ onClose }: DialogProps): React.JSX.Element {
-  const [accounts, setAccounts] = useState<ManagedUserAccountResponse[] | null>(null);
+  const [accounts, setAccounts] = useState<UserAccountListItemResponse[] | null>(null);
   const [accountsFailure, setAccountsFailure] = useState<string | null>(null);
   const [personId, setPersonId] = useState('');
   const [values, setValues] = useState<PasswordValues>({ password: '', confirmation: '' });
@@ -151,8 +151,8 @@ export function ResetPasswordDialog({ onClose }: DialogProps): React.JSX.Element
                     : 'Escolha uma pessoa'}
               </option>
               {accounts?.map((account) => (
-                <option key={account.personId} value={account.personId}>
-                  {account.personName} — {account.email}
+                <option key={account.person.id} value={account.person.id}>
+                  {account.person.name} — {account.email}
                 </option>
               ))}
             </FormSelect>

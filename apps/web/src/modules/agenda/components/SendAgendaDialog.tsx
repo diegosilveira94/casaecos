@@ -6,8 +6,8 @@ import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js';
 import { Dialog } from '../../../shared/ui/Dialog.js';
 import { FormField } from '../../../shared/ui/FormField.js';
 import { FormSelect } from '../../../shared/ui/FormSelect.js';
+import { ROLE_IDS } from '../../shared/person/domain/roles.js';
 import { AgendaMessage, type AgendaAudience } from '../domain/agenda-message.js';
-import { SHELTERED_ROLE_ID } from '../domain/event-form.js';
 import { SEND_PERIOD_LABELS, sendPeriodFor, type SendPeriodKey } from '../domain/send-period.js';
 import { splitWhatsAppBold, toWhatsAppNumber, whatsAppLink } from '../domain/whatsapp-link.js';
 import { useSendAgendaData } from '../hooks/use-send-agenda-data.js';
@@ -69,7 +69,7 @@ export function SendAgendaDialog({ today, onClose }: SendAgendaDialogProps): Rea
   const { people, events, reload } = useSendAgendaData(period);
 
   const everyone = people.status === 'loaded' ? people.people : [];
-  const recipients = everyone.filter(({ role }) => role.id !== SHELTERED_ROLE_ID);
+  const recipients = everyone.filter(({ role }) => role.id !== ROLE_IDS.sheltered);
   const person = everyone.find(({ id }) => id === personId) ?? null;
 
   const audience: AgendaAudience | null =
@@ -157,9 +157,7 @@ export function SendAgendaDialog({ today, onClose }: SendAgendaDialogProps): Rea
         className="dialog__panel--form dialog__panel--send-agenda"
         onClose={confirmation === null ? requestClose : ignoreClose}
       >
-        <p className="send-agenda__intro">
-          Confira a mensagem. Envie no WhatsApp.
-        </p>
+        <p className="send-agenda__intro">Confira a mensagem. Envie no WhatsApp.</p>
 
         <div className="send-agenda">
           <div className="send-agenda__controls">

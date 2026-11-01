@@ -35,7 +35,7 @@ class StubRepository implements UserAccountRepository {
   requestedPersonId: number | null = null;
 
   findAll(): Promise<UserAccount[]> {
-    return Promise.resolve(this.account ? [this.account] : []);
+    return Promise.resolve([]);
   }
 
   findByEmail(_email: string): Promise<UserAccount | null> {

@@ -10,6 +10,8 @@ export interface HomeSelection {
   /** False when there is nothing to choose: one home, or no access to homes. */
   canChooseHome: boolean;
   selectHome: (homeId: number | null) => void;
+  /** Reads the homes again, after a screen creates, renames or removes one. */
+  reloadHomes: () => void;
 }
 
 export const HomeSelectionContext = createContext<HomeSelection | null>(null);

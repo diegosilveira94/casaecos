@@ -75,6 +75,8 @@ casaecos/
 │   │   │   │   ├── relatorios/
 │   │   │   │   └── shared/            # cross-módulo
 │   │   │   │       ├── person/        # person + role
+│   │   │   │       ├── home/          # home + home_person
+│   │   │   │       ├── organization/  # GET /organizations (a casa precisa de uma)
 │   │   │   │       └── auth/          # user_account, login, JWT, middlewares de acesso
 │   │   │   ├── config/                # env.ts (zod) e prisma.ts (client singleton)
 │   │   │   ├── middlewares/           # error-handler, HttpError, RequestValidator
@@ -101,8 +103,11 @@ casaecos/
 │       │   │   ├── agenda/           # domain/ (calendário, cores), hooks/, components/,
 │       │   │   │                     # services/EventService, pages/AgendaPage
 │       │   │   └── shared/           # auth/ (SessionStore, AuthService, AuthProvider/useAuth,
-│       │   │                         # LoginPage, ProtectedRoute), home/ (HomeService),
-│       │   │                         # home/context (casa escolhida), layout/ (AppLayout,
+│       │   │                         # LoginPage, ProtectedRoute, RequirePermission, AccessPage),
+│       │   │                         # home/ (HomeService, HomesPage, HomeDetailPage),
+│       │   │                         # home/context (casa escolhida), person/ (PeoplePage,
+│       │   │                         # PersonFormDialog, roles.ts), organization/,
+│       │   │                         # settings/ (SettingsLayout), layout/ (AppLayout,
 │       │   │                         # AppSidebar, HomePicker, AppHeader, AppBrand)
 │       │   ├── App.tsx
 │       │   └── main.tsx
@@ -163,7 +168,7 @@ Modelagem física finalizada e **já implementada** em `apps/api/prisma/schema.p
 npm run db:up       # sobe o Postgres do docker-compose
 npm run db:migrate  # prisma migrate dev
 npm run db:seed     # popula role, event_type e participation_type
-npm run db:seed:admin  # cria o primeiro Coordenador com credencial (lê ADMIN_* do .env)
+npm run db:seed:admin  # cria a organização e o primeiro Coordenador (lê ORGANIZATION_NAME e ADMIN_* do .env)
 npm run db:seed:demo   # dados de teste: casas, pessoas, contas e compromissos (só fora de produção)
 ```
 
@@ -388,10 +393,11 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   sidebar. Qual layout vale é decidido em JS por `useIsDesktop()`
   (`src/shared/ui/use-media-query.ts`), com o mesmo breakpoint do CSS.
 - **Controle sem função ainda** (Medicamentos, Relatórios, Prestação de Contas,
-  Configurações, Ajuda, notificações, Exportar e "Ver todos") usa
+  Ajuda, notificações, Exportar e "Ver todos") usa
   `COMING_SOON_PROPS` (`src/shared/ui/coming-soon.ts`): parece o real, não
-  faz nada e tem `aria-disabled` + "Disponível em breve" (#95). Ao implementar, troque
-  pelo comportamento de verdade.
+  faz nada e tem `aria-disabled` + "Disponível em breve" (#95). Na sidebar ele fica com
+  45% de opacidade (ECOS-30). Ao implementar, troque pelo comportamento de verdade.
+  Configurações virou real na ECOS-30.
 - **Casa escolhida na sidebar** (`HomePicker`) vale para toda a área logada, via
   `HomeSelectionProvider` (`modules/shared/home/context/`), dentro do `AppLayout`. As
   casas vêm de `homeService.list()` só com `can('home:read')`; com uma casa só (cuidadora)
@@ -467,8 +473,9 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   papel → tipo de escopo (`scopeKindForRole`). O que não está no mapa é negado; papel
   sem escopo próprio cai no escopo por casa.
 - **Matriz**: Coordenador pode tudo; Secretário pode tudo menos mexer no acesso de quem
-  usa o sistema; Cuidador só lê (casas e eventos das casas dele); Motorista só lê os
-  eventos em que está no `person_event`; Acolhido não tem acesso.
+  usa o sistema; Cuidador e Colaborador (ECOS-30, o "coringa" da equipe) só leem (casas e
+  eventos das casas deles); Motorista só lê os eventos em que está no `person_event`;
+  Acolhido não tem acesso.
 - **Acesso de usuários** (`account:manage`, só Coordenador): criar credencial,
   cadastrar ou promover alguém a Coordenador, trocar o papel de quem tem credencial e
   excluir pessoa com credencial. As três últimas são checadas no `PersonService`.
@@ -480,11 +487,51 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   viram filtro no repositório. `eventFilter()` é união discriminada por `kind`
   (`all` | `homes` | `participant`): trate cada caso, nunca "sem campo = sem filtro".
   Fora do escopo é 403, checado antes da existência.
-- **Rotas protegidas**: `/homes`, `/people`, `/roles` e `/agenda` exigem login e
-  permissão. Eventos, listagem e participantes (ECOS-6/15/7) usam `authorize('event:*')`
+- **Rotas protegidas**: `/homes`, `/people`, `/roles`, `/organizations` e `/agenda` exigem
+  login e permissão. Eventos, listagem e participantes (ECOS-6/15/7) usam `authorize('event:*')`
   e o `AccessScope`.
 - **Testes de rota** simulam o login com `src/test/fake-authentication.ts`
   (`vi.mock` do `authenticate`).
+
+### Cadastros: pessoas, casas e acessos (ECOS-30)
+
+> Decisões #107 a #114 no Notion.
+
+- **Telas em Configurações** (`/settings`), uma aba por rota: `/settings/people`,
+  `/settings/homes` (e `/settings/homes/:homeId`) e `/settings/access`. O item da sidebar
+  e a área só aparecem com `person:read` (coordenação e secretaria); a aba Acessos só com
+  `account:manage`. `RequirePermission` manda quem não pode de volta para `/agenda`. O
+  desenho foi validado num protótipo HTML antes do código.
+- **Papel Colaborador** (id 6, no `seed.ts`): coringa da equipe, com o acesso do Cuidador
+  (`home:read`, `event:read`, escopo por casa). Mais do que isso é trocar o papel.
+- **Casas no formulário de pessoa**: o campo aparece até o papel ser escolhido e continua
+  só para Acolhido e Cuidador/Monitor (`choosesHomesInPersonForm`). O resto da equipe é
+  vinculado pela página da casa, inclusive o Colaborador, que sem vínculo vê a
+  agenda vazia. Trocar para um papel sem o campo descarta o que foi marcado, mas mantém os
+  vínculos já salvos.
+- **Organização**: nenhuma tela cria; o `db:seed:admin` cria a primeira
+  (`ORGANIZATION_NAME`) se não houver nenhuma, e o `seed-demo` reaproveita. `GET
+/organizations` (`home:write`) serve o formulário de casa, que usa a única que existe.
+- **Quem acessa**: `PersonResponse.hasAccount` (a tela da secretaria trava a troca de papel
+  antes do 403) e `GET /auth/accounts` (`account:manage`, `UserAccountListItemResponse`:
+  pessoa, papel, e-mail e último acesso, sem hash). O `personSelection` de pessoa fica em
+  `person/repositories/person-record.ts`, usado também pelo repositório de casas.
+- **Formulário de pessoa**: nome, papel em cartões (`RolePicker`), casas para marcar, CPF e
+  telefone. Salvar é a pessoa e depois cada vínculo (`PersonFormSaver`), que relê as casas
+  da API para não repetir vínculo depois de uma falha no meio. A secretaria não escolhe
+  Coordenador nem troca o papel de quem tem credencial.
+- **Casas**: criar já vincula o responsável (`HomeFormSaver`), porque o escopo do cuidador
+  vem do `home_person`. O detalhe separa Acolhidos e Equipe, adiciona várias pessoas de
+  uma vez e não remove o responsável. Criar, editar ou excluir casa chama
+  `useHomeSelection().reloadHomes()`, que atualiza o seletor da sidebar.
+- **Acessos**: "Dar acesso" gera uma senha provisória (`temporary-password.ts`) e a mostra
+  uma vez, com "Copiar". "Trocar papel" usa `PATCH /people/:id` e não vale para a própria
+  conta, para a ONG não ficar sem coordenador.
+- **Listas** paginadas no cliente, 10/20/50 (`shared/ui/pagination.ts` e `Pager`): `GET
+/people` segue devolvendo array, que uma ONG deste tamanho comporta. Papel aparece como
+  texto com um ponto na cor do papel (`RoleLabel`, tons de `roles.ts`), sem pílula.
+- **Carregamento**: `useApiResource(key, load)` (`shared/http/`) guarda o resultado pela
+  chave, descarta resposta atrasada e mantém o dado na tela durante um `reload`.
 
 ## Padrão de idioma
 
@@ -688,6 +735,11 @@ os frames de criação e edição de compromisso.
 - **ECOS-23 implementada em 13/10/2026**: visões Semana e Dia — grade temporal no
   desktop, lista semanal agrupada e lista do dia no celular, navegação pelo período e
   buscas recortadas com `from`/`to`.
+- **ECOS-30 implementada em 27/10/2026**: telas de cadastro em Configurações — pessoas
+  (com papel e casas), casas (com o vínculo `home_person`) e acessos (credencial e troca de
+  papel), papel Colaborador, organização no `db:seed:admin`, `GET /organizations`, `GET
+/auth/accounts` e `hasAccount` na pessoa. A coordenação monta casas e equipe sem
+  depender do `seed-demo`.
 - **ECOS-32 implementada em 31/10/2026**: "Enviar agenda" monta a mensagem de agenda
   (Geral, Motoristas ou Uma pessoa) para a secretaria conferir, personalizar e enviar
   pelo WhatsApp, sem bot e sem custo. O lembrete automático ficou na ECOS-37.
@@ -726,6 +778,7 @@ os frames de criação e edição de compromisso.
   - ECOS-19/20: telas de design no Figma (formulário de compromisso, login)
   - ECOS-21: exportar agenda — adiada (decisão #38)
   - ECOS-23: visões Semana e Dia da agenda — ✅ implementada
+  - ECOS-30: telas de cadastro (pessoas, casas e acessos) — ✅ implementada
   - ECOS-32: envio da agenda pelo WhatsApp (fase 1, manual) — ✅ implementada
 
 ## Pendências que afetam o desenvolvimento

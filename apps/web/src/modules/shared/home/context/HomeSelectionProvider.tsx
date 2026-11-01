@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { HomeResponse } from '@casaecos/shared-types';
 
@@ -19,6 +19,7 @@ export function HomeSelectionProvider({ children }: HomeSelectionProviderProps):
   const canReadHomes = can('home:read');
   const [homes, setHomes] = useState<HomeResponse[]>([]);
   const [selectedHomeId, setSelectedHomeId] = useState<number | null>(null);
+  const [reloadCount, setReloadCount] = useState(0);
 
   useEffect(() => {
     if (!canReadHomes) return;
@@ -35,16 +36,27 @@ export function HomeSelectionProvider({ children }: HomeSelectionProviderProps):
     return () => {
       current = false;
     };
-  }, [canReadHomes]);
+  }, [canReadHomes, reloadCount]);
+
+  const reloadHomes = useCallback(() => {
+    setReloadCount((count) => count + 1);
+  }, []);
+
+  // A removed home cannot stay picked: the agenda would filter by a home that is gone.
+  const pickedHomeId =
+    selectedHomeId !== null && homes.some(({ id }) => id === selectedHomeId)
+      ? selectedHomeId
+      : null;
 
   const value = useMemo(
     () => ({
       homes,
-      selectedHomeId,
+      selectedHomeId: pickedHomeId,
       canChooseHome: homes.length > 1,
       selectHome: setSelectedHomeId,
+      reloadHomes,
     }),
-    [homes, selectedHomeId],
+    [homes, pickedHomeId, reloadHomes],
   );
 
   return <HomeSelectionContext value={value}>{children}</HomeSelectionContext>;

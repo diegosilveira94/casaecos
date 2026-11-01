@@ -51,6 +51,7 @@ const maria: PersonResponse = {
   role: { id: 2, description: 'Cuidadora' },
   individualRegistration: null,
   phone: null,
+  hasAccount: false,
   createdAt: '2026-09-23T12:00:00.000Z',
   updatedAt: '2026-09-23T12:00:00.000Z',
 };

@@ -95,10 +95,13 @@ async function main(): Promise<void> {
   await createAccount(caregiver, 'cuidadora@ecos.test', passwordHash);
   await createAccount(driver, 'motorista@ecos.test', passwordHash);
 
-  const organization = await prisma.organization.create({
-    data: { name: 'Ecos da Esperança' },
-    select: { id: true },
-  });
+  // Reuses the organization of `db:seed:admin`, so the demo homes sit beside the real ones.
+  const organization =
+    (await prisma.organization.findFirst({ select: { id: true } })) ??
+    (await prisma.organization.create({
+      data: { name: 'Ecos da Esperança' },
+      select: { id: true },
+    }));
   const createHome = async (name: string, responsibleId: number, peopleIds: number[]) => {
     const home = await prisma.home.create({
       data: {

@@ -26,6 +26,10 @@ describe('rotas de autenticação', () => {
       body: { message: 'Envie o token de acesso no cabeçalho Authorization' },
     });
 
+    await expect(request(createApp()).get('/auth/accounts')).resolves.toMatchObject({
+      status: 401,
+    });
+
     await expect(
       request(createApp())
         .post('/auth/accounts')

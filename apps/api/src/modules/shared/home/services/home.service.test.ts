@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { AccessScope } from '../../auth/domain/access-scope.js';
 import { Person, Role } from '../../person/domain/person.js';
 import { ROLE_IDS } from '../../person/domain/role-ids.js';
-import { Home, OrganizationSummary } from '../domain/home.js';
+import { OrganizationSummary } from '../../organization/domain/organization.js';
+import { Home } from '../domain/home.js';
 import {
   DuplicateHomePersonError,
   HomeHasEventsError,
@@ -35,6 +36,7 @@ function makePerson(id = 2): Person {
     role: new Role(1, 'Coordenador'),
     individualRegistration: null,
     phone: null,
+    hasAccount: false,
     createdAt,
     updatedAt,
   });

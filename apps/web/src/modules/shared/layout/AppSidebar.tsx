@@ -10,6 +10,7 @@ import {
   HelpIcon,
   PillIcon,
 } from '../../../shared/ui/icons.js';
+import { useAuth } from '../auth/context/use-auth.js';
 import { AppBrand } from './AppBrand.js';
 import { HomePicker } from './HomePicker.js';
 
@@ -18,15 +19,29 @@ const UPCOMING_MODULES = [
   { label: 'Medicamentos', icon: <PillIcon /> },
   { label: 'Relatórios', icon: <ChartIcon /> },
   { label: 'Prestação de Contas', icon: <DollarIcon /> },
-  { label: 'Configurações', icon: <GearIcon /> },
-  { label: 'Ajuda', icon: <HelpIcon /> },
 ];
+
+interface UpcomingModuleProps {
+  label: string;
+  icon: React.ReactNode;
+}
+
+function UpcomingModule({ label, icon }: UpcomingModuleProps): React.JSX.Element {
+  return (
+    <button className="app-sidebar__link" {...COMING_SOON_PROPS}>
+      {icon}
+      {label}
+    </button>
+  );
+}
 
 interface AppSidebarProps {
   onNavigate: () => void;
 }
 
 export function AppSidebar({ onNavigate }: AppSidebarProps): React.JSX.Element {
+  const { can } = useAuth();
+
   return (
     <aside className="app-sidebar" id="app-sidebar">
       <AppBrand layout="stacked" />
@@ -37,11 +52,16 @@ export function AppSidebar({ onNavigate }: AppSidebarProps): React.JSX.Element {
           Agenda
         </NavLink>
         {UPCOMING_MODULES.map(({ label, icon }) => (
-          <button key={label} className="app-sidebar__link" {...COMING_SOON_PROPS}>
-            {icon}
-            {label}
-          </button>
+          <UpcomingModule key={label} label={label} icon={icon} />
         ))}
+        {/* The registers are the coordination's: the other roles do not see them. */}
+        {can('person:read') ? (
+          <NavLink to="/settings" className="app-sidebar__link" onClick={onNavigate}>
+            <GearIcon />
+            Configurações
+          </NavLink>
+        ) : null}
+        <UpcomingModule label="Ajuda" icon={<HelpIcon />} />
       </nav>
 
       <div className="app-sidebar__footer">
