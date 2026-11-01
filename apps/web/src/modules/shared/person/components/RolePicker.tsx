@@ -1,11 +1,14 @@
+import { Box, Typography } from '@mui/material';
+
 import type { RoleResponse } from '@casaecos/shared-types';
 
-import { RequiredMark } from '../../../../shared/ui/FormField.js';
-import { fieldErrorId } from '../../../../shared/ui/field-error-props.js';
+import { ChoiceCard } from '../../../../shared/ui/ChoiceCard.js';
+import { FieldGroup } from '../../../../shared/ui/FieldGroup.js';
+import { toneColors } from '../../../agenda/domain/event-tone.js';
 import { roleGuide } from '../domain/roles.js';
 
 interface RolePickerProps {
-  /** Also the prefix of the ids of the options and of the error. */
+  /** Groups the radios of the field. */
   name: string;
   legend: string;
   roles: readonly RoleResponse[];
@@ -35,51 +38,39 @@ export function RolePicker({
   onChange,
 }: RolePickerProps): React.JSX.Element {
   return (
-    <fieldset
-      className="type-field"
-      aria-describedby={error === undefined ? undefined : fieldErrorId(name)}
-    >
-      <legend>
-        {legend}
-        <RequiredMark />
-      </legend>
-      <div
-        className={[
-          'role-picker',
-          layout === 'wide' ? 'role-picker--wide' : '',
-          error === undefined ? '' : 'role-picker--invalid',
-        ]
-          .filter(Boolean)
-          .join(' ')}
+    <FieldGroup legend={legend} isRequired error={error} hint={hint}>
+      <Box
+        sx={{ display: 'grid', gap: 1, gridTemplateColumns: { md: 'repeat(2, minmax(0, 1fr))' } }}
       >
         {roles.map((role) => {
           const guide = roleGuide(role.id);
           const reason = blockedReason(role.id);
           return (
-            <label key={role.id} className={`role-option event-tone--${guide.tone}`} title={reason}>
-              <input
-                className="visually-hidden"
-                type="radio"
-                name={name}
-                value={role.id}
-                checked={value === role.id}
-                disabled={isDisabled || reason !== undefined}
-                onChange={() => {
-                  onChange(role.id);
-                }}
-              />
-              <span>{role.description}</span>
-              <small>{layout === 'wide' ? guide.access : guide.hint}</small>
-            </label>
+            <ChoiceCard
+              key={role.id}
+              kind="radio"
+              name={name}
+              title={reason}
+              checkedColors={toneColors(guide.tone)}
+              label={
+                <>
+                  <Typography component="span" sx={{ display: 'block', fontSize: 'inherit' }}>
+                    {role.description}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                    {layout === 'wide' ? guide.access : guide.hint}
+                  </Typography>
+                </>
+              }
+              isChecked={value === role.id}
+              isDisabled={isDisabled || reason !== undefined}
+              onChange={() => {
+                onChange(role.id);
+              }}
+            />
           );
         })}
-      </div>
-      {error === undefined ? null : (
-        <p className="form-field__error" id={fieldErrorId(name)}>
-          {error}
-        </p>
-      )}
-      {hint === undefined ? null : <p className="form-field__hint">{hint}</p>}
-    </fieldset>
+      </Box>
+    </FieldGroup>
   );
 }

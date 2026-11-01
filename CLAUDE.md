@@ -36,7 +36,7 @@ medicamentos e dificulta a prestação de contas à prefeitura.
 - **Backend:** Node.js + Express + TypeScript
 - **ORM:** Prisma (Postgres)
 - **Banco:** PostgreSQL
-- **Frontend:** React + TypeScript (Vite)
+- **Frontend:** React + TypeScript (Vite), Material UI (`@mui/material`, `@mui/x-date-pickers`)
 - **Testes:** Vitest
 - **Lint/formatação:** typescript-eslint (strict-type-checked) + Prettier, ESLint 10 (flat config)
 - **Futuro (fase 2):** Bot WhatsApp via Evolution API ou Baileys (a validar)
@@ -196,6 +196,33 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   versão anterior saem no mesmo commit que os descobre.
 - Prettier cuida da formatação; não brigue manualmente com estilo.
 
+### Estilo: Material UI (ECOS-38)
+
+> Decisões #121 a #126 no Notion.
+
+- **A cara é a do Material UI**, só com as cores da marca. As telas podem divergir do Figma:
+  o protótipo segue como referência de conteúdo e fluxo, não de pixel.
+- **Tema em um arquivo só**, `apps/web/src/shared/ui/theme.ts`: paleta (`primary` `#186949`,
+  `primary.light` é o verde claro de seleção) e padrões dos componentes. Não há arquivo CSS.
+- **Tela se estiliza com `sx`** e componentes do MUI (`Stack`, `Box`, `Typography`). Sem
+  `className` de estilo. Layout por tela usa os breakpoints do tema: `{ xs: ..., md: ... }`.
+- **`md` é o desktop** (832px = 52rem), o mesmo do `useIsDesktop()`.
+- **Cores que não são da marca** ficam em `event-tone.ts` (`eventColors`, `toneColors`), usado
+  por tipo de compromisso e por papel.
+- **Peças próprias** em `shared/ui/`: `Dialog` (bottom sheet no celular; o painel vira o
+  `<form>` com `onSubmit`, e o rodapé `actions` fica sempre visível), `ChoiceCard` e
+  `FieldGroup` (opções em cartões), `FormSelect` (select **nativo**, que no celular abre o
+  seletor do sistema), `FormDatePicker`, `RecordList` (cartão no celular, tabela no desktop) e
+  `icons.tsx` (único ponto que importa de `@mui/icons-material`, por caminho, nunca pelo barrel).
+- **Data com `FormDatePicker`** (`@mui/x-date-pickers` + dayjs, pt-BR), que mantém o valor do
+  formulário como texto `YYYY-MM-DD`. Hora segue no `type="time"` nativo.
+- **Cuidado no MUI v9**: `color="text.secondary"` em `Typography` não tem efeito (vira atributo
+  HTML); use `sx={{ color: 'text.secondary' }}`. `color="primary"` funciona.
+- **Botão destrutivo é preenchido em vermelho** (`color="error" variant="contained"`, letra
+  branca), como "Excluir" e o `ConfirmDialog`.
+- **Testes não veem o CSS**: layout e cor se conferem no navegador. Ao abrir um `Dialog`, o MUI
+  marca o resto da página como `aria-hidden`, então `getByRole` só enxerga o que está nele.
+
 ### Contrato da API
 
 > Decisões #42 a #44 no Notion.
@@ -283,8 +310,8 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   português, #69).
 - **Visual**: segue o frame `login-desktop` do Figma (nodeId `77:450`), com a marca
   "Casa Ecos" e a tagline "Cuidando de quem cuida.". O link "Esqueceu a senha?"
-  orienta a procurar a Coordenação; não há recuperação automática. Tokens em
-  inglês (`--color-*`) no `index.css`, com o verde `#186949` do Figma.
+  orienta a procurar a Coordenação; não há recuperação automática. Verde `#186949` do
+  Figma, no tema do MUI.
 
 ### Agenda — compromissos (ECOS-6)
 
@@ -381,7 +408,8 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
 
 > Decisões #92 a #99 no Notion.
 
-- **Desktop fiel ao protótipo** (Figma `22:5`, a partir de 52rem): sidebar com o logo
+- **Desktop segue a estrutura do protótipo** (Figma `22:5`, a partir de 52rem; a aparência é a do
+  Material UI desde a ECOS-38): sidebar com o logo
   e a marca (imagens em `apps/web/src/assets/`), todos os módulos, o seletor de casa,
   a tagline e a paisagem; header com menu, notificações e o menu do usuário ("Sair");
   ações Filtros, Exportar e "+ Novo Compromisso"; Mês/Semana/Dia; grade com **um bloco
@@ -391,7 +419,7 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   pontos por dia e a lista do dia selecionado embaixo, com o tipo como **texto colorido,
   sem fundo**. O botão de menu abre a sidebar como gaveta; no desktop ele recolhe a
   sidebar. Qual layout vale é decidido em JS por `useIsDesktop()`
-  (`src/shared/ui/use-media-query.ts`), com o mesmo breakpoint do CSS.
+  (`src/shared/ui/use-media-query.ts`), com o mesmo breakpoint do tema (`md`).
 - **Controle sem função ainda** (Medicamentos, Relatórios, Prestação de Contas,
   Ajuda, notificações, Exportar e "Ver todos") usa
   `COMING_SOON_PROPS` (`src/shared/ui/coming-soon.ts`): parece o real, não
@@ -423,8 +451,7 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
 - **Permissões na tela**: "+ Novo Compromisso" só aparece com `can('event:write')`; a
   ECOS-9 liga a ação nele.
 - **Cor por tipo**: `event-tone.ts` mapeia o id do `event_type` (ids fixos, #37) para
-  um tom; o CSS tem `--color-event-*` (texto, contraste AA no branco) e `--event-tint`
-  (fundo dos blocos e dos selos) por tom. Tipo novo ou "Outro" cai no neutro.
+  um tom, com `color` (texto, contraste AA no branco) e `tint` (fundo dos blocos e dos selos). Tipo novo ou "Outro" cai no neutro.
 - **Erros**: lookup que falha só esvazia o filtro; a falha da busca do mês aparece com
   `ApiRequestError.message` + "Tentar novamente" (na lista do dia no celular, acima da
   grade no desktop), sem tirar a grade da tela.
@@ -641,13 +668,13 @@ os frames de criação e edição de compromisso.
 
 ### Divergências a resolver antes da ECOS-8
 
-1. ~~O verde não bate.~~ Resolvido na ECOS-17: `--color-primary: #186949` no
-   `index.css`, igual ao Figma (decisão #89).
+1. ~~O verde não bate.~~ Resolvido na ECOS-17: `#186949`, igual ao Figma (decisão
+   #89), hoje em `primary.main` no tema do MUI.
 2. ~~O protótipo é só desktop.~~ Resolvido na ECOS-8: as três opções de layout mobile
    estão na seção `104:483` do Figma, e a escolhida é a A (frame `104:20`, decisão
    #92).
 3. **Tokens não existem no Figma.** Nenhuma variável está definida no arquivo, então
-   a fonte da verdade dos tokens vai ser o CSS do `apps/web`, não o Figma. Ao
+   a fonte da verdade dos tokens é o tema do MUI em `apps/web`, não o Figma. Ao
    importar uma tela, extrair os valores e nomeá-los no código.
 4. ~~Tagline em aberto.~~ Definida na ECOS-17: "Cuidando de quem cuida." (decisão
    #90). O texto da sidebar do protótipo da agenda precisa ser trocado no Figma.
@@ -754,6 +781,9 @@ os frames de criação e edição de compromisso.
   assim é mantido. Salvar é o compromisso e depois os
   participantes, um a um (`EventFormSaver`), porque a API os mantém em rotas próprias.
   O desenho foi validado num protótipo HTML antes do código.
+- **ECOS-38 implementada em 01/11/2026**: Material UI como único sistema de estilo do `apps/web`,
+  sem arquivo CSS, com tema próprio e date picker nos campos de data do compromisso. As telas
+  deixam de seguir o Figma ao pixel (#122).
 - **Deploy de homologação no ar em 01/10/2026**: Neon + Render + Vercel, plano gratuito
   (decisões #100 a #103).
 - Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-9, com ECOS-11 e
@@ -780,9 +810,13 @@ os frames de criação e edição de compromisso.
   - ECOS-23: visões Semana e Dia da agenda — ✅ implementada
   - ECOS-30: telas de cadastro (pessoas, casas e acessos) — ✅ implementada
   - ECOS-32: envio da agenda pelo WhatsApp (fase 1, manual) — ✅ implementada
+  - ECOS-38: Material UI como sistema de estilo — ✅ implementada
 
 ## Pendências que afetam o desenvolvimento
 
+- **O JavaScript do web ficou grande**: 1,26 MB (364 kB com gzip) depois do Material UI, e o Vite
+  avisa do tamanho. Para um sistema pensado para celular, a saída provável é carregar os dialogs
+  e o date picker sob demanda.
 - **A mensagem de agenda só sai completa com tudo cadastrado.** As idas e voltas da
   escola são a maior parte da mensagem real da associação, e a agenda não tem compromisso
   recorrente: cada trajeto teria de ser lançado todo dia. Também não há hora de saída

@@ -1,6 +1,5 @@
-import { useId } from 'react';
+import { TablePagination } from '@mui/material';
 
-import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from './icons.js';
 import { PAGE_SIZES, type PageSize, type PageWindow } from './pagination.js';
 
 interface PagerProps {
@@ -21,62 +20,30 @@ export function Pager({
   onChangePage,
   onChangePageSize,
 }: PagerProps): React.JSX.Element {
-  const sizeId = useId();
-
   return (
-    <nav className="pager" aria-label="Paginação">
-      <p className="pager__range">
-        {window.total === 0
-          ? 'Nenhum resultado'
-          : `${String(window.firstPosition)}–${String(window.lastPosition)} de ${String(window.total)}`}
-      </p>
-      <div className="pager__size">
-        <label htmlFor={sizeId}>Por página</label>
-        <div className="form-select form-select--compact">
-          <select
-            id={sizeId}
-            value={pageSize}
-            onChange={(changeEvent) => {
-              const size = Number(changeEvent.target.value);
-              if (isPageSize(size)) onChangePageSize(size);
-            }}
-          >
-            {PAGE_SIZES.map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
-          <ChevronDownIcon />
-        </div>
-      </div>
-      <div className="pager__steps">
-        <button
-          className="icon-button"
-          type="button"
-          aria-label="Página anterior"
-          disabled={window.page === 1}
-          onClick={() => {
-            onChangePage(window.page - 1);
-          }}
-        >
-          <ChevronLeftIcon />
-        </button>
-        <span>
-          Página {window.page} de {window.pageCount}
-        </span>
-        <button
-          className="icon-button"
-          type="button"
-          aria-label="Próxima página"
-          disabled={window.page === window.pageCount}
-          onClick={() => {
-            onChangePage(window.page + 1);
-          }}
-        >
-          <ChevronRightIcon />
-        </button>
-      </div>
-    </nav>
+    <TablePagination
+      component="nav"
+      aria-label="Paginação"
+      count={window.total}
+      // MUI counts pages from zero; PageWindow, from one.
+      page={window.page - 1}
+      rowsPerPage={pageSize}
+      rowsPerPageOptions={[...PAGE_SIZES]}
+      labelRowsPerPage="Por página"
+      labelDisplayedRows={({ from, to, count }) =>
+        count === 0 ? 'Nenhum resultado' : `${String(from)}–${String(to)} de ${String(count)}`
+      }
+      getItemAriaLabel={(direction) =>
+        direction === 'previous' ? 'Página anterior' : 'Próxima página'
+      }
+      slotProps={{ select: { native: true, inputProps: { 'aria-label': 'Por página' } } }}
+      onPageChange={(_clickEvent, zeroBasedPage) => {
+        onChangePage(zeroBasedPage + 1);
+      }}
+      onRowsPerPageChange={(changeEvent) => {
+        const size = Number(changeEvent.target.value);
+        if (isPageSize(size)) onChangePageSize(size);
+      }}
+    />
   );
 }

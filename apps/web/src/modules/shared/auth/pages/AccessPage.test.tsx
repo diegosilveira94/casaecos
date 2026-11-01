@@ -65,7 +65,7 @@ describe('AccessPage', () => {
   it('lista quem acessa, com papel e "Nunca entrou"', async () => {
     renderSettingsPage(<AccessPage />);
 
-    const row = (await screen.findByText('Juliana Alves')).closest('.record-row')!;
+    const row = (await screen.findByText('Juliana Alves')).closest('li')!;
     expect(within(row as HTMLElement).getByText('Cuidador/Monitor')).toBeInTheDocument();
     expect(within(row as HTMLElement).getAllByText(/Nunca entrou/).length).toBeGreaterThan(0);
   });

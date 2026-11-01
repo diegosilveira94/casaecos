@@ -1,11 +1,10 @@
+import { Alert, Button, Stack, Typography } from '@mui/material';
 import { useEffect, useState, type SyntheticEvent } from 'react';
 
 import type { UserAccountListItemResponse } from '@casaecos/shared-types';
 
 import { ApiRequestError } from '../../../../shared/http/api-request-error.js';
 import { Dialog } from '../../../../shared/ui/Dialog.js';
-import { fieldErrorProps } from '../../../../shared/ui/field-error-props.js';
-import { FormField } from '../../../../shared/ui/FormField.js';
 import { FormSelect } from '../../../../shared/ui/FormSelect.js';
 import { authService } from '../services/auth-service.js';
 import { PasswordInput } from './PasswordInput.js';
@@ -44,29 +43,6 @@ function validateNewPassword(values: PasswordValues): PasswordErrors {
     errors.confirmation = 'As senhas não coincidem.';
   }
   return errors;
-}
-
-function SubmissionMessage({ kind, children }: { kind: 'error' | 'success'; children: string }) {
-  return (
-    <div
-      className={`form-message form-message--${kind}`}
-      role={kind === 'error' ? 'alert' : 'status'}
-    >
-      <span aria-hidden="true">{kind === 'error' ? '!' : '✓'}</span>
-      <p>{children}</p>
-    </div>
-  );
-}
-
-function SuccessContent({ message, onClose }: { message: string; onClose: () => void }) {
-  return (
-    <div className="password-success">
-      <SubmissionMessage kind="success">{message}</SubmissionMessage>
-      <button className="primary-button" type="button" onClick={onClose}>
-        Concluir
-      </button>
-    </div>
-  );
 }
 
 export function ResetPasswordDialog({ onClose }: DialogProps): React.JSX.Element {
@@ -118,59 +94,78 @@ export function ResetPasswordDialog({ onClose }: DialogProps): React.JSX.Element
   return (
     <Dialog
       title="Redefinir senha"
-      className="dialog__panel--password"
       onClose={isSaving ? () => undefined : onClose}
+      {...(success ? {} : { onSubmit: (event) => void submit(event) })}
+      actions={
+        success ? (
+          <Button variant="contained" onClick={onClose}>
+            Concluir
+          </Button>
+        ) : (
+          <>
+            {failure ? (
+              <Alert severity="error" sx={{ width: '100%' }}>
+                {failure}
+              </Alert>
+            ) : null}
+            <Button color="inherit" disabled={isSaving} onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              loading={isSaving}
+              loadingPosition="start"
+              disabled={accounts === null || accounts.length === 0}
+            >
+              {isSaving ? 'Salvando...' : 'Redefinir senha'}
+            </Button>
+          </>
+        )
+      }
     >
       {success ? (
-        <SuccessContent message={success} onClose={onClose} />
+        <Alert severity="success" role="status">
+          {success}
+        </Alert>
       ) : (
-        <form className="password-form" onSubmit={(event) => void submit(event)} noValidate>
-          <p className="password-form__intro">
+        <Stack spacing={2}>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             Defina uma nova senha para alguém que possui acesso ao sistema.
-          </p>
-          {accountsFailure ? (
-            <SubmissionMessage kind="error">{accountsFailure}</SubmissionMessage>
-          ) : null}
-          <FormField id="account-person" label="Pessoa" isRequired error={personError}>
-            <FormSelect
-              id="account-person"
-              name="personId"
-              value={personId}
-              showsPrompt={!personId}
-              onChange={(event) => {
-                setPersonId(event.target.value);
-              }}
-              disabled={accounts === null || accounts.length === 0 || isSaving}
-              {...fieldErrorProps('account-person', personError)}
-            >
-              <option value="">
-                {accounts === null
-                  ? 'Carregando pessoas...'
-                  : accounts.length === 0
-                    ? 'Nenhuma credencial cadastrada'
-                    : 'Escolha uma pessoa'}
+          </Typography>
+          {accountsFailure ? <Alert severity="error">{accountsFailure}</Alert> : null}
+          <FormSelect
+            label="Pessoa"
+            required
+            name="personId"
+            error={personError !== undefined}
+            helperText={personError}
+            value={personId}
+            onChange={(event) => {
+              setPersonId(event.target.value);
+            }}
+            disabled={accounts === null || accounts.length === 0 || isSaving}
+          >
+            <option value="">
+              {accounts === null
+                ? 'Carregando pessoas...'
+                : accounts.length === 0
+                  ? 'Nenhuma credencial cadastrada'
+                  : 'Escolha uma pessoa'}
+            </option>
+            {accounts?.map((account) => (
+              <option key={account.person.id} value={account.person.id}>
+                {account.person.name} — {account.email}
               </option>
-              {accounts?.map((account) => (
-                <option key={account.person.id} value={account.person.id}>
-                  {account.person.name} — {account.email}
-                </option>
-              ))}
-            </FormSelect>
-          </FormField>
+            ))}
+          </FormSelect>
           <NewPasswordFields
             values={values}
             errors={errors}
             disabled={isSaving || accounts === null || accounts.length === 0}
             onChange={setValues}
           />
-          {failure ? <SubmissionMessage kind="error">{failure}</SubmissionMessage> : null}
-          <PasswordActions
-            isSaving={isSaving}
-            isDisabled={accounts === null || accounts.length === 0}
-            onCancel={onClose}
-            label="Redefinir senha"
-          />
-        </form>
+        </Stack>
       )}
     </Dialog>
   );
@@ -186,72 +181,32 @@ interface NewPasswordFieldsProps {
 function NewPasswordFields({ values, errors, disabled, onChange }: NewPasswordFieldsProps) {
   return (
     <>
-      <FormField
-        id="new-password"
+      <PasswordInput
         label="Nova senha"
-        isRequired
-        error={errors.password}
-        hint="Mínimo de 8 caracteres"
-      >
-        <PasswordInput
-          id="new-password"
-          name="newPassword"
-          autoComplete="new-password"
-          value={values.password}
-          onChange={(event) => {
-            onChange({ ...values, password: event.target.value });
-          }}
-          disabled={disabled}
-          {...fieldErrorProps('new-password', errors.password)}
-        />
-      </FormField>
-      <FormField
-        id="confirm-password"
+        required
+        name="newPassword"
+        autoComplete="new-password"
+        error={errors.password !== undefined}
+        helperText={errors.password ?? 'Mínimo de 8 caracteres'}
+        value={values.password}
+        onChange={(event) => {
+          onChange({ ...values, password: event.target.value });
+        }}
+        disabled={disabled}
+      />
+      <PasswordInput
         label="Confirmar nova senha"
-        isRequired
-        error={errors.confirmation}
-      >
-        <PasswordInput
-          id="confirm-password"
-          name="passwordConfirmation"
-          autoComplete="new-password"
-          value={values.confirmation}
-          onChange={(event) => {
-            onChange({ ...values, confirmation: event.target.value });
-          }}
-          disabled={disabled}
-          {...fieldErrorProps('confirm-password', errors.confirmation)}
-        />
-      </FormField>
+        required
+        name="passwordConfirmation"
+        autoComplete="new-password"
+        error={errors.confirmation !== undefined}
+        helperText={errors.confirmation}
+        value={values.confirmation}
+        onChange={(event) => {
+          onChange({ ...values, confirmation: event.target.value });
+        }}
+        disabled={disabled}
+      />
     </>
-  );
-}
-
-function PasswordActions({
-  isSaving,
-  isDisabled = false,
-  onCancel,
-  label,
-}: {
-  isSaving: boolean;
-  isDisabled?: boolean;
-  onCancel: () => void;
-  label: string;
-}) {
-  return (
-    <div className="password-form__actions">
-      <button className="outline-button" type="button" onClick={onCancel} disabled={isSaving}>
-        Cancelar
-      </button>
-      <button
-        className="primary-button"
-        type="submit"
-        disabled={isSaving || isDisabled}
-        aria-busy={isSaving}
-      >
-        {isSaving ? <span className="spinner" aria-hidden="true" /> : null}
-        {isSaving ? 'Salvando...' : label}
-      </button>
-    </div>
   );
 }

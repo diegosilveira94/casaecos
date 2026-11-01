@@ -1,6 +1,9 @@
+import { Box } from '@mui/material';
+
 import type { PersonResponse } from '@casaecos/shared-types';
 
-import { FormField } from '../../../shared/ui/FormField.js';
+import { ChoiceCard } from '../../../shared/ui/ChoiceCard.js';
+import { FieldGroup } from '../../../shared/ui/FieldGroup.js';
 import { FormSelect } from '../../../shared/ui/FormSelect.js';
 import type { HomePeople } from '../../shared/home/hooks/use-home-people.js';
 import {
@@ -72,10 +75,9 @@ export function ParticipantsField({
 }: ParticipantsFieldProps): React.JSX.Element {
   if (homePeople.status !== 'loaded') {
     return (
-      <fieldset>
-        <legend>Pessoas envolvidas</legend>
-        <p className="form-field__hint">{STATUS_MESSAGE[homePeople.status]}</p>
-      </fieldset>
+      <FieldGroup legend="Pessoas envolvidas" hint={STATUS_MESSAGE[homePeople.status]}>
+        {null}
+      </FieldGroup>
     );
   }
 
@@ -132,71 +134,71 @@ export function ParticipantsField({
 
   return (
     <>
-      <fieldset>
-        <legend>Acolhidos</legend>
-        {sheltered.length === 0 ? (
-          <p className="form-field__hint">Nenhum acolhido vinculado a esta casa.</p>
-        ) : (
-          <div className="person-chips">
-            {sheltered.map((person) => (
-              <label key={person.id} className="person-chip">
-                <input
-                  type="checkbox"
-                  checked={participants.some(({ personId }) => personId === person.id)}
-                  disabled={isDisabled}
-                  onChange={(event) => {
-                    toggleSheltered(person, event.target.checked);
-                  }}
-                />
-                <span>{person.name}</span>
-              </label>
-            ))}
-          </div>
-        )}
-      </fieldset>
-
-      <FormField id="event-responsible" label="Responsável">
-        <FormSelect
-          id="event-responsible"
-          showsPrompt={!responsible}
-          value={responsible?.personId ?? NOBODY}
-          disabled={isDisabled}
-          onChange={(event) => {
-            assign(
-              responsible,
-              PARTICIPATION_TYPE_IDS.responsible,
-              responsibleOptions,
-              event.target.value,
-            );
+      <FieldGroup
+        legend="Acolhidos"
+        hint={sheltered.length === 0 ? 'Nenhum acolhido vinculado a esta casa.' : undefined}
+      >
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 1,
+            gridTemplateColumns: {
+              xs: 'repeat(2, minmax(0, 1fr))',
+              md: 'repeat(3, minmax(0, 1fr))',
+            },
           }}
         >
-          <option value={NOBODY}>Ninguém</option>
-          {responsibleOptions.map(({ id, name }) => (
-            <option key={id} value={id}>
-              {name}
-            </option>
+          {sheltered.map((person) => (
+            <ChoiceCard
+              key={person.id}
+              kind="checkbox"
+              label={person.name}
+              isChecked={participants.some(({ personId }) => personId === person.id)}
+              isDisabled={isDisabled}
+              onChange={(isChecked) => {
+                toggleSheltered(person, isChecked);
+              }}
+            />
           ))}
-        </FormSelect>
-      </FormField>
+        </Box>
+      </FieldGroup>
 
-      <FormField id="event-driver" label="Motorista">
-        <FormSelect
-          id="event-driver"
-          showsPrompt={!driver}
-          value={driver?.personId ?? NOBODY}
-          disabled={isDisabled}
-          onChange={(event) => {
-            assign(driver, PARTICIPATION_TYPE_IDS.driver, driverOptions, event.target.value);
-          }}
-        >
-          <option value={NOBODY}>Sem motorista</option>
-          {driverOptions.map(({ id, name }) => (
-            <option key={id} value={id}>
-              {name}
-            </option>
-          ))}
-        </FormSelect>
-      </FormField>
+      <FormSelect
+        label="Responsável"
+        value={responsible?.personId ?? NOBODY}
+        disabled={isDisabled}
+        onChange={(event) => {
+          assign(
+            responsible,
+            PARTICIPATION_TYPE_IDS.responsible,
+            responsibleOptions,
+            event.target.value,
+          );
+        }}
+      >
+        <option value={NOBODY}>Ninguém</option>
+        {responsibleOptions.map(({ id, name }) => (
+          <option key={id} value={id}>
+            {name}
+          </option>
+        ))}
+      </FormSelect>
+
+      <FormSelect
+        label="Motorista"
+        value={driver?.personId ?? NOBODY}
+        disabled={isDisabled}
+        onChange={(event) => {
+          assign(driver, PARTICIPATION_TYPE_IDS.driver, driverOptions, event.target.value);
+        }}
+      >
+        <option value={NOBODY}>Sem motorista</option>
+        {driverOptions.map(({ id, name }) => (
+          <option key={id} value={id}>
+            {name}
+          </option>
+        ))}
+      </FormSelect>
     </>
   );
 }

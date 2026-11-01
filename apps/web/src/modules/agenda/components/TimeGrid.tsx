@@ -1,15 +1,43 @@
+import { Box, ButtonBase, CircularProgress, Stack, Typography } from '@mui/material';
 import type { CSSProperties } from 'react';
 
 import type { EventResponse } from '@casaecos/shared-types';
 
 import { dayKey, isSameDay } from '../domain/calendar-dates.js';
 import { eventSubject, formatTimeRange } from '../domain/event-format.js';
-import { eventToneClassName } from '../domain/event-tone.js';
+import { eventColors } from '../domain/event-tone.js';
 
 const DEFAULT_START_HOUR = 7;
 const DEFAULT_END_HOUR = 20;
 const HOUR_HEIGHT = 64;
 const MIN_EVENT_HEIGHT = 34;
+
+const HOURS_COLUMN = '4.25rem';
+const NOTICE_SX = {
+  position: 'absolute',
+  top: '7.5rem',
+  left: '50%',
+  zIndex: 2,
+  px: 1.75,
+  py: 1.25,
+  borderRadius: 2,
+  bgcolor: 'background.paper',
+  color: 'text.secondary',
+  fontSize: '0.85rem',
+  transform: 'translateX(-50%)',
+};
+const DAY_HEADING_SX = {
+  display: 'grid',
+  justifyItems: 'center',
+  gap: 0.25,
+  minHeight: '4.25rem',
+  px: 0.5,
+  py: 1,
+  color: 'text.secondary',
+  borderLeft: 1,
+  borderColor: 'divider',
+};
+const EVENT_LINE_SX = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
 
 const weekdayFormat = new Intl.DateTimeFormat('pt-BR', { weekday: 'short' });
 
@@ -71,95 +99,191 @@ export function TimeGrid({
   onOpenEvent,
   onShowDay,
 }: TimeGridProps): React.JSX.Element {
+  const isDayView = days.length === 1;
   const events = days.flatMap((day) => eventsByDay.get(dayKey(day)) ?? []);
   const { startHour, endHour } = visibleHours(events);
   const hourCount = endHour - startHour;
   const hours = Array.from({ length: hourCount + 1 }, (_, offset) => startHour + offset);
-  const style = {
-    '--time-grid-days': String(days.length),
-    '--time-grid-hours': String(hourCount),
-    '--time-grid-height': `${String(hourCount * HOUR_HEIGHT)}px`,
-  } as CSSProperties;
+  const gridHeight = `${String(hourCount * HOUR_HEIGHT)}px`;
+  const minGridWidth = `calc(${HOURS_COLUMN} + ${String(days.length)} * 5rem)`;
 
   return (
-    <div
-      className={`time-grid ${days.length === 1 ? 'time-grid--day' : 'time-grid--week'}`}
+    <Box
       aria-busy={isLoading}
+      sx={{ position: 'relative', minWidth: 0, opacity: isLoading ? 0.65 : 1 }}
     >
-      <div className="time-grid__scroll" role="group" aria-label={label}>
-        <div className="time-grid__header" style={style}>
+      <Box role="group" aria-label={label} sx={{ maxHeight: '39rem', overflow: 'auto' }}>
+        <Box
+          sx={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 3,
+            display: 'grid',
+            gridTemplateColumns: `${HOURS_COLUMN} repeat(${String(days.length)}, minmax(5rem, 1fr))`,
+            minWidth: minGridWidth,
+            bgcolor: 'background.paper',
+            borderBottom: 1,
+            borderColor: 'divider',
+          }}
+        >
           <span aria-hidden="true" />
           {days.map((day) => {
-            const className = `time-grid__day-heading${isSameDay(day, today) ? ' is-today' : ''}`;
+            const isToday = isSameDay(day, today);
             const content = (
               <>
-                <span>{weekdayFormat.format(day).replace('.', '')}</span>
-                <strong>{day.getDate()}</strong>
+                <Typography component="span" variant="caption" sx={{ textTransform: 'uppercase' }}>
+                  {weekdayFormat.format(day).replace('.', '')}
+                </Typography>
+                <Box
+                  component="strong"
+                  sx={{
+                    display: 'grid',
+                    placeItems: 'center',
+                    width: 32,
+                    height: 32,
+                    borderRadius: '50%',
+                    bgcolor: isToday ? 'primary.main' : 'transparent',
+                    color: isToday ? 'common.white' : 'text.primary',
+                  }}
+                >
+                  {day.getDate()}
+                </Box>
               </>
             );
 
             return onShowDay ? (
-              <button
-                className={className}
+              <ButtonBase
                 key={dayKey(day)}
-                type="button"
                 aria-label={`Ver dia ${String(day.getDate())}`}
                 onClick={() => {
                   onShowDay(day);
                 }}
+                sx={{ ...DAY_HEADING_SX, '&:hover': { bgcolor: 'action.hover' } }}
               >
                 {content}
-              </button>
+              </ButtonBase>
             ) : (
-              <div className={className} key={dayKey(day)}>
+              <Box key={dayKey(day)} sx={DAY_HEADING_SX}>
                 {content}
-              </div>
+              </Box>
             );
           })}
-        </div>
+        </Box>
 
-        <div className="time-grid__body" style={style}>
-          <div className="time-grid__hours" aria-hidden="true">
-            {hours.map((hour) => (
-              <span key={hour} style={{ top: `${String((hour - startHour) * HOUR_HEIGHT)}px` }}>
+        <Box
+          sx={{
+            position: 'relative',
+            display: 'grid',
+            gridTemplateColumns: `${HOURS_COLUMN} minmax(0, 1fr)`,
+            height: gridHeight,
+            minWidth: minGridWidth,
+          }}
+        >
+          <Box
+            aria-hidden="true"
+            sx={{ position: 'relative', borderRight: 1, borderColor: 'divider' }}
+          >
+            {hours.map((hour, position) => (
+              <Typography
+                key={hour}
+                component="span"
+                variant="caption"
+                sx={{
+                  color: 'text.secondary',
+                  position: 'absolute',
+                  right: '0.65rem',
+                  top: `${String((hour - startHour) * HOUR_HEIGHT)}px`,
+                  transform: position === 0 ? 'translateY(0.2rem)' : 'translateY(-50%)',
+                }}
+              >
                 {String(hour).padStart(2, '0')}:00
-              </span>
+              </Typography>
             ))}
-          </div>
-          <div className="time-grid__columns">
+          </Box>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${String(days.length)}, minmax(0, 1fr))`,
+            }}
+          >
             {days.map((day) => (
-              <div className="time-grid__day" key={dayKey(day)}>
+              <Box
+                key={dayKey(day)}
+                sx={{
+                  position: 'relative',
+                  display: 'grid',
+                  gridTemplateRows: `repeat(${String(hourCount)}, ${String(HOUR_HEIGHT)}px)`,
+                  height: gridHeight,
+                  '&:not(:first-of-type)': { borderLeft: 1, borderColor: 'divider' },
+                }}
+              >
                 {hours.slice(0, -1).map((hour) => (
-                  <span className="time-grid__hour-line" key={hour} aria-hidden="true" />
+                  <Box
+                    key={hour}
+                    component="span"
+                    aria-hidden="true"
+                    sx={{ borderTop: 1, borderColor: 'divider' }}
+                  />
                 ))}
-                {(eventsByDay.get(dayKey(day)) ?? []).map((event) => (
-                  <button
-                    className={`time-grid__event ${eventToneClassName(event.eventType.id)}`}
-                    key={event.id}
-                    type="button"
-                    style={eventStyle(event, startHour, endHour)}
-                    onClick={() => {
-                      onOpenEvent(event);
-                    }}
-                  >
-                    <span>{formatTimeRange(event)}</span>
-                    <strong>{event.title}</strong>
-                    <small>{eventSubject(event)}</small>
-                  </button>
-                ))}
-              </div>
+                {(eventsByDay.get(dayKey(day)) ?? []).map((event) => {
+                  const { color, tint } = eventColors(event.eventType.id);
+                  return (
+                    <ButtonBase
+                      key={event.id}
+                      style={eventStyle(event, startHour, endHour)}
+                      onClick={() => {
+                        onOpenEvent(event);
+                      }}
+                      sx={{
+                        position: 'absolute',
+                        zIndex: 1,
+                        left: isDayView ? 8 : 3,
+                        right: isDayView ? 16 : 3,
+                        display: 'grid',
+                        alignContent: 'start',
+                        justifyItems: 'start',
+                        minHeight: 34,
+                        overflow: 'hidden',
+                        px: isDayView ? 1.25 : 0.75,
+                        py: 0.5,
+                        bgcolor: tint,
+                        borderLeft: 3,
+                        borderColor: color,
+                        borderRadius: 1,
+                        fontSize: isDayView ? '0.78rem' : '0.68rem',
+                        lineHeight: 1.25,
+                        textAlign: 'left',
+                        '& > *': { ...EVENT_LINE_SX, maxWidth: '100%' },
+                      }}
+                    >
+                      <span>{formatTimeRange(event)}</span>
+                      <Box component="strong" sx={{ fontSize: isDayView ? '0.88rem' : '0.74rem' }}>
+                        {event.title}
+                      </Box>
+                      <Box component="small" sx={{ color: 'text.secondary', fontSize: '0.66rem' }}>
+                        {eventSubject(event)}
+                      </Box>
+                    </ButtonBase>
+                  );
+                })}
+              </Box>
             ))}
-          </div>
-        </div>
-      </div>
+          </Box>
+        </Box>
+      </Box>
       {isLoading ? (
-        <p className="time-grid__empty" role="status">
-          <span className="spinner spinner--primary spinner--small" aria-hidden="true" />
-          Carregando compromissos...
-        </p>
+        <Stack
+          direction="row"
+          role="status"
+          spacing={1}
+          sx={{ ...NOTICE_SX, alignItems: 'center', whiteSpace: 'nowrap' }}
+        >
+          <CircularProgress size={16} aria-hidden="true" />
+          <span>Carregando compromissos...</span>
+        </Stack>
       ) : events.length === 0 && !hasError ? (
-        <p className="time-grid__empty">Nenhum compromisso neste período.</p>
+        <Box sx={NOTICE_SX}>Nenhum compromisso neste período.</Box>
       ) : null}
-    </div>
+    </Box>
   );
 }

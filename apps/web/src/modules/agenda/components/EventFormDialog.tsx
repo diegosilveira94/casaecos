@@ -1,3 +1,4 @@
+import { Box, Button, Checkbox, FormControlLabel, Stack, TextField } from '@mui/material';
 import { useState, type SyntheticEvent } from 'react';
 
 import type { EventResponse, EventTypeResponse } from '@casaecos/shared-types';
@@ -5,8 +6,8 @@ import type { EventResponse, EventTypeResponse } from '@casaecos/shared-types';
 import { ApiRequestError } from '../../../shared/http/api-request-error.js';
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog.js';
 import { Dialog } from '../../../shared/ui/Dialog.js';
-import { fieldErrorProps } from '../../../shared/ui/field-error-props.js';
-import { FormField } from '../../../shared/ui/FormField.js';
+import { AlertMessage } from '../../../shared/ui/AlertMessage.js';
+import { FormDatePicker } from '../../../shared/ui/FormDatePicker.js';
 import { FormSelect } from '../../../shared/ui/FormSelect.js';
 import { useHomeSelection } from '../../shared/home/context/use-home-selection.js';
 import { useHomePeople } from '../../shared/home/hooks/use-home-people.js';
@@ -55,9 +56,6 @@ interface PendingHomeChange {
   leaving: EventFormParticipant[];
   removesSheltered: boolean;
 }
-
-// A second dialog is on top and answers Escape and the backdrop itself.
-const ignoreClose = (): void => undefined;
 
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof ApiRequestError ? error.message : fallback;
@@ -187,31 +185,49 @@ export function EventFormDialog({
     <>
       <Dialog
         title={isEditing ? 'Editar compromisso' : 'Novo compromisso'}
-        className="dialog__panel--form"
-        onClose={confirmation === null && pendingHomeChange === null ? requestClose : ignoreClose}
+        onClose={requestClose}
+        onSubmit={(submitEvent) => {
+          void save(submitEvent);
+        }}
+        actions={
+          <>
+            {failure === null ? null : <AlertMessage>{failure}</AlertMessage>}
+            {isEditing ? (
+              <Button
+                sx={{ mr: 'auto' }}
+                color="error"
+                variant="contained"
+                disabled={isSaving}
+                onClick={() => {
+                  setConfirmation('delete');
+                }}
+              >
+                Excluir
+              </Button>
+            ) : null}
+            <Button color="inherit" disabled={isSaving} onClick={requestClose}>
+              Cancelar
+            </Button>
+            <Button type="submit" variant="contained" loading={isSaving} loadingPosition="start">
+              {isSaving ? 'Salvando...' : isEditing ? 'Salvar alterações' : 'Salvar compromisso'}
+            </Button>
+          </>
+        }
       >
-        <form
-          className="event-form"
-          noValidate
-          onSubmit={(submitEvent) => {
-            void save(submitEvent);
-          }}
-        >
-          <FormField id="event-title" label="Título" isRequired error={errors.title}>
-            <input
-              id="event-title"
-              type="text"
-              maxLength={EVENT_TITLE_MAX_LENGTH}
-              placeholder="Ex.: Consulta pediátrica"
-              value={values.title}
-              disabled={isSaving}
-              required
-              onChange={(inputEvent) => {
-                change({ title: inputEvent.target.value });
-              }}
-              {...fieldErrorProps('event-title', errors.title)}
-            />
-          </FormField>
+        <Stack spacing={2.5}>
+          <TextField
+            label="Título"
+            required
+            error={errors.title !== undefined}
+            helperText={errors.title}
+            placeholder="Ex.: Consulta pediátrica"
+            value={values.title}
+            disabled={isSaving}
+            slotProps={{ htmlInput: { maxLength: EVENT_TITLE_MAX_LENGTH } }}
+            onChange={(inputEvent) => {
+              change({ title: inputEvent.target.value });
+            }}
+          />
 
           <EventTypePicker
             eventTypes={eventTypes}
@@ -224,137 +240,116 @@ export function EventFormDialog({
           />
 
           <div>
-            <div
-              className={
-                values.endsOnAnotherDay
-                  ? 'event-form__row event-form__row--pairs'
-                  : 'event-form__row'
-              }
+            <Box
+              sx={{
+                display: 'grid',
+                gap: '1rem 0.75rem',
+                alignItems: 'start',
+                gridTemplateColumns: {
+                  xs: 'repeat(2, minmax(0, 1fr))',
+                  md: values.endsOnAnotherDay
+                    ? 'repeat(2, minmax(0, 1fr))'
+                    : 'minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr)',
+                },
+              }}
             >
-              <FormField
-                id="event-start-day"
+              <FormDatePicker
                 label="Data"
                 isRequired
+                value={values.startDay}
                 error={errors.startDay}
-                className={values.endsOnAnotherDay ? '' : 'form-field--wide'}
-              >
-                <input
-                  id="event-start-day"
-                  type="date"
-                  value={values.startDay}
-                  disabled={isSaving}
-                  required
-                  onChange={(inputEvent) => {
-                    change({ startDay: inputEvent.target.value });
-                  }}
-                  {...fieldErrorProps('event-start-day', errors.startDay)}
-                />
-              </FormField>
-              <FormField id="event-start-time" label="Início" isRequired error={errors.startTime}>
-                <input
-                  id="event-start-time"
-                  type="time"
-                  value={values.startTime}
-                  disabled={isSaving}
-                  required
-                  onChange={(inputEvent) => {
-                    change({ startTime: inputEvent.target.value });
-                  }}
-                  {...fieldErrorProps('event-start-time', errors.startTime)}
-                />
-              </FormField>
-              {values.endsOnAnotherDay ? (
-                <FormField
-                  id="event-end-day"
-                  label="Data de término"
-                  isRequired
-                  error={errors.endDay}
-                >
-                  <input
-                    id="event-end-day"
-                    type="date"
-                    min={values.startDay}
-                    value={values.endDay}
-                    disabled={isSaving}
-                    required
-                    onChange={(inputEvent) => {
-                      change({ endDay: inputEvent.target.value });
-                    }}
-                    {...fieldErrorProps('event-end-day', errors.endDay)}
-                  />
-                </FormField>
-              ) : null}
-              <FormField
-                id="event-end-time"
-                label="Término"
-                isRequired={values.endsOnAnotherDay}
-                error={errors.endTime}
-              >
-                <input
-                  id="event-end-time"
-                  type="time"
-                  value={values.endTime}
-                  disabled={isSaving}
-                  required={values.endsOnAnotherDay}
-                  onChange={(inputEvent) => {
-                    change({ endTime: inputEvent.target.value });
-                  }}
-                  {...fieldErrorProps('event-end-time', errors.endTime)}
-                />
-              </FormField>
-            </div>
-            <label className="event-form__checkbox">
-              <input
-                type="checkbox"
-                checked={values.endsOnAnotherDay}
-                disabled={isSaving}
-                onChange={(inputEvent) => {
-                  const endsOnAnotherDay = inputEvent.target.checked;
-                  change({
-                    endsOnAnotherDay,
-                    endDay: endsOnAnotherDay ? values.endDay || values.startDay : '',
-                  });
+                isDisabled={isSaving}
+                isWideOnPhone={!values.endsOnAnotherDay}
+                onChange={(startDay) => {
+                  change({ startDay });
                 }}
               />
-              Termina em outro dia
-            </label>
+              <TextField
+                label="Início"
+                type="time"
+                required
+                error={errors.startTime !== undefined}
+                helperText={errors.startTime}
+                value={values.startTime}
+                disabled={isSaving}
+                onChange={(inputEvent) => {
+                  change({ startTime: inputEvent.target.value });
+                }}
+              />
+              {values.endsOnAnotherDay ? (
+                <FormDatePicker
+                  label="Data de término"
+                  isRequired
+                  minDay={values.startDay}
+                  value={values.endDay}
+                  error={errors.endDay}
+                  isDisabled={isSaving}
+                  onChange={(endDay) => {
+                    change({ endDay });
+                  }}
+                />
+              ) : null}
+              <TextField
+                label="Término"
+                type="time"
+                required={values.endsOnAnotherDay}
+                error={errors.endTime !== undefined}
+                helperText={errors.endTime}
+                value={values.endTime}
+                disabled={isSaving}
+                onChange={(inputEvent) => {
+                  change({ endTime: inputEvent.target.value });
+                }}
+              />
+            </Box>
+            <FormControlLabel
+              label="Termina em outro dia"
+              control={
+                <Checkbox
+                  checked={values.endsOnAnotherDay}
+                  disabled={isSaving}
+                  onChange={(inputEvent) => {
+                    const endsOnAnotherDay = inputEvent.target.checked;
+                    change({
+                      endsOnAnotherDay,
+                      endDay: endsOnAnotherDay ? values.endDay || values.startDay : '',
+                    });
+                  }}
+                />
+              }
+            />
           </div>
 
-          <FormField id="event-home" label="Casa" isRequired error={errors.homeId}>
-            <FormSelect
-              id="event-home"
-              showsPrompt={values.homeId === null}
-              value={values.homeId ?? NO_HOME}
-              disabled={isSaving || isCheckingHome}
-              required
-              onChange={(selectEvent) => {
-                const { value } = selectEvent.target;
-                void changeHome(value === NO_HOME ? null : Number(value));
-              }}
-              {...fieldErrorProps('event-home', errors.homeId)}
-            >
-              <option value={NO_HOME}>Escolha a casa</option>
-              {homeOptions.map((home) => (
-                <option key={home.id} value={home.id}>
-                  {home.name}
-                </option>
-              ))}
-            </FormSelect>
-          </FormField>
+          <FormSelect
+            label="Casa"
+            required
+            error={errors.homeId !== undefined}
+            helperText={errors.homeId}
+            value={values.homeId ?? NO_HOME}
+            disabled={isSaving || isCheckingHome}
+            onChange={(selectEvent) => {
+              const { value } = selectEvent.target;
+              void changeHome(value === NO_HOME ? null : Number(value));
+            }}
+          >
+            <option value={NO_HOME}>Escolha a casa</option>
+            {homeOptions.map((home) => (
+              <option key={home.id} value={home.id}>
+                {home.name}
+              </option>
+            ))}
+          </FormSelect>
 
-          <FormField id="event-address" label="Endereço">
-            <input
-              id="event-address"
-              type="text"
-              maxLength={EVENT_ADDRESS_MAX_LENGTH}
-              placeholder="Ex.: UBS Paranaguamirim"
-              value={values.address}
-              disabled={isSaving}
-              onChange={(inputEvent) => {
-                change({ address: inputEvent.target.value });
-              }}
-            />
-          </FormField>
+          <TextField
+            label="Endereço"
+            placeholder="Ex.: UBS Paranaguamirim"
+            value={values.address}
+            disabled={isSaving}
+            slotProps={{ htmlInput: { maxLength: EVENT_ADDRESS_MAX_LENGTH } }}
+            onChange={(inputEvent) => {
+              change({ address: inputEvent.target.value });
+            }}
+          />
 
           <ParticipantsField
             homePeople={homePeople}
@@ -366,64 +361,20 @@ export function EventFormDialog({
             }}
           />
 
-          <FormField
-            id="event-description"
+          <TextField
             label="Descrição"
-            hint={`${String(values.description.length)}/${String(EVENT_DESCRIPTION_MAX_LENGTH)}`}
-          >
-            <textarea
-              id="event-description"
-              rows={3}
-              maxLength={EVENT_DESCRIPTION_MAX_LENGTH}
-              placeholder="Ex.: Levar a carteirinha de vacinação."
-              value={values.description}
-              disabled={isSaving}
-              onChange={(inputEvent) => {
-                change({ description: inputEvent.target.value });
-              }}
-            />
-          </FormField>
-
-          <footer className="dialog__footer">
-            {failure === null ? null : (
-              <div className="login-error" role="alert">
-                <span aria-hidden="true">!</span>
-                <p>{failure}</p>
-              </div>
-            )}
-            <div className="dialog__actions">
-              {isEditing ? (
-                <button
-                  className="outline-button outline-button--danger dialog__delete"
-                  type="button"
-                  disabled={isSaving}
-                  onClick={() => {
-                    setConfirmation('delete');
-                  }}
-                >
-                  Excluir
-                </button>
-              ) : null}
-              <button
-                className="outline-button"
-                type="button"
-                disabled={isSaving}
-                onClick={requestClose}
-              >
-                Cancelar
-              </button>
-              <button
-                className="primary-button"
-                type="submit"
-                disabled={isSaving}
-                aria-busy={isSaving}
-              >
-                {isSaving ? <span className="spinner" aria-hidden="true" /> : null}
-                {isSaving ? 'Salvando...' : isEditing ? 'Salvar alterações' : 'Salvar compromisso'}
-              </button>
-            </div>
-          </footer>
-        </form>
+            multiline
+            rows={3}
+            helperText={`${String(values.description.length)}/${String(EVENT_DESCRIPTION_MAX_LENGTH)}`}
+            placeholder="Ex.: Levar a carteirinha de vacinação."
+            value={values.description}
+            disabled={isSaving}
+            slotProps={{ htmlInput: { maxLength: EVENT_DESCRIPTION_MAX_LENGTH } }}
+            onChange={(inputEvent) => {
+              change({ description: inputEvent.target.value });
+            }}
+          />
+        </Stack>
       </Dialog>
 
       {confirmation === 'discard' ? (

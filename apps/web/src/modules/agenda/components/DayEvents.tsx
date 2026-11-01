@@ -1,9 +1,13 @@
+import { Box } from '@mui/material';
+
 import type { EventResponse } from '@casaecos/shared-types';
 
+import { LoadError } from '../../../shared/ui/LoadError.js';
+import { LoadingStatus } from '../../../shared/ui/LoadingStatus.js';
 import { formatDayHeading } from '../domain/event-format.js';
 import type { AgendaEvents } from '../hooks/use-agenda-events.js';
+import { DayHeading } from './DayHeading.js';
 import { EventCardList } from './EventCardList.js';
-import { MonthLoadError } from './MonthLoadError.js';
 
 interface DayEventsProps {
   day: Date;
@@ -14,10 +18,6 @@ interface DayEventsProps {
   onOpenEvent: (event: EventResponse) => void;
 }
 
-function eventCountLabel(count: number): string {
-  return `${String(count)} ${count === 1 ? 'compromisso' : 'compromissos'}`;
-}
-
 function DayEventsBody({
   agendaEvents,
   dayEvents,
@@ -25,16 +25,11 @@ function DayEventsBody({
   onOpenEvent,
 }: Omit<DayEventsProps, 'day' | 'today'>): React.JSX.Element {
   if (agendaEvents.status === 'loading') {
-    return (
-      <p className="day-events__status" role="status">
-        <span className="spinner spinner--primary spinner--small" aria-hidden="true" />
-        Carregando compromissos...
-      </p>
-    );
+    return <LoadingStatus>Carregando compromissos...</LoadingStatus>;
   }
 
   if (agendaEvents.status === 'failed') {
-    return <MonthLoadError message={agendaEvents.message} onRetry={onRetry} />;
+    return <LoadError message={agendaEvents.message} onRetry={onRetry} />;
   }
 
   return <EventCardList events={dayEvents} onOpenEvent={onOpenEvent} />;
@@ -44,14 +39,21 @@ export function DayEvents({ day, today, ...body }: DayEventsProps): React.JSX.El
   const heading = formatDayHeading(day, today);
 
   return (
-    <section className="day-events" aria-label={`Compromissos do dia: ${heading}`}>
-      <header className="day-events__header">
-        <h2>{heading}</h2>
-        {body.agendaEvents.status === 'loaded' && body.dayEvents.length > 0 ? (
-          <span>{eventCountLabel(body.dayEvents.length)}</span>
-        ) : null}
-      </header>
+    <Box
+      component="section"
+      aria-label={`Compromissos do dia: ${heading}`}
+      sx={{ minWidth: 0, pt: 2, borderTop: 1, borderColor: 'divider' }}
+    >
+      <DayHeading
+        level="h2"
+        title={heading}
+        count={
+          body.agendaEvents.status === 'loaded' && body.dayEvents.length > 0
+            ? body.dayEvents.length
+            : undefined
+        }
+      />
       <DayEventsBody {...body} />
-    </section>
+    </Box>
   );
 }

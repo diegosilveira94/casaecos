@@ -11,6 +11,8 @@ export default defineConfig({
     port: 5173,
   },
   test: {
+    // Material UI weighs on jsdom: a long form flow takes several seconds.
+    testTimeout: 20000,
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],

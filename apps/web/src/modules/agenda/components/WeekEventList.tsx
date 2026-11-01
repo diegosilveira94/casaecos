@@ -1,10 +1,14 @@
+import { Box, Stack, Typography } from '@mui/material';
+
 import type { EventResponse } from '@casaecos/shared-types';
 
+import { LoadError } from '../../../shared/ui/LoadError.js';
+import { LoadingStatus } from '../../../shared/ui/LoadingStatus.js';
 import { dayKey } from '../domain/calendar-dates.js';
 import { formatDayHeading } from '../domain/event-format.js';
 import type { AgendaEvents } from '../hooks/use-agenda-events.js';
+import { DayHeading } from './DayHeading.js';
 import { EventCardList } from './EventCardList.js';
-import { MonthLoadError } from './MonthLoadError.js';
 
 interface WeekEventListProps {
   days: Date[];
@@ -24,39 +28,33 @@ export function WeekEventList({
   onOpenEvent,
 }: WeekEventListProps): React.JSX.Element {
   if (agendaEvents.status === 'loading') {
-    return (
-      <p className="day-events__status" role="status">
-        <span className="spinner spinner--primary spinner--small" aria-hidden="true" />
-        Carregando compromissos...
-      </p>
-    );
+    return <LoadingStatus>Carregando compromissos...</LoadingStatus>;
   }
 
   if (agendaEvents.status === 'failed') {
-    return <MonthLoadError message={agendaEvents.message} onRetry={onRetry} />;
+    return <LoadError message={agendaEvents.message} onRetry={onRetry} />;
   }
 
   const daysWithEvents = days.filter((day) => (eventsByDay.get(dayKey(day))?.length ?? 0) > 0);
   if (daysWithEvents.length === 0) {
-    return <p className="day-events__status">Nenhum compromisso nesta semana.</p>;
+    return (
+      <Typography variant="body2" sx={{ color: 'text.secondary', my: 1 }}>
+        Nenhum compromisso nesta semana.
+      </Typography>
+    );
   }
 
   return (
-    <section className="week-event-list" aria-label="Compromissos da semana">
+    <Stack component="section" aria-label="Compromissos da semana" spacing={2} sx={{ pt: 0.5 }}>
       {daysWithEvents.map((day) => {
         const events = eventsByDay.get(dayKey(day)) ?? [];
         return (
-          <section className="day-events week-event-list__day" key={dayKey(day)}>
-            <header className="day-events__header">
-              <h3>{formatDayHeading(day, today)}</h3>
-              <span>
-                {events.length} {events.length === 1 ? 'compromisso' : 'compromissos'}
-              </span>
-            </header>
+          <Box component="section" key={dayKey(day)} sx={{ minWidth: 0 }}>
+            <DayHeading level="h3" title={formatDayHeading(day, today)} count={events.length} />
             <EventCardList events={events} onOpenEvent={onOpenEvent} />
-          </section>
+          </Box>
         );
       })}
-    </section>
+    </Stack>
   );
 }

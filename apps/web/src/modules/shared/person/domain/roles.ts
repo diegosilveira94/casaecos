@@ -8,7 +8,7 @@ export const ROLE_IDS = {
   collaborator: 6,
 } as const;
 
-/** Tone classes of the CSS (`event-tone--*`), reused so a role has one color everywhere. */
+/** The color families of the event types, reused so a role has one color everywhere. */
 export type RoleTone = 'meeting' | 'therapy' | 'health' | 'school' | 'neutral' | 'activity';
 
 interface RoleGuide {

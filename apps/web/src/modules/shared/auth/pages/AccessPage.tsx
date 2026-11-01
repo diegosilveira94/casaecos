@@ -1,12 +1,29 @@
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Box,
+  Button,
+  Stack,
+  Typography,
+} from '@mui/material';
 import { useState } from 'react';
 
 import type { UserAccountListItemResponse } from '@casaecos/shared-types';
 
 import { useApiResource } from '../../../../shared/http/use-api-resource.js';
-import { PlusIcon } from '../../../../shared/ui/icons.js';
+import { ExpandIcon, PlusIcon } from '../../../../shared/ui/icons.js';
+import { LoadingStatus } from '../../../../shared/ui/LoadingStatus.js';
 import { LoadError } from '../../../../shared/ui/LoadError.js';
 import { Pager } from '../../../../shared/ui/Pager.js';
 import { PAGE_SIZES, paginate, type PageSize } from '../../../../shared/ui/pagination.js';
+import { RecordList, RecordRow } from '../../../../shared/ui/RecordList.js';
+import {
+  RECORD_ACTIONS_SX,
+  RECORD_CELL_SX,
+  RECORD_META_SX,
+  RECORD_NAME_SX,
+} from '../../../../shared/ui/record-list-sx.js';
 import { RoleLabel } from '../../person/components/RoleLabel.js';
 import { canHaveAccess, roleGuide } from '../../person/domain/roles.js';
 import { personService } from '../../person/services/person-service.js';
@@ -53,40 +70,42 @@ export function AccessPage(): React.JSX.Element {
 
   return (
     <>
-      <div className="list-toolbar list-toolbar--single">
-        <button
-          className="primary-button primary-button--compact"
-          type="button"
+      <Stack direction="row" sx={{ justifyContent: 'flex-end', mt: 2.5, mb: 2 }}>
+        <Button
+          variant="contained"
+          startIcon={<PlusIcon />}
           disabled={candidates === null}
           onClick={() => {
             setDialog({ kind: 'grant' });
           }}
         >
-          <PlusIcon />
           Dar acesso
-        </button>
-      </div>
-      <details className="permissions-help">
-        <summary>O que cada papel pode fazer</summary>
-        <ul className="permission-list">
-          {roleOptions
-            .filter((role) => canHaveAccess(role.id))
-            .map((role) => (
-              <li key={role.id}>
-                <strong>{role.description}</strong>
-                <span>{roleGuide(role.id).access}</span>
-              </li>
-            ))}
-        </ul>
-      </details>
+        </Button>
+      </Stack>
+      <Accordion disableGutters variant="outlined" sx={{ mb: 2 }}>
+        <AccordionSummary expandIcon={<ExpandIcon />}>O que cada papel pode fazer</AccordionSummary>
+        <AccordionDetails>
+          <Stack component="ul" spacing={1}>
+            {roleOptions
+              .filter((role) => canHaveAccess(role.id))
+              .map((role) => (
+                <li key={role.id}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {role.description}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    {roleGuide(role.id).access}
+                  </Typography>
+                </li>
+              ))}
+          </Stack>
+        </AccordionDetails>
+      </Accordion>
 
       {accounts.resource.status === 'failed' ? (
         <LoadError message={accounts.resource.message} onRetry={accounts.reload} />
       ) : accounts.resource.status === 'loading' ? (
-        <p className="day-events__status" role="status">
-          <span className="spinner spinner--primary spinner--small" aria-hidden="true" />
-          Carregando acessos...
-        </p>
+        <LoadingStatus>Carregando acessos...</LoadingStatus>
       ) : (
         <AccountList
           accounts={accounts.resource.data}
@@ -153,33 +172,33 @@ function AccountList({
 
   return (
     <>
-      <ul className="record-list access-columns">
-        <li className="record-list__header" aria-hidden="true">
-          <span>Nome</span>
-          <span>Papel</span>
-          <span>E-mail</span>
-          <span>Último acesso</span>
-          <span />
-        </li>
+      <RecordList
+        columns="minmax(0, 1.3fr) 10rem minmax(0, 1.5fr) 9rem 8.5rem"
+        headers={['Nome', 'Papel', 'E-mail', 'Último acesso', '']}
+      >
         {pageWindow.items.map((account) => {
           const isOwnAccount = account.person.id === ownPersonId;
           return (
             <li key={account.id}>
-              <div className="record-row">
-                <span className="record-row__name">{account.person.name}</span>
+              <RecordRow>
+                <Box component="span" sx={RECORD_NAME_SX}>
+                  {account.person.name}
+                </Box>
                 <RoleLabel role={account.role} />
-                <span className="record-row__cell--desktop">{account.email}</span>
-                <span className="record-row__cell--desktop">
+                <Box component="span" sx={RECORD_CELL_SX}>
+                  {account.email}
+                </Box>
+                <Box component="span" sx={RECORD_CELL_SX}>
                   {lastLoginText(account.lastLoginAt)}
-                </span>
-                <span className="record-row__meta">
+                </Box>
+                <Box component="span" sx={RECORD_META_SX}>
                   {account.email} · {lastLoginText(account.lastLoginAt)}
-                </span>
-                <span className="record-row__actions">
+                </Box>
+                <Box component="span" sx={RECORD_ACTIONS_SX}>
                   {/* Changing one's own role could leave the NGO without a coordinator. */}
-                  <button
-                    className="outline-button"
-                    type="button"
+                  <Button
+                    size="small"
+                    variant="outlined"
                     disabled={!canChangeRole || isOwnAccount}
                     title={
                       isOwnAccount ? 'Peça a outro coordenador para trocar o seu papel' : undefined
@@ -189,13 +208,13 @@ function AccountList({
                     }}
                   >
                     Trocar papel
-                  </button>
-                </span>
-              </div>
+                  </Button>
+                </Box>
+              </RecordRow>
             </li>
           );
         })}
-      </ul>
+      </RecordList>
       <Pager
         window={pageWindow}
         pageSize={pageSize}

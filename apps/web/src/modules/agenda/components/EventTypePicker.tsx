@@ -1,11 +1,11 @@
+import { Box, Stack } from '@mui/material';
+
 import type { EventTypeResponse } from '@casaecos/shared-types';
 
-import { fieldErrorId } from '../../../shared/ui/field-error-props.js';
-import { RequiredMark } from '../../../shared/ui/FormField.js';
-import { eventToneClassName } from '../domain/event-tone.js';
+import { ChoiceCard } from '../../../shared/ui/ChoiceCard.js';
+import { FieldGroup } from '../../../shared/ui/FieldGroup.js';
+import { eventColors } from '../domain/event-tone.js';
 import { EventTypeGlyph } from './EventTypeIcon.js';
-
-const FIELD_ID = 'event-type';
 
 interface EventTypePickerProps {
   eventTypes: EventTypeResponse[];
@@ -24,38 +24,38 @@ export function EventTypePicker({
   onChange,
 }: EventTypePickerProps): React.JSX.Element {
   return (
-    <fieldset
-      className="type-field"
-      aria-describedby={error === undefined ? undefined : fieldErrorId(FIELD_ID)}
-    >
-      <legend>
-        Tipo de compromisso
-        <RequiredMark />
-      </legend>
-      <div className={error === undefined ? 'type-picker' : 'type-picker type-picker--invalid'}>
+    <FieldGroup legend="Tipo de compromisso" isRequired error={error}>
+      <Box
+        sx={{ display: 'grid', gap: 1, gridTemplateColumns: { md: 'repeat(2, minmax(0, 1fr))' } }}
+      >
         {eventTypes.map((eventType) => (
-          <label key={eventType.id} className={`type-option ${eventToneClassName(eventType.id)}`}>
-            <input
-              className="visually-hidden"
-              type="radio"
-              name={FIELD_ID}
-              checked={eventTypeId === eventType.id}
-              disabled={isDisabled}
-              required
-              onChange={() => {
-                onChange(eventType.id);
-              }}
-            />
-            <EventTypeGlyph eventTypeId={eventType.id} />
-            {eventType.name}
-          </label>
+          <ChoiceCard
+            key={eventType.id}
+            kind="radio"
+            name="event-type"
+            checkedColors={eventColors(eventType.id)}
+            label={
+              <Stack
+                component="span"
+                direction="row"
+                sx={{
+                  alignItems: 'center',
+                  gap: 1,
+                  '& svg': { fontSize: '1.25rem', color: eventColors(eventType.id).color },
+                }}
+              >
+                <EventTypeGlyph eventTypeId={eventType.id} />
+                {eventType.name}
+              </Stack>
+            }
+            isChecked={eventTypeId === eventType.id}
+            isDisabled={isDisabled}
+            onChange={() => {
+              onChange(eventType.id);
+            }}
+          />
         ))}
-      </div>
-      {error === undefined ? null : (
-        <p className="form-field__error" id={fieldErrorId(FIELD_ID)}>
-          {error}
-        </p>
-      )}
-    </fieldset>
+      </Box>
+    </FieldGroup>
   );
 }

@@ -1,10 +1,13 @@
+import { Alert, Box, Button, FormHelperText, Stack } from '@mui/material';
 import { useState } from 'react';
 
 import type { HomeResponse, PersonResponse } from '@casaecos/shared-types';
 
 import { ApiRequestError } from '../../../../shared/http/api-request-error.js';
 import { AlertMessage } from '../../../../shared/ui/AlertMessage.js';
+import { ChoiceCard } from '../../../../shared/ui/ChoiceCard.js';
 import { Dialog } from '../../../../shared/ui/Dialog.js';
+import { FieldGroup } from '../../../../shared/ui/FieldGroup.js';
 import { isStaff } from '../../person/domain/roles.js';
 import { homeService } from '../services/home-service.js';
 
@@ -37,24 +40,28 @@ function CandidateGroup({
   if (people.length === 0) return null;
 
   return (
-    <fieldset>
-      <legend>{legend}</legend>
-      <div className="person-chips">
+    <FieldGroup legend={legend}>
+      <Box
+        sx={{
+          display: 'grid',
+          gap: 1,
+          gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' },
+        }}
+      >
         {people.map((person) => (
-          <label key={person.id} className="person-chip">
-            <input
-              type="checkbox"
-              checked={selectedIds.includes(person.id)}
-              disabled={isDisabled}
-              onChange={(inputEvent) => {
-                onToggle(person.id, inputEvent.target.checked);
-              }}
-            />
-            <span>{person.name}</span>
-          </label>
+          <ChoiceCard
+            key={person.id}
+            kind="checkbox"
+            label={person.name}
+            isChecked={selectedIds.includes(person.id)}
+            isDisabled={isDisabled}
+            onChange={(isChecked) => {
+              onToggle(person.id, isChecked);
+            }}
+          />
         ))}
-      </div>
-    </fieldset>
+      </Box>
+    </FieldGroup>
   );
 }
 
@@ -99,23 +106,40 @@ export function LinkPeopleDialog({
   return (
     <Dialog
       title={`Adicionar à ${home.name}`}
-      className="dialog__panel--form"
       onClose={() => {
         if (!isSaving) onClose();
       }}
+      onSubmit={(submitEvent) => {
+        submitEvent.preventDefault();
+        void linkSelected();
+      }}
+      actions={
+        <>
+          {failure === null ? null : <AlertMessage>{failure}</AlertMessage>}
+          <Button color="inherit" disabled={isSaving} onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            variant="contained"
+            loading={isSaving}
+            loadingPosition="start"
+            disabled={selectedIds.length === 0}
+          >
+            {isSaving
+              ? 'Adicionando...'
+              : selectedIds.length > 1
+                ? `Adicionar ${String(selectedIds.length)} pessoas`
+                : 'Adicionar à casa'}
+          </Button>
+        </>
+      }
     >
-      <form
-        className="event-form"
-        noValidate
-        onSubmit={(submitEvent) => {
-          submitEvent.preventDefault();
-          void linkSelected();
-        }}
-      >
+      <Stack spacing={2.5}>
         {candidates.length === 0 ? (
-          <p className="form-notice">
+          <Alert severity="info">
             Todas as pessoas cadastradas já estão nesta casa. Cadastre a pessoa em Pessoas primeiro.
-          </p>
+          </Alert>
         ) : (
           <>
             <CandidateGroup
@@ -132,33 +156,12 @@ export function LinkPeopleDialog({
               isDisabled={isSaving}
               onToggle={toggle}
             />
-            <p className="form-field__hint">
+            <FormHelperText>
               Não achou? Cadastre a pessoa na aba Pessoas, já marcando esta casa.
-            </p>
+            </FormHelperText>
           </>
         )}
-        <footer className="dialog__footer">
-          {failure === null ? null : <AlertMessage>{failure}</AlertMessage>}
-          <div className="dialog__actions">
-            <button className="outline-button" type="button" disabled={isSaving} onClick={onClose}>
-              Cancelar
-            </button>
-            <button
-              className="primary-button"
-              type="submit"
-              disabled={isSaving || selectedIds.length === 0}
-              aria-busy={isSaving}
-            >
-              {isSaving ? <span className="spinner" aria-hidden="true" /> : null}
-              {isSaving
-                ? 'Adicionando...'
-                : selectedIds.length > 1
-                  ? `Adicionar ${String(selectedIds.length)} pessoas`
-                  : 'Adicionar à casa'}
-            </button>
-          </div>
-        </footer>
-      </form>
+      </Stack>
     </Dialog>
   );
 }

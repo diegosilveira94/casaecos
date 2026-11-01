@@ -8,6 +8,7 @@ import type { AuthenticatedUserResponse, LoginResponse } from '@casaecos/shared-
 import { App } from './App.js';
 import { AuthProvider } from './modules/shared/auth/context/AuthProvider.js';
 import { sessionStore } from './modules/shared/auth/session-store.js';
+import { setDesktopViewport } from './test/media-query.js';
 
 const maria: AuthenticatedUserResponse = {
   personId: 1,
@@ -182,6 +183,7 @@ describe('App', () => {
   it('leva à Agenda e às Configurações pela navegação e mostra os outros módulos sem ação', async () => {
     sessionStore.save({ token: 'token-salvo', expiresInSeconds: 3600 });
     answerAuthWith(maria);
+    setDesktopViewport(true);
     renderApp('/agenda');
 
     const navigation = await screen.findByRole('navigation', { name: 'Módulos' });
@@ -225,6 +227,7 @@ describe('App', () => {
       role: { id: 3, description: 'Cuidador/Monitor' },
       permissions: ['home:read', 'event:read'],
     });
+    setDesktopViewport(true);
     renderApp('/settings/access');
 
     expect(await screen.findByRole('heading', { name: 'Agenda' })).toBeInTheDocument();
