@@ -196,7 +196,9 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   versão anterior saem no mesmo commit que os descobre.
 - Prettier cuida da formatação; não brigue manualmente com estilo.
 
-### Estilo: Material UI
+### Estilo: Material UI (ECOS-38)
+
+> Decisões #121 a #126 no Notion.
 
 - **A cara é a do Material UI**, só com as cores da marca. As telas podem divergir do Figma:
   o protótipo segue como referência de conteúdo e fluxo, não de pixel.
@@ -216,6 +218,8 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   formulário como texto `YYYY-MM-DD`. Hora segue no `type="time"` nativo.
 - **Cuidado no MUI v9**: `color="text.secondary"` em `Typography` não tem efeito (vira atributo
   HTML); use `sx={{ color: 'text.secondary' }}`. `color="primary"` funciona.
+- **Botão destrutivo é preenchido em vermelho** (`color="error" variant="contained"`, letra
+  branca), como "Excluir" e o `ConfirmDialog`.
 - **Testes não veem o CSS**: layout e cor se conferem no navegador. Ao abrir um `Dialog`, o MUI
   marca o resto da página como `aria-hidden`, então `getByRole` só enxerga o que está nele.
 
@@ -404,7 +408,8 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
 
 > Decisões #92 a #99 no Notion.
 
-- **Desktop fiel ao protótipo** (Figma `22:5`, a partir de 52rem): sidebar com o logo
+- **Desktop segue a estrutura do protótipo** (Figma `22:5`, a partir de 52rem; a aparência é a do
+  Material UI desde a ECOS-38): sidebar com o logo
   e a marca (imagens em `apps/web/src/assets/`), todos os módulos, o seletor de casa,
   a tagline e a paisagem; header com menu, notificações e o menu do usuário ("Sair");
   ações Filtros, Exportar e "+ Novo Compromisso"; Mês/Semana/Dia; grade com **um bloco
@@ -776,6 +781,9 @@ os frames de criação e edição de compromisso.
   assim é mantido. Salvar é o compromisso e depois os
   participantes, um a um (`EventFormSaver`), porque a API os mantém em rotas próprias.
   O desenho foi validado num protótipo HTML antes do código.
+- **ECOS-38 implementada em 01/11/2026**: Material UI como único sistema de estilo do `apps/web`,
+  sem arquivo CSS, com tema próprio e date picker nos campos de data do compromisso. As telas
+  deixam de seguir o Figma ao pixel (#122).
 - **Deploy de homologação no ar em 01/10/2026**: Neon + Render + Vercel, plano gratuito
   (decisões #100 a #103).
 - Módulo 4 (Agenda) quebrado em stories no Jira: ECOS-5 a ECOS-9, com ECOS-11 e
@@ -802,9 +810,13 @@ os frames de criação e edição de compromisso.
   - ECOS-23: visões Semana e Dia da agenda — ✅ implementada
   - ECOS-30: telas de cadastro (pessoas, casas e acessos) — ✅ implementada
   - ECOS-32: envio da agenda pelo WhatsApp (fase 1, manual) — ✅ implementada
+  - ECOS-38: Material UI como sistema de estilo — ✅ implementada
 
 ## Pendências que afetam o desenvolvimento
 
+- **O JavaScript do web ficou grande**: 1,26 MB (364 kB com gzip) depois do Material UI, e o Vite
+  avisa do tamanho. Para um sistema pensado para celular, a saída provável é carregar os dialogs
+  e o date picker sob demanda.
 - **A mensagem de agenda só sai completa com tudo cadastrado.** As idas e voltas da
   escola são a maior parte da mensagem real da associação, e a agenda não tem compromisso
   recorrente: cada trajeto teria de ser lançado todo dia. Também não há hora de saída
