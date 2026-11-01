@@ -16,6 +16,15 @@ describe('PersonService', () => {
     vi.unstubAllGlobals();
   });
 
+  it('lista todas as pessoas em GET /people', async () => {
+    const service = new PersonService(
+      new HttpClient('http://api.test', { readAccessToken: () => 'token' }),
+    );
+
+    await expect(service.list()).resolves.toEqual([]);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('http://api.test/people');
+  });
+
   it('lista as pessoas de um papel em GET /people?roleId=', async () => {
     const service = new PersonService(
       new HttpClient('http://api.test', { readAccessToken: () => 'token' }),

@@ -8,6 +8,11 @@ const PEOPLE_PATH = '/people';
 export class PersonService {
   constructor(private readonly http: HttpClient) {}
 
+  /** Everyone, ordered by name: needs `person:read`. */
+  list(): Promise<PersonResponse[]> {
+    return this.http.get(PEOPLE_PATH);
+  }
+
   /** Everyone with the role, whatever the home: needs `person:read`. */
   listByRole(roleId: number): Promise<PersonResponse[]> {
     return this.http.get(`${PEOPLE_PATH}?roleId=${String(roleId)}`);

@@ -425,6 +425,36 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
 - **Testes**: `src/test/media-query.ts` substitui o `matchMedia` do jsdom; os testes
   começam no celular e passam ao desktop com `setDesktopViewport(true)`.
 
+### Agenda — envio pelo WhatsApp (ECOS-32)
+
+> Decisões #115 a #119 no Notion.
+
+- **Fase 1 do RF-32: o envio é manual.** "Enviar agenda" (barra da Agenda, com
+  `can('person:read')`, porque precisa do telefone da equipe) abre o `SendAgendaDialog`:
+  ele monta o texto e abre o WhatsApp, e quem envia é a pessoa, lá. O sistema não
+  sabe se a mensagem saiu, então não há histórico nem "enviado". Sem mudança na API:
+  usa `GET /people` e `GET /agenda/events`. O lembrete automático e o bot seguem em
+  aberto (#06) e o sino do header continua "Disponível em breve".
+- **O link é `api.whatsapp.com/send`, não `wa.me`** (#120): o redirecionamento do `wa.me`
+  troca todo emoji do texto por "�".
+- **Três públicos** (`AgendaAudience`): Geral e Motoristas usam o link sem `phone`, sem
+  número, para a pessoa escolher o grupo; Uma pessoa usa o número dela. "Copiar mensagem"
+  fica sempre ao lado. Só a equipe é oferecida, sem acolhidos, e quem não tem telefone
+  válido aparece desabilitado com o motivo.
+- **O filtro de casa da sidebar não vale aqui**: o motorista atende todas e deixaria de
+  receber o resto sem ninguém notar. Período: Hoje, Amanhã (padrão) ou Próximos 7 dias.
+- **Formato** (`AgendaMessage`) segue a mensagem que a associação já manda: blocos
+  "➡️ Às 09:00" pela hora de **início** (não existe hora de saída, e escrever "SAÍDA"
+  atrasaria o motorista). `description` entra; endereço só em Motoristas e Uma pessoa.
+  O coração de cada casa vem do id, para não mudar entre mensagens.
+- **Nome de acolhido**: primeiro nome em maiúsculas, crescendo só enquanto outro acolhido
+  começa igual ("ANA CLARA", "ANA BEATRIZ"). Quem é acolhido vem do papel da pessoa, não do
+  tipo de participação.
+- **Telefone segue texto livre**: `toWhatsAppNumber` converte ao montar o link (só Brasil).
+- **Personalizar**: o texto editado vale só para aquele envio e não é salvo. Enquanto
+  editado, público e período ficam travados; "Voltar ao modelo" e fechar pedem confirmação
+  se o texto mudou.
+
 ### Autorização (ECOS-14)
 
 > Decisões #58 a #66 no Notion.
@@ -658,6 +688,9 @@ os frames de criação e edição de compromisso.
 - **ECOS-23 implementada em 13/10/2026**: visões Semana e Dia — grade temporal no
   desktop, lista semanal agrupada e lista do dia no celular, navegação pelo período e
   buscas recortadas com `from`/`to`.
+- **ECOS-32 implementada em 31/10/2026**: "Enviar agenda" monta a mensagem de agenda
+  (Geral, Motoristas ou Uma pessoa) para a secretaria conferir, personalizar e enviar
+  pelo WhatsApp, sem bot e sem custo. O lembrete automático ficou na ECOS-37.
 - **ECOS-9 implementada em 06/10/2026**: formulário de compromisso em `/agenda` —
   "+ Novo Compromisso" e "Editar" (no detalhe) abrem o `EventFormDialog`, bottom sheet
   no celular e modal no desktop; tipo em cartões, término opcional com "Termina em
@@ -693,8 +726,17 @@ os frames de criação e edição de compromisso.
   - ECOS-19/20: telas de design no Figma (formulário de compromisso, login)
   - ECOS-21: exportar agenda — adiada (decisão #38)
   - ECOS-23: visões Semana e Dia da agenda — ✅ implementada
+  - ECOS-32: envio da agenda pelo WhatsApp (fase 1, manual) — ✅ implementada
 
 ## Pendências que afetam o desenvolvimento
+
+- **A mensagem de agenda só sai completa com tudo cadastrado.** As idas e voltas da
+  escola são a maior parte da mensagem real da associação, e a agenda não tem compromisso
+  recorrente: cada trajeto teria de ser lançado todo dia. Também não há hora de saída
+  separada do início (#117). Ver no uso real antes de modelar.
+- **A mensagem leva nome de criança e dado de saúde para o WhatsApp** (#117). A
+  secretaria já faz isso hoje, mas entra na revisão de LGPD pendente no Notion antes de
+  usar dado real.
 
 - **Permissões: implementadas na ECOS-14** (ver "Autorização") e aplicadas nos
   eventos (ECOS-6), na listagem (ECOS-15) e nos participantes (ECOS-7). Na tela, a

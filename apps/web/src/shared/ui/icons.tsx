@@ -149,6 +149,12 @@ export const PeopleIcon = (): React.JSX.Element => (
   </Icon>
 );
 
+export const SendIcon = (): React.JSX.Element => (
+  <Icon>
+    <path d="m20.5 3.5-17 7 6.5 3 3 6.5 7.5-16.5ZM10 13.5l3.5-3.5" />
+  </Icon>
+);
+
 export const ChatIcon = (): React.JSX.Element => (
   <Icon>
     <path d="M5 5h14a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 19 16h-8l-4.5 3.5V16H5a1.5 1.5 0 0 1-1.5-1.5v-8A1.5 1.5 0 0 1 5 5Z" />

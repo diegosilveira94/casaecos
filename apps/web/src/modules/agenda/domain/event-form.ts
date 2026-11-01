@@ -13,7 +13,7 @@ export const EVENT_ADDRESS_MAX_LENGTH = 100;
 export const EVENT_DESCRIPTION_MAX_LENGTH = 300;
 
 // Lookup ids are fixed by the seed (#37).
-const SHELTERED_ROLE_ID = 5;
+export const SHELTERED_ROLE_ID = 5;
 export const DRIVER_ROLE_ID = 4;
 
 /** `participation_type`: the role of a person in one commitment. */
