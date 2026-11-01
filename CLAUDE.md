@@ -504,6 +504,11 @@ O comando de seed fica em `apps/api/prisma7.config.ts` (`migrations.seed`), não
   desenho foi validado num protótipo HTML antes do código.
 - **Papel Colaborador** (id 6, no `seed.ts`): coringa da equipe, com o acesso do Cuidador
   (`home:read`, `event:read`, escopo por casa). Mais do que isso é trocar o papel.
+- **Casas no formulário de pessoa**: o campo aparece até o papel ser escolhido e continua
+  só para Acolhido e Cuidador/Monitor (`choosesHomesInPersonForm`). O resto da equipe é
+  vinculado pela página da casa, inclusive o Colaborador, que sem vínculo vê a
+  agenda vazia. Trocar para um papel sem o campo descarta o que foi marcado, mas mantém os
+  vínculos já salvos.
 - **Organização**: nenhuma tela cria; o `db:seed:admin` cria a primeira
   (`ORGANIZATION_NAME`) se não houver nenhuma, e o `seed-demo` reaproveita. `GET
 /organizations` (`home:write`) serve o formulário de casa, que usa a única que existe.

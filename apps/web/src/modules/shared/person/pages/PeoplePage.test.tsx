@@ -118,6 +118,59 @@ describe('PeoplePage', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
+  it('mostra a escolha de casas até selecionar alguém da equipe que não seja cuidador', async () => {
+    const user = userEvent.setup();
+    renderSettingsPage(<PeoplePage />);
+
+    await user.click(await screen.findByRole('button', { name: 'Nova pessoa' }));
+    const dialog = screen.getByRole('dialog', { name: 'Nova pessoa' });
+    expect(within(dialog).getByRole('group', { name: 'Casas' })).toBeInTheDocument();
+
+    for (const hiddenRole of [/Coordenador/, /Secretário/, /Motorista/, /Colaborador/]) {
+      await user.click(within(dialog).getByRole('radio', { name: hiddenRole }));
+      expect(within(dialog).queryByRole('group', { name: 'Casas' })).toBeNull();
+      expect(within(dialog).queryByText(/Onde a pessoa mora ou trabalha/)).toBeNull();
+    }
+
+    for (const shownRole of [/Cuidador/, /Acolhido/]) {
+      await user.click(within(dialog).getByRole('radio', { name: shownRole }));
+      expect(within(dialog).getByRole('group', { name: 'Casas' })).toBeInTheDocument();
+      expect(within(dialog).getByText('Onde a pessoa mora ou trabalha.')).toBeInTheDocument();
+    }
+  });
+
+  it('não vincula a casa marcada antes de trocar para um papel sem casas', async () => {
+    const user = userEvent.setup();
+    createPerson.mockResolvedValue(makePerson(9, 'Rita Nunes', 4));
+    renderSettingsPage(<PeoplePage />);
+
+    await user.click(await screen.findByRole('button', { name: 'Nova pessoa' }));
+    const dialog = screen.getByRole('dialog', { name: 'Nova pessoa' });
+    await user.type(within(dialog).getByLabelText('Nome *'), 'Rita Nunes');
+    await user.click(within(dialog).getByRole('radio', { name: /Cuidador/ }));
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Casa Esperança' }));
+    await user.click(within(dialog).getByRole('radio', { name: /Motorista/ }));
+    await user.click(within(dialog).getByRole('button', { name: 'Cadastrar pessoa' }));
+
+    expect(createPerson).toHaveBeenCalledOnce();
+    expect(linkPerson).not.toHaveBeenCalled();
+  });
+
+  it('mantém os vínculos de quem passa para um papel sem casas', async () => {
+    const user = userEvent.setup();
+    vi.mocked(personService.update).mockResolvedValue(juliana);
+    vi.mocked(personService.listHomes).mockResolvedValue([esperanca]);
+    renderSettingsPage(<PeoplePage />);
+
+    await user.click(await screen.findByRole('button', { name: /Juliana Alves/ }));
+    const dialog = screen.getByRole('dialog', { name: 'Editar pessoa' });
+    await user.click(within(dialog).getByRole('radio', { name: /Secretário/ }));
+    await user.click(within(dialog).getByRole('button', { name: 'Salvar alterações' }));
+
+    expect(personService.update).toHaveBeenCalledOnce();
+    expect(homeService.unlinkPerson).not.toHaveBeenCalled();
+  });
+
   it('pede nome e papel antes de chamar a API', async () => {
     const user = userEvent.setup();
     renderSettingsPage(<PeoplePage />);

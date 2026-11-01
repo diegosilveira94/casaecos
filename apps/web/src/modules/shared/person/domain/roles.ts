@@ -43,7 +43,7 @@ const ROLE_GUIDES: Readonly<Partial<Record<number, RoleGuide>>> = {
   [ROLE_IDS.sheltered]: { tone: 'neutral', hint: 'Criança ou adolescente', access: null },
   [ROLE_IDS.collaborator]: {
     tone: 'activity',
-    hint: 'Equipe (coringa)',
+    hint: 'Equipe',
     access: 'Vê a agenda das casas onde está vinculado',
   },
 };
@@ -58,6 +58,14 @@ export function roleGuide(roleId: number): RoleGuide {
 /** Everyone but the sheltered children: who works in a home. */
 export function isStaff(roleId: number): boolean {
   return roleId !== ROLE_IDS.sheltered;
+}
+
+/**
+ * Who has homes chosen in the person form: the child who lives there and the caregiver who
+ * works there. The rest of the staff is linked from the home's page, when it applies.
+ */
+export function choosesHomesInPersonForm(roleId: number): boolean {
+  return roleId === ROLE_IDS.sheltered || roleId === ROLE_IDS.caregiver;
 }
 
 /** Roles that may receive a credential: every one with something to see once logged in. */

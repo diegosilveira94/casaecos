@@ -19,7 +19,7 @@ import {
   validatePersonForm,
   type PersonFormValues,
 } from '../domain/person-form.js';
-import { ROLE_IDS } from '../domain/roles.js';
+import { choosesHomesInPersonForm, ROLE_IDS } from '../domain/roles.js';
 import { personFormSaver, PersonHomesSaveError } from '../services/person-form-saver.js';
 import { personService } from '../services/person-service.js';
 import { RolePicker } from './RolePicker.js';
@@ -162,50 +162,6 @@ export function PersonFormDialog({
               }}
             />
           </FormField>
-          <RolePicker
-            name="person-role"
-            legend="Papel"
-            roles={roles}
-            value={values.roleId}
-            isDisabled={isBusy || isRoleLocked}
-            blockedReason={(roleId) =>
-              roleId === ROLE_IDS.coordinator && !canManageAccess ? COORDINATOR_ONLY : undefined
-            }
-            error={errors.roleId}
-            hint={
-              isRoleLocked
-                ? 'Esta pessoa acessa o sistema: só a coordenação troca o papel dela.'
-                : undefined
-            }
-            onChange={(roleId) => {
-              change({ roleId });
-            }}
-          />
-          <fieldset className="type-field">
-            <legend>Casas</legend>
-            {homes.length === 0 ? (
-              <p className="form-field__hint">Nenhuma casa cadastrada ainda.</p>
-            ) : (
-              <div className="person-chips">
-                {homes.map((home) => (
-                  <label key={home.id} className="person-chip">
-                    <input
-                      type="checkbox"
-                      checked={values.homeIds.includes(home.id)}
-                      disabled={isBusy}
-                      onChange={(inputEvent) => {
-                        toggleHome(home.id, inputEvent.target.checked);
-                      }}
-                    />
-                    <span>{home.name}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-            <p className="form-field__hint">
-              Onde a pessoa mora ou trabalha. Motorista atende todas as casas e pode ficar sem.
-            </p>
-          </fieldset>
           <div className="event-form__row event-form__row--pairs">
             <FormField id="person-registration" label="CPF">
               <input
@@ -235,6 +191,56 @@ export function PersonFormDialog({
               />
             </FormField>
           </div>
+          <RolePicker
+            name="person-role"
+            legend="Papel"
+            roles={roles}
+            value={values.roleId}
+            isDisabled={isBusy || isRoleLocked}
+            blockedReason={(roleId) =>
+              roleId === ROLE_IDS.coordinator && !canManageAccess ? COORDINATOR_ONLY : undefined
+            }
+            error={errors.roleId}
+            hint={
+              isRoleLocked
+                ? 'Esta pessoa acessa o sistema: só a coordenação troca o papel dela.'
+                : undefined
+            }
+            onChange={(roleId) => {
+              // Without the field, what was marked must not be saved unseen, and the links the
+              // person already has stay: they may have come from the home's page.
+              change(
+                choosesHomesInPersonForm(roleId)
+                  ? { roleId }
+                  : { roleId, homeIds: initialValues.homeIds },
+              );
+            }}
+          />
+          {values.roleId === null || choosesHomesInPersonForm(values.roleId) ? (
+            <fieldset className="type-field">
+              <legend>Casas</legend>
+              {homes.length === 0 ? (
+                <p className="form-field__hint">Nenhuma casa cadastrada ainda.</p>
+              ) : (
+                <div className="person-chips">
+                  {homes.map((home) => (
+                    <label key={home.id} className="person-chip">
+                      <input
+                        type="checkbox"
+                        checked={values.homeIds.includes(home.id)}
+                        disabled={isBusy}
+                        onChange={(inputEvent) => {
+                          toggleHome(home.id, inputEvent.target.checked);
+                        }}
+                      />
+                      <span>{home.name}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              <p className="form-field__hint">Onde a pessoa mora ou trabalha.</p>
+            </fieldset>
+          ) : null}
           <footer className="dialog__footer">
             {failure === null ? null : <AlertMessage>{failure}</AlertMessage>}
             <div className="dialog__actions">
