@@ -19,12 +19,12 @@ const AUDIENCE_OPTIONS: { kind: AudienceKind; label: string; hint: string }[] = 
   {
     kind: 'general',
     label: 'Geral',
-    hint: 'Compromissos de todas as casas. Você escolhe o grupo no WhatsApp.',
+    hint: 'Compromissos de todas as casas. Escolha o grupo no WhatsApp.',
   },
   {
     kind: 'drivers',
     label: 'Motoristas',
-    hint: 'Compromissos com motorista, de todas as casas. Você escolhe o grupo no WhatsApp.',
+    hint: 'Compromissos com motorista, de todas as casas. Escolha o grupo no WhatsApp.',
   },
   {
     kind: 'person',
@@ -158,7 +158,7 @@ export function SendAgendaDialog({ today, onClose }: SendAgendaDialogProps): Rea
         onClose={confirmation === null ? requestClose : ignoreClose}
       >
         <p className="send-agenda__intro">
-          Confira a mensagem. O envio é feito por você, no WhatsApp.
+          Confira a mensagem. Envie no WhatsApp.
         </p>
 
         <div className="send-agenda">
