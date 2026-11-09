@@ -58,6 +58,7 @@ export interface UserAccountProperties {
   personName: string;
   email: string;
   passwordHash: string;
+  googleSubject: string | null;
   role: Role;
   homeIds: readonly number[];
   lastLoginAt: Date | null;
@@ -71,6 +72,7 @@ export class UserAccount {
   readonly personName: string;
   readonly email: string;
   readonly passwordHash: string;
+  readonly googleSubject: string | null;
   readonly role: Role;
   readonly homeIds: readonly number[];
   readonly lastLoginAt: Date | null;
@@ -83,6 +85,7 @@ export class UserAccount {
     this.personName = properties.personName;
     this.email = properties.email;
     this.passwordHash = properties.passwordHash;
+    this.googleSubject = properties.googleSubject;
     this.role = properties.role;
     this.homeIds = properties.homeIds;
     this.lastLoginAt = properties.lastLoginAt;

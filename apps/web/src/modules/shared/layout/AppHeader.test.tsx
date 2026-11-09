@@ -22,6 +22,7 @@ function renderHeader(permissions: Permission[]): void {
       permissions,
     },
     login: vi.fn(),
+    loginWithGoogle: vi.fn(),
     logout: vi.fn(),
     can: (permission) => permissions.includes(permission),
   };

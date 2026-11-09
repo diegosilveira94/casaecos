@@ -83,6 +83,7 @@ function authAs(permissions: Permission[], personId: number): AuthContextValue {
     status: 'authenticated',
     user,
     login: vi.fn(),
+    loginWithGoogle: vi.fn(),
     logout: vi.fn(),
     can: (permission) => permissions.includes(permission),
   };

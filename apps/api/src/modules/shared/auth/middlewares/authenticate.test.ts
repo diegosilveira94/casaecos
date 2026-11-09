@@ -22,6 +22,7 @@ function makeAccount(): UserAccount {
     personName: 'Maria Silva',
     email: 'maria@ecos.org',
     passwordHash: 'irrelevante',
+    googleSubject: null,
     role: new Role(2, 'Secretário'),
     homeIds: [],
     lastLoginAt: null,
@@ -47,6 +48,10 @@ class StubRepository implements UserAccountRepository {
     return Promise.resolve(this.account);
   }
 
+  findByGoogleSubject(_subject: string): Promise<UserAccount | null> {
+    return Promise.resolve(null);
+  }
+
   personExists(_personId: number): Promise<boolean> {
     return Promise.resolve(true);
   }
@@ -60,6 +65,10 @@ class StubRepository implements UserAccountRepository {
   }
 
   updatePassword(_id: number, _passwordHash: string): Promise<void> {
+    return Promise.resolve();
+  }
+
+  linkGoogleSubject(_id: number, _subject: string): Promise<void> {
     return Promise.resolve();
   }
 }

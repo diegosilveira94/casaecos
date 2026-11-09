@@ -13,11 +13,13 @@ export interface CreateUserAccountData {
 export interface UserAccountRepository {
   findAll(): Promise<UserAccount[]>;
   findByEmail(email: string): Promise<UserAccount | null>;
+  findByGoogleSubject(subject: string): Promise<UserAccount | null>;
   findByPersonId(personId: number): Promise<UserAccount | null>;
   personExists(personId: number): Promise<boolean>;
   create(data: CreateUserAccountData): Promise<UserAccount>;
   registerLogin(id: number, at: Date): Promise<void>;
   updatePassword(id: number, passwordHash: string): Promise<void>;
+  linkGoogleSubject(id: number, subject: string): Promise<void>;
 }
 
 export class DuplicateEmailError extends Error {
@@ -34,11 +36,19 @@ export class PersonAlreadyHasAccountError extends Error {
   }
 }
 
+export class GoogleIdentityAlreadyLinkedError extends Error {
+  constructor() {
+    super('Google identity already linked');
+    this.name = 'GoogleIdentityAlreadyLinkedError';
+  }
+}
+
 const userAccountSelection = {
   id: true,
   personId: true,
   email: true,
   passwordHash: true,
+  googleSubject: true,
   lastLoginAt: true,
   createdAt: true,
   updatedAt: true,
@@ -60,6 +70,7 @@ function toUserAccount(record: UserAccountRecord): UserAccount {
     personName: record.person.name,
     email: record.email,
     passwordHash: record.passwordHash,
+    googleSubject: record.googleSubject,
     role: new Role(record.person.role.id, record.person.role.description),
     homeIds: record.person.homeLinks.map((link) => link.homeId),
     lastLoginAt: record.lastLoginAt,
@@ -96,6 +107,15 @@ export class PrismaUserAccountRepository implements UserAccountRepository {
     return account ? toUserAccount(account) : null;
   }
 
+  async findByGoogleSubject(subject: string): Promise<UserAccount | null> {
+    const account = await prisma.userAccount.findUnique({
+      where: { googleSubject: subject },
+      select: userAccountSelection,
+    });
+
+    return account ? toUserAccount(account) : null;
+  }
+
   async personExists(personId: number): Promise<boolean> {
     const person = await prisma.person.findUnique({
       where: { id: personId },
@@ -120,6 +140,17 @@ export class PrismaUserAccountRepository implements UserAccountRepository {
 
   async updatePassword(id: number, passwordHash: string): Promise<void> {
     await prisma.userAccount.update({ where: { id }, data: { passwordHash } });
+  }
+
+  async linkGoogleSubject(id: number, subject: string): Promise<void> {
+    try {
+      await prisma.userAccount.update({ where: { id }, data: { googleSubject: subject } });
+    } catch (error: unknown) {
+      if (uniqueConstraintColumns(error)?.includes('google_subject')) {
+        throw new GoogleIdentityAlreadyLinkedError();
+      }
+      throw error;
+    }
   }
 
   /**

@@ -115,13 +115,14 @@ model Event {
 
 // Autenticação fica fora de person: acolhidos não logam, e credencial é dado sensível.
 model UserAccount {
-  id           Int       @id @default(autoincrement())
-  personId     Int       @unique @map("person_id")
-  email        String    @unique @db.VarChar(255)
-  passwordHash String    @map("password_hash") @db.VarChar(255)
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz(6)
+  id            Int       @id @default(autoincrement())
+  personId      Int       @unique @map("person_id")
+  email         String    @unique @db.VarChar(255)
+  passwordHash  String    @map("password_hash") @db.VarChar(255)
+  googleSubject String?   @unique @map("google_subject") @db.VarChar(255)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  lastLoginAt   DateTime? @map("last_login_at") @db.Timestamptz(6)
 
   person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
 

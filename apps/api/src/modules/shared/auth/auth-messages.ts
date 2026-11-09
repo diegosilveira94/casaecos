@@ -15,3 +15,7 @@ export const EMAIL_IN_USE = 'Este e-mail já está em uso';
 export const ACCOUNT_NOT_FOUND = 'Credencial de acesso não encontrada';
 export const TOO_MANY_LOGIN_ATTEMPTS =
   'Muitas tentativas de login. Aguarde alguns minutos e tente novamente.';
+export const INVALID_GOOGLE_CREDENTIAL = 'Não foi possível confirmar sua conta Google';
+export const GOOGLE_ACCOUNT_NOT_ALLOWED =
+  'Esta conta Google não possui acesso ao sistema. Fale com a Coordenação.';
+export const GOOGLE_LOGIN_NOT_CONFIGURED = 'O login com Google ainda não foi configurado';

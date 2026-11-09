@@ -57,13 +57,22 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
     setState({ status: 'authenticated', user });
   }, []);
 
+  const loginWithGoogle = useCallback(async (credential: string) => {
+    const { token, expiresInSeconds, user } = await authService.loginWithGoogle({ credential });
+    sessionStore.save({ token, expiresInSeconds });
+    setState({ status: 'authenticated', user });
+  }, []);
+
   const can = useCallback(
     (permission: Permission) =>
       state.status === 'authenticated' && state.user.permissions.includes(permission),
     [state],
   );
 
-  const value = useMemo(() => ({ ...state, login, logout, can }), [state, login, logout, can]);
+  const value = useMemo(
+    () => ({ ...state, login, loginWithGoogle, logout, can }),
+    [state, login, loginWithGoogle, logout, can],
+  );
 
   return <AuthContext value={value}>{children}</AuthContext>;
 }

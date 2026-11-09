@@ -18,6 +18,9 @@ describe('rotas de autenticação', () => {
       .post('/auth/login')
       .send({ email: 'nao-e-email', password: 'senha-correta' });
     expect(invalidEmail.status).toBe(400);
+
+    const googleWithoutCredential = await request(createApp()).post('/auth/google').send({});
+    expect(googleWithoutCredential.status).toBe(400);
   });
 
   it('exige token nas rotas protegidas', async () => {

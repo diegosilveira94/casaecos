@@ -5,6 +5,11 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface GoogleLoginRequest {
+  /** ID token returned by Google Identity Services in the browser. */
+  credential: string;
+}
+
 /** `resource:action` pairs of the RBAC. The role → permission map lives in the API. */
 export type Permission =
   | 'account:manage'

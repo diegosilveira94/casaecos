@@ -159,6 +159,7 @@ function renderPage(
     status: 'authenticated',
     user,
     login: vi.fn(),
+    loginWithGoogle: vi.fn(),
     logout: vi.fn(),
     can: (permission) => user.permissions.includes(permission),
   };

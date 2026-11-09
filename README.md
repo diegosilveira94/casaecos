@@ -6,6 +6,9 @@ Sistemas (Senac Joinville), metodologia Design Science Research.
 
 Contexto completo do produto e das convenções: [`CLAUDE.md`](./CLAUDE.md).
 
+Documento para validação institucional do login com Google:
+[`doc/README.md`](./doc/README.md).
+
 ## Stack
 
 | Camada  | Tecnologias                                         |
@@ -87,6 +90,7 @@ Módulos: `agenda` (em desenvolvimento), `medicamentos`, `prestacao-contas`,
 | Método  | Rota                                | Descrição                                                                    |
 | ------- | ----------------------------------- | ---------------------------------------------------------------------------- |
 | `POST`  | `/auth/login`                       | E-mail + senha; devolve `{ token, expiresInSeconds, user }`                  |
+| `POST`  | `/auth/google`                      | Valida o ID token do Google para um e-mail já cadastrado                     |
 | `POST`  | `/auth/accounts`                    | Cria credencial para uma pessoa (somente Coordenador)                        |
 | `GET`   | `/auth/accounts`                    | Lista as credenciais com pessoa, papel e último acesso (somente Coordenador) |
 | `PATCH` | `/auth/accounts/:personId/password` | Redefine a senha de outra pessoa (somente Coordenador)                       |
@@ -95,6 +99,17 @@ Módulos: `agenda` (em desenvolvimento), `medicamentos`, `prestacao-contas`,
 Nas rotas protegidas, envie `Authorization: Bearer <token>`. O token é um JWT
 HS256 de 8 horas, sem refresh token. O `user` do login e do `/auth/me` traz as
 `permissions` do papel, que a tela usa para esconder o que o usuário não pode fazer.
+
+### Login com Google
+
+Crie no Google Cloud uma credencial OAuth 2.0 do tipo **Aplicativo da Web**, autorize
+`http://localhost:5173` para desenvolvimento e configure o mesmo Client ID público nas
+variáveis `GOOGLE_CLIENT_ID` e `VITE_GOOGLE_CLIENT_ID`. Reinicie API e web depois de
+alterar o `.env`. O botão só aparece quando o Client ID está configurado.
+
+O Google não cria usuários no Casa Ecos: o e-mail verificado precisa existir antes em
+**Configurações → Acessos**. No primeiro login, a API vincula o identificador estável da
+conta Google à credencial existente; os próximos logins usam esse vínculo.
 
 A organização e o primeiro coordenador são criados fora da API — `POST /auth/accounts`
 exige um Coordenador autenticado, e nenhuma tela cria organização:
