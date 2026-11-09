@@ -10,13 +10,14 @@ import { authService } from '../services/auth-service.js';
 import { AccessPage } from './AccessPage.js';
 
 vi.mock('../services/auth-service.js', () => ({
-  authService: { listAccounts: vi.fn(), createAccount: vi.fn() },
+  authService: { listAccounts: vi.fn(), createAccount: vi.fn(), resetPassword: vi.fn() },
 }));
 vi.mock('../../person/services/person-service.js', () => ({
   personService: { list: vi.fn(), listRoles: vi.fn(), update: vi.fn() },
 }));
 
 const createAccount = vi.mocked(authService.createAccount);
+const resetPassword = vi.mocked(authService.resetPassword);
 const updatePerson = vi.mocked(personService.update);
 
 function account(
@@ -60,6 +61,7 @@ describe('AccessPage', () => {
       updatedAt: '2026-10-27T10:00:00.000Z',
     });
     updatePerson.mockResolvedValue(makePerson(3, 'Juliana Alves', 2, { hasAccount: true }));
+    resetPassword.mockResolvedValue({ message: 'Senha redefinida com sucesso' });
   });
 
   it('lista quem acessa, com papel e "Nunca entrou"', async () => {
@@ -108,5 +110,21 @@ describe('AccessPage', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Trocar papel' }));
 
     expect(updatePerson).toHaveBeenCalledWith(3, { roleId: 2 });
+  });
+
+  it('redefine a senha pela ação ao lado de trocar papel', async () => {
+    const user = userEvent.setup();
+    renderSettingsPage(<AccessPage />);
+
+    const row = (await screen.findByText('Juliana Alves')).closest('li')!;
+    await user.click(within(row).getByRole('button', { name: 'Redefinir senha' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Redefinir senha' });
+    expect(within(dialog).getByText(/Juliana Alves \(juliana@ecos\.org\)/)).toBeInTheDocument();
+    await user.type(within(dialog).getByLabelText('Nova senha *'), 'senha-temporaria');
+    await user.type(within(dialog).getByLabelText('Confirmar nova senha *'), 'senha-temporaria');
+    await user.click(within(dialog).getByRole('button', { name: 'Redefinir senha' }));
+
+    expect(resetPassword).toHaveBeenCalledWith(3, { password: 'senha-temporaria' });
   });
 });
