@@ -27,16 +27,6 @@ describe('AuthService', () => {
     expect(init?.method).toBe('GET');
   });
 
-  it('envia a credencial Google sem token de sessão', async () => {
-    await service().loginWithGoogle({ credential: 'id-token-google' });
-
-    const [url, init] = fetchMock.mock.calls[0]!;
-    expect(url).toBe('http://api.test/auth/google');
-    expect(init?.method).toBe('POST');
-    expect(new Headers(init?.headers).get('Authorization')).toBeNull();
-    expect(JSON.parse(init?.body as string)).toEqual({ credential: 'id-token-google' });
-  });
-
   it('cria a credencial em POST /auth/accounts, com o token de quem está logado', async () => {
     await service().createAccount({
       personId: 3,

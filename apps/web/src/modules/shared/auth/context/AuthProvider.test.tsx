@@ -46,9 +46,6 @@ function SessionProbe(): React.JSX.Element {
       >
         Entrar
       </button>
-      <button type="button" onClick={() => void auth.loginWithGoogle('id-token-google')}>
-        Entrar com Google
-      </button>
       <button type="button" onClick={auth.logout}>
         Sair
       </button>
@@ -151,24 +148,6 @@ describe('AuthProvider', () => {
 
     expect(await screen.findByText('Olá, Maria Silva')).toBeInTheDocument();
     expect(sessionStore.readAccessToken()).toBe('token-novo');
-  });
-
-  it('salva o token e autentica no login com Google', async () => {
-    const loginResponse: LoginResponse = {
-      token: 'token-google',
-      expiresInSeconds: 3600,
-      user: maria,
-    };
-    fetchMock.mockResolvedValue(jsonResponse(200, loginResponse));
-    renderWithAuth();
-
-    await userEvent.click(screen.getByRole('button', { name: 'Entrar com Google' }));
-
-    expect(await screen.findByText('Olá, Maria Silva')).toBeInTheDocument();
-    expect(sessionStore.readAccessToken()).toBe('token-google');
-    const [url, init] = fetchMock.mock.calls[0]!;
-    expect(url).toBe('http://api.test/auth/google');
-    expect(init?.body).toBe(JSON.stringify({ credential: 'id-token-google' }));
   });
 
   it('encerra a sessão quando qualquer chamada recebe 401', async () => {

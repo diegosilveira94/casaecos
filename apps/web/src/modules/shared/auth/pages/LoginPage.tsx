@@ -1,14 +1,12 @@
-import { Box, Button, Divider, Link, Stack, TextField, Typography } from '@mui/material';
+import { Box, Button, Link, Stack, TextField, Typography } from '@mui/material';
 import { useState, type SyntheticEvent } from 'react';
 import { Navigate, useLocation } from 'react-router';
 
 import { ApiRequestError } from '../../../../shared/http/api-request-error.js';
-import { env } from '../../../../config/env.js';
 import { AlertMessage } from '../../../../shared/ui/AlertMessage.js';
 import { Dialog } from '../../../../shared/ui/Dialog.js';
 import { BrandMark } from '../../layout/BrandMark.js';
 import { PasswordInput } from '../components/PasswordInput.js';
-import { GoogleLoginButton } from '../components/GoogleLoginButton.js';
 import { SessionRestoring } from '../components/SessionRestoring.js';
 import { useAuth } from '../context/use-auth.js';
 
@@ -84,18 +82,6 @@ export function LoginPage(): React.JSX.Element {
     try {
       // On success the status turns `authenticated` and the redirect above takes over.
       await auth.login({ email: trimmedEmail, password });
-    } catch (loginError: unknown) {
-      setError(loginErrorMessage(loginError));
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleGoogleCredential(credential: string): Promise<void> {
-    setError(null);
-    setIsSubmitting(true);
-    try {
-      await auth.loginWithGoogle(credential);
     } catch (loginError: unknown) {
       setError(loginErrorMessage(loginError));
     } finally {
@@ -208,21 +194,6 @@ export function LoginPage(): React.JSX.Element {
               {isSubmitting ? 'Entrando...' : 'Entrar'}
             </Button>
           </Stack>
-
-          {env.googleClientId ? (
-            <Stack spacing={2} sx={{ mt: 2.5 }}>
-              <Divider>ou</Divider>
-              <GoogleLoginButton
-                disabled={isSubmitting}
-                onCredential={(credential) => {
-                  void handleGoogleCredential(credential);
-                }}
-                onError={() => {
-                  setError('Não foi possível carregar o login do Google. Tente novamente.');
-                }}
-              />
-            </Stack>
-          ) : null}
 
           <Typography variant="body2" sx={{ color: 'text.secondary', mt: 4, textAlign: 'center' }}>
             Problemas para acessar?{' '}

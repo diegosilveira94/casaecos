@@ -2,7 +2,6 @@ import type {
   ApiMessage,
   AuthenticatedUserResponse,
   CreateUserAccountRequest,
-  GoogleLoginRequest,
   LoginRequest,
   LoginResponse,
   ResetPasswordRequest,
@@ -20,10 +19,6 @@ export class AuthService {
 
   login(credentials: LoginRequest): Promise<LoginResponse> {
     return this.http.post('/auth/login', credentials, { authenticated: false });
-  }
-
-  loginWithGoogle(request: GoogleLoginRequest): Promise<LoginResponse> {
-    return this.http.post('/auth/google', request, { authenticated: false });
   }
 
   getCurrentUser(): Promise<AuthenticatedUserResponse> {

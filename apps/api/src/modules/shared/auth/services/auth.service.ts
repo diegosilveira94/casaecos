@@ -1,7 +1,6 @@
 import type {
   ApiMessage,
   CreateUserAccountRequest,
-  GoogleLoginRequest,
   LoginRequest,
   LoginResponse,
   ResetPasswordRequest,
@@ -10,13 +9,9 @@ import type {
 } from '@casaecos/shared-types';
 
 import { HttpError } from '../../../../middlewares/http-error.js';
-import { env } from '../../../../config/env.js';
 import {
   ACCOUNT_NOT_FOUND,
   EMAIL_IN_USE,
-  GOOGLE_ACCOUNT_NOT_ALLOWED,
-  GOOGLE_LOGIN_NOT_CONFIGURED,
-  INVALID_GOOGLE_CREDENTIAL,
   INVALID_CREDENTIALS,
   PERSON_ALREADY_HAS_ACCOUNT,
   PERSON_NOT_FOUND,
@@ -24,17 +19,11 @@ import {
 import type { UserAccount } from '../domain/user-account.js';
 import {
   DuplicateEmailError,
-  GoogleIdentityAlreadyLinkedError,
   PersonAlreadyHasAccountError,
   PrismaUserAccountRepository,
   type UserAccountRepository,
 } from '../repositories/user-account.repository.js';
 import { BcryptPasswordHasher, type PasswordHasher } from './password-hasher.js';
-import {
-  GoogleIdentityTokenVerifier,
-  GoogleLoginNotConfiguredError,
-  type GoogleIdentityVerifier,
-} from './google-identity-verifier.js';
 import { JwtTokenIssuer, type TokenIssuer } from './token-issuer.js';
 
 /**
@@ -54,50 +43,11 @@ export class AuthService {
     private readonly repository: UserAccountRepository,
     private readonly passwordHasher: PasswordHasher,
     private readonly tokenIssuer: TokenIssuer,
-    private readonly googleIdentityVerifier: GoogleIdentityVerifier,
   ) {}
 
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     const account = await this.findAccountMatching(credentials);
 
-    return this.completeLogin(account);
-  }
-
-  async loginWithGoogle(request: GoogleLoginRequest): Promise<LoginResponse> {
-    let identity;
-    try {
-      identity = await this.googleIdentityVerifier.verify(request.credential);
-    } catch (error: unknown) {
-      if (error instanceof GoogleLoginNotConfiguredError) {
-        throw HttpError.serviceUnavailable(GOOGLE_LOGIN_NOT_CONFIGURED);
-      }
-      throw error;
-    }
-
-    if (!identity) throw HttpError.unauthorized(INVALID_GOOGLE_CREDENTIAL);
-
-    let account = await this.repository.findByGoogleSubject(identity.subject);
-
-    if (!account) {
-      account = await this.repository.findByEmail(normalizeEmail(identity.email));
-      if (!account || (account.googleSubject && account.googleSubject !== identity.subject)) {
-        throw HttpError.forbidden(GOOGLE_ACCOUNT_NOT_ALLOWED);
-      }
-
-      try {
-        await this.repository.linkGoogleSubject(account.id, identity.subject);
-      } catch (error: unknown) {
-        if (error instanceof GoogleIdentityAlreadyLinkedError) {
-          throw HttpError.forbidden(GOOGLE_ACCOUNT_NOT_ALLOWED);
-        }
-        throw error;
-      }
-    }
-
-    return this.completeLogin(account);
-  }
-
-  private async completeLogin(account: UserAccount): Promise<LoginResponse> {
     await this.repository.registerLogin(account.id, new Date());
 
     const user = account.toAuthenticatedUser();
@@ -189,5 +139,4 @@ export const authService = new AuthService(
   new PrismaUserAccountRepository(),
   new BcryptPasswordHasher(),
   new JwtTokenIssuer(),
-  new GoogleIdentityTokenVerifier(env.GOOGLE_CLIENT_ID),
 );

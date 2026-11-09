@@ -26,8 +26,6 @@ const loginSchema = z
   })
   .strict();
 
-const googleLoginSchema = z.object({ credential: z.string().min(1).max(10_000) }).strict();
-
 const createAccountSchema = z
   .object({
     personId: z.number().int().positive(),
@@ -42,7 +40,6 @@ const accountPersonIdSchema = z.object({ personId: z.coerce.number().int().posit
 
 export class AuthController {
   readonly loginValidator = new RequestValidator({ body: loginSchema });
-  readonly googleLoginValidator = new RequestValidator({ body: googleLoginSchema });
   readonly createAccountValidator = new RequestValidator({ body: createAccountSchema });
   readonly resetPasswordValidator = new RequestValidator({
     params: accountPersonIdSchema,
@@ -52,11 +49,6 @@ export class AuthController {
   login: RequestHandler = async (_request, response) => {
     const { body } = this.loginValidator.data(response);
     response.json(await authService.login(body));
-  };
-
-  googleLogin: RequestHandler = async (_request, response) => {
-    const { body } = this.googleLoginValidator.data(response);
-    response.json(await authService.loginWithGoogle(body));
   };
 
   listAccounts: RequestHandler = async (_request, response) => {

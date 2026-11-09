@@ -21,8 +21,6 @@ const envSchema = z.object({
   // Login attempts per IP inside the rate limit window.
   LOGIN_RATE_LIMIT_MAX_ATTEMPTS: z.coerce.number().int().positive().default(10),
   LOGIN_RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().int().positive().default(15),
-  // Optional so password login keeps working before Google is configured.
-  GOOGLE_CLIENT_ID: z.string().trim().min(1).optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

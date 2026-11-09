@@ -4,13 +4,11 @@ import { Role } from '../../person/domain/person.js';
 import { UserAccount } from '../domain/user-account.js';
 import {
   DuplicateEmailError,
-  GoogleIdentityAlreadyLinkedError,
   PersonAlreadyHasAccountError,
   type CreateUserAccountData,
   type UserAccountRepository,
 } from '../repositories/user-account.repository.js';
 import { AuthService } from './auth.service.js';
-import type { GoogleIdentityVerifier, VerifiedGoogleIdentity } from './google-identity-verifier.js';
 import type { PasswordHasher } from './password-hasher.js';
 import type { AuthTokenClaims, IssuedToken, TokenIssuer } from './token-issuer.js';
 
@@ -26,7 +24,6 @@ function makeAccount(): UserAccount {
     personName: 'Maria Silva',
     email: 'maria@ecos.org',
     passwordHash: `hashed:${CORRECT_PASSWORD}`,
-    googleSubject: null,
     role: new Role(2, 'Secretário'),
     homeIds: [],
     lastLoginAt: null,
@@ -44,9 +41,6 @@ class FakeUserAccountRepository implements UserAccountRepository {
   createdData: CreateUserAccountData | null = null;
   registeredLogin: { id: number; at: Date } | null = null;
   updatedPassword: { id: number; passwordHash: string } | null = null;
-  linkedGoogleSubject: { id: number; subject: string } | null = null;
-  accountByGoogleSubject: UserAccount | null = null;
-  googleLinkError: Error | null = null;
   accounts: UserAccount[] = [makeAccount()];
 
   findAll(): Promise<UserAccount[]> {
@@ -60,10 +54,6 @@ class FakeUserAccountRepository implements UserAccountRepository {
 
   findByPersonId(_personId: number): Promise<UserAccount | null> {
     return Promise.resolve(this.accountByPersonId);
-  }
-
-  findByGoogleSubject(_subject: string): Promise<UserAccount | null> {
-    return Promise.resolve(this.accountByGoogleSubject);
   }
 
   personExists(_personId: number): Promise<boolean> {
@@ -83,12 +73,6 @@ class FakeUserAccountRepository implements UserAccountRepository {
 
   updatePassword(id: number, passwordHash: string): Promise<void> {
     this.updatedPassword = { id, passwordHash };
-    return Promise.resolve();
-  }
-
-  linkGoogleSubject(id: number, subject: string): Promise<void> {
-    if (this.googleLinkError) return Promise.reject(this.googleLinkError);
-    this.linkedGoogleSubject = { id, subject };
     return Promise.resolve();
   }
 }
@@ -121,30 +105,17 @@ class FakeTokenIssuer implements TokenIssuer {
   }
 }
 
-class FakeGoogleIdentityVerifier implements GoogleIdentityVerifier {
-  identity: VerifiedGoogleIdentity | null = {
-    subject: 'google-subject-7',
-    email: 'maria@ecos.org',
-  };
-
-  verify(_idToken: string): Promise<VerifiedGoogleIdentity | null> {
-    return Promise.resolve(this.identity);
-  }
-}
-
 describe('AuthService', () => {
   let repository: FakeUserAccountRepository;
   let passwordHasher: FakePasswordHasher;
   let tokenIssuer: FakeTokenIssuer;
-  let googleIdentityVerifier: FakeGoogleIdentityVerifier;
   let service: AuthService;
 
   beforeEach(() => {
     repository = new FakeUserAccountRepository();
     passwordHasher = new FakePasswordHasher();
     tokenIssuer = new FakeTokenIssuer();
-    googleIdentityVerifier = new FakeGoogleIdentityVerifier();
-    service = new AuthService(repository, passwordHasher, tokenIssuer, googleIdentityVerifier);
+    service = new AuthService(repository, passwordHasher, tokenIssuer);
   });
 
   it('autentica, devolve o usuário com o papel e registra o último login', async () => {
@@ -180,56 +151,6 @@ describe('AuthService', () => {
     await service.login({ email: '  MARIA@ecos.org ', password: CORRECT_PASSWORD });
 
     expect(repository.searchedEmail).toBe('maria@ecos.org');
-  });
-
-  it('entra com uma conta Google autorizada e a vincula no primeiro acesso', async () => {
-    const result = await service.loginWithGoogle({ credential: 'id-token-google' });
-
-    expect(result.token).toBe('token-de-teste');
-    expect(repository.searchedEmail).toBe('maria@ecos.org');
-    expect(repository.linkedGoogleSubject).toEqual({ id: 5, subject: 'google-subject-7' });
-    expect(repository.registeredLogin?.id).toBe(5);
-  });
-
-  it('entra pelo vínculo Google existente sem depender do e-mail', async () => {
-    repository.accountByGoogleSubject = makeAccount();
-    googleIdentityVerifier.identity = {
-      subject: 'google-subject-7',
-      email: 'email-alterado@gmail.com',
-    };
-
-    await expect(service.loginWithGoogle({ credential: 'id-token-google' })).resolves.toMatchObject(
-      {
-        token: 'token-de-teste',
-      },
-    );
-    expect(repository.searchedEmail).toBeNull();
-    expect(repository.linkedGoogleSubject).toBeNull();
-  });
-
-  it('recusa conta Google inválida ou não cadastrada nos acessos', async () => {
-    googleIdentityVerifier.identity = null;
-    await expect(service.loginWithGoogle({ credential: 'invalido' })).rejects.toMatchObject({
-      status: 401,
-    });
-
-    googleIdentityVerifier.identity = {
-      subject: 'google-subject-99',
-      email: 'sem-acesso@gmail.com',
-    };
-    repository.accountByEmail = null;
-    await expect(service.loginWithGoogle({ credential: 'valido' })).rejects.toMatchObject({
-      status: 403,
-      message: 'Esta conta Google não possui acesso ao sistema. Fale com a Coordenação.',
-    });
-  });
-
-  it('não vincula uma identidade Google já usada por outra conta', async () => {
-    repository.googleLinkError = new GoogleIdentityAlreadyLinkedError();
-
-    await expect(service.loginWithGoogle({ credential: 'id-token-google' })).rejects.toMatchObject({
-      status: 403,
-    });
   });
 
   it('responde igual para e-mail inexistente e senha errada, sem registrar login', async () => {

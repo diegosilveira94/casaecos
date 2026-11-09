@@ -39,13 +39,6 @@ authRouter.post(
   authController.login,
 );
 
-authRouter.post(
-  '/google',
-  createLoginRateLimiter(),
-  authController.googleLoginValidator.handle,
-  authController.googleLogin,
-);
-
 // Creating a credential is a coordinator action. The first coordinator is created
 // outside the API by `npm run db:seed:admin`, since there is nobody to authenticate
 // as before it exists.

@@ -14,7 +14,6 @@ export type AuthState =
 export type AuthContextValue = AuthState & {
   /** Rejects with `ApiRequestError`, whose message is ready for the login screen. */
   login: (credentials: LoginRequest) => Promise<void>;
-  loginWithGoogle: (credential: string) => Promise<void>;
   logout: () => void;
   /** False while the session is not authenticated. */
   can: (permission: Permission) => boolean;

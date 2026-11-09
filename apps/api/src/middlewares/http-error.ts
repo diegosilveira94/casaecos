@@ -27,8 +27,4 @@ export class HttpError extends Error {
   static conflict(message: string, details?: unknown): HttpError {
     return new HttpError(409, message, details);
   }
-
-  static serviceUnavailable(message: string): HttpError {
-    return new HttpError(503, message);
-  }
 }
