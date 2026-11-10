@@ -15,7 +15,6 @@ import { useState } from 'react';
 import { COMING_SOON_PROPS } from '../../../shared/ui/coming-soon.js';
 import { BellIcon, ChevronDownIcon, MenuIcon, UserIcon } from '../../../shared/ui/icons.js';
 import { useAuth } from '../auth/context/use-auth.js';
-import { ResetPasswordDialog } from '../auth/components/PasswordDialogs.js';
 import { AppBrand } from './AppBrand.js';
 
 interface AppHeaderProps {
@@ -26,7 +25,6 @@ interface AppHeaderProps {
 function UserMenu(): React.JSX.Element | null {
   const auth = useAuth();
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
-  const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
 
   if (auth.status !== 'authenticated') return null;
 
@@ -64,25 +62,8 @@ function UserMenu(): React.JSX.Element | null {
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         onClose={closeMenu}
       >
-        {auth.can('account:manage') ? (
-          <MenuItem
-            onClick={() => {
-              closeMenu();
-              setIsResetPasswordOpen(true);
-            }}
-          >
-            Redefinir senha
-          </MenuItem>
-        ) : null}
         <MenuItem onClick={auth.logout}>Sair</MenuItem>
       </Menu>
-      {isResetPasswordOpen ? (
-        <ResetPasswordDialog
-          onClose={() => {
-            setIsResetPasswordOpen(false);
-          }}
-        />
-      ) : null}
     </>
   );
 }
