@@ -9,6 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
     "test": "vitest run",
+    "test:unit": "vitest run src/tests/unit/send-period.unit.test.ts",
+    "test:acceptance": "vitest run src/tests/acceptance/authentication.acceptance.test.tsx",
     "test:watch": "vitest"
   },
   "dependencies": {
