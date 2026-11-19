@@ -8,6 +8,7 @@ import type {
 } from '@casaecos/shared-types';
 
 import type { AuthenticatedUser } from '../../auth/domain/user-account.js';
+import { HttpError } from '../../../../middlewares/http-error.js';
 import type { PersonFilters } from '../repositories/person.repository.js';
 
 const { listPeople, getPerson, createPerson, updatePerson, deletePerson } = vi.hoisted(() => ({
@@ -127,5 +128,79 @@ describe('DELETE /people/:id', () => {
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ message: 'Pessoa excluída com sucesso' });
     expect(deletePerson).toHaveBeenCalledWith(7, expect.anything());
+  });
+});
+
+describe('testes de integração de pessoas (5 cenários)', () => {
+  it('lista pessoas pelo nome informado na requisição HTTP', async () => {
+    listPeople.mockResolvedValueOnce([maria]);
+
+    const response = await request(createApp()).get('/people?name=Maria');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual([maria]);
+    expect(listPeople).toHaveBeenCalledWith({ name: 'Maria' });
+  });
+
+  it('cria uma pessoa e encaminha o usuário autenticado ao serviço', async () => {
+    createPerson.mockResolvedValueOnce(maria);
+
+    const response = await request(createApp()).post('/people').send({
+      name: 'Maria',
+      roleId: 2,
+      individualRegistration: '123.456.789-09',
+      phone: '(47) 99999-0000',
+    });
+
+    expect(response.status).toBe(201);
+    expect(response.body).toEqual(maria);
+    expect(createPerson).toHaveBeenCalledWith(
+      {
+        name: 'Maria',
+        roleId: 2,
+        individualRegistration: '123.456.789-09',
+        phone: '(47) 99999-0000',
+      },
+      expect.objectContaining({ personId: 7 }),
+    );
+  });
+
+  it('aceita PUT para atualizar uma pessoa pela rota da API', async () => {
+    updatePerson.mockResolvedValueOnce(maria);
+
+    const response = await request(createApp()).put('/people/7').send({ name: 'Maria Souza' });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(maria);
+    expect(updatePerson).toHaveBeenCalledWith(
+      7,
+      { name: 'Maria Souza' },
+      expect.objectContaining({ personId: 7 }),
+    );
+  });
+
+  it('devolve o erro de pessoa não encontrada pelo contrato HTTP', async () => {
+    getPerson.mockRejectedValueOnce(HttpError.notFound('Pessoa não encontrada'));
+
+    const response = await request(createApp()).get('/people/99');
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({ message: 'Pessoa não encontrada' });
+  });
+
+  it('devolve o conflito ao tentar excluir uma pessoa vinculada', async () => {
+    deletePerson.mockRejectedValueOnce(
+      HttpError.conflict('Não é possível excluir uma pessoa vinculada a eventos ou casas', {
+        linkedResources: ['casas'],
+      }),
+    );
+
+    const response = await request(createApp()).delete('/people/7');
+
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({
+      message: 'Não é possível excluir uma pessoa vinculada a eventos ou casas',
+      details: { linkedResources: ['casas'] },
+    });
   });
 });
