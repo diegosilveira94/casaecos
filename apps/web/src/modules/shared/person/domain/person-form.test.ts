@@ -70,3 +70,55 @@ describe('formulário de pessoa', () => {
     expect(homeLinkChanges([1, 2], [2, 3])).toEqual({ toLink: [3], toUnlink: [1] });
   });
 });
+
+describe('testes unitários de pessoas (5 cenários)', () => {
+  it('cria o formulário vazio com todos os campos prontos para preenchimento', () => {
+    expect(emptyPersonForm()).toEqual({
+      name: '',
+      roleId: null,
+      individualRegistration: '',
+      phone: '',
+      homeIds: [],
+    });
+  });
+
+  it('aceita um formulário preenchido sem retornar erros de validação', () => {
+    expect(
+      validatePersonForm({
+        name: 'Maria Clara',
+        roleId: 3,
+        individualRegistration: '',
+        phone: '',
+        homeIds: [],
+      }),
+    ).toEqual({});
+  });
+
+  it('transforma uma pessoa salva mantendo CPF, telefone e casas vinculadas', () => {
+    expect(personFormFrom(joao, [1, 3])).toEqual({
+      name: 'João Pedro',
+      roleId: 5,
+      individualRegistration: '123.456.789-09',
+      phone: '',
+      homeIds: [1, 3],
+    });
+  });
+
+  it('não deixa montar a requisição antes de escolher um papel', () => {
+    expect(() => toPersonRequest(emptyPersonForm())).toThrow(
+      'Validate the form before building the request',
+    );
+  });
+
+  it('detecta mudanças no CPF e no telefone da pessoa', () => {
+    const initial = personFormFrom(joao, []);
+
+    expect(
+      hasPersonFormChanges(initial, {
+        ...initial,
+        individualRegistration: '987.654.321-00',
+      }),
+    ).toBe(true);
+    expect(hasPersonFormChanges(initial, { ...initial, phone: '(47) 99999-0000' })).toBe(true);
+  });
+});

@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -201,5 +201,85 @@ describe('PeoplePage', () => {
     await user.click(screen.getByRole('button', { name: /João Pedro/ }));
     expect(screen.getByRole('radio', { name: /Coordenador/ })).toBeDisabled();
     expect(screen.getByRole('radio', { name: /Secretário/ })).toBeEnabled();
+  });
+});
+
+describe('testes de aceitação de pessoas (5 cenários)', () => {
+  it('mostra a lista sem permitir cadastro para quem só pode consultar pessoas', async () => {
+    renderSettingsPage(<PeoplePage />, { permissions: ['person:read'] });
+
+    await screen.findByText('Carlos Lima');
+
+    expect(screen.queryByRole('button', { name: 'Nova pessoa' })).toBeNull();
+    expect(screen.getByText('Carlos Lima').closest('button')).toBeNull();
+  });
+
+  it('abre o formulário de cadastro com os dados que a secretaria precisa informar', async () => {
+    const user = userEvent.setup();
+    renderSettingsPage(<PeoplePage />);
+
+    await user.click(await screen.findByRole('button', { name: 'Nova pessoa' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Nova pessoa' });
+    expect(within(dialog).getByLabelText('Nome *')).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('CPF')).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Telefone')).toBeInTheDocument();
+    expect(within(dialog).getByRole('group', { name: 'Papel' })).toBeInTheDocument();
+  });
+
+  it('pede confirmação antes de descartar um cadastro preenchido', async () => {
+    const user = userEvent.setup();
+    renderSettingsPage(<PeoplePage />);
+
+    await user.click(await screen.findByRole('button', { name: 'Nova pessoa' }));
+    const dialog = screen.getByRole('dialog', { name: 'Nova pessoa' });
+    await user.type(within(dialog).getByLabelText('Nome *'), 'Ana Costa');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+
+    const confirmation = screen.getByRole('dialog', { name: 'Descartar alterações?' });
+    await user.click(within(confirmation).getByRole('button', { name: 'Descartar' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+  });
+
+  it('salva a edição do telefone da pessoa selecionada', async () => {
+    const user = userEvent.setup();
+    vi.mocked(personService.update).mockResolvedValue(
+      makePerson(4, 'Carlos Lima', 4, { phone: '(47) 98888-0000' }),
+    );
+    renderSettingsPage(<PeoplePage />);
+
+    await user.click(await screen.findByRole('button', { name: /Carlos Lima/ }));
+    const dialog = screen.getByRole('dialog', { name: 'Editar pessoa' });
+    await user.type(within(dialog).getByLabelText('Telefone'), '(47) 98888-0000');
+    await user.click(within(dialog).getByRole('button', { name: 'Salvar alterações' }));
+
+    await waitFor(() => {
+      expect(personService.update).toHaveBeenCalledWith(4, {
+        name: 'Carlos Lima',
+        roleId: 4,
+        individualRegistration: null,
+        phone: '(47) 98888-0000',
+      });
+    });
+  });
+
+  it('exclui uma pessoa somente depois da confirmação da secretaria', async () => {
+    const user = userEvent.setup();
+    vi.mocked(personService.delete).mockResolvedValue({ message: 'Pessoa excluída com sucesso' });
+    renderSettingsPage(<PeoplePage />);
+
+    await user.click(await screen.findByRole('button', { name: /Carlos Lima/ }));
+    const personDialog = screen.getByRole('dialog', { name: 'Editar pessoa' });
+    await user.click(within(personDialog).getByRole('button', { name: 'Excluir' }));
+
+    const confirmation = screen.getByRole('dialog', { name: 'Excluir pessoa?' });
+    await user.click(within(confirmation).getByRole('button', { name: 'Excluir' }));
+
+    await waitFor(() => {
+      expect(personService.delete).toHaveBeenCalledWith(4);
+    });
   });
 });
