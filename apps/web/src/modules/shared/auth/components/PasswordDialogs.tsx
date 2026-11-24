@@ -1,11 +1,10 @@
 import { Alert, Button, Stack, Typography } from '@mui/material';
-import { useEffect, useState, type SyntheticEvent } from 'react';
+import { useState, type SyntheticEvent } from 'react';
 
 import type { UserAccountListItemResponse } from '@casaecos/shared-types';
 
 import { ApiRequestError } from '../../../../shared/http/api-request-error.js';
 import { Dialog } from '../../../../shared/ui/Dialog.js';
-import { FormSelect } from '../../../../shared/ui/FormSelect.js';
 import { authService } from '../services/auth-service.js';
 import { PasswordInput } from './PasswordInput.js';
 
@@ -14,6 +13,7 @@ const PASSWORD_MAX_BYTES = 72;
 const UNEXPECTED_ERROR = 'Não foi possível concluir a solicitação. Tente novamente.';
 
 interface DialogProps {
+  account: UserAccountListItemResponse;
   onClose: () => void;
 }
 
@@ -45,42 +45,23 @@ function validateNewPassword(values: PasswordValues): PasswordErrors {
   return errors;
 }
 
-export function ResetPasswordDialog({ onClose }: DialogProps): React.JSX.Element {
-  const [accounts, setAccounts] = useState<UserAccountListItemResponse[] | null>(null);
-  const [accountsFailure, setAccountsFailure] = useState<string | null>(null);
-  const [personId, setPersonId] = useState('');
+export function ResetPasswordDialog({ account, onClose }: DialogProps): React.JSX.Element {
   const [values, setValues] = useState<PasswordValues>({ password: '', confirmation: '' });
   const [wasSubmitted, setWasSubmitted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const errors = wasSubmitted ? validateNewPassword(values) : {};
-  const personError = wasSubmitted && !personId ? 'Escolha uma pessoa.' : undefined;
-
-  useEffect(() => {
-    let isCurrent = true;
-    authService.listAccounts().then(
-      (loadedAccounts) => {
-        if (isCurrent) setAccounts(loadedAccounts);
-      },
-      (error: unknown) => {
-        if (isCurrent) setAccountsFailure(errorMessage(error));
-      },
-    );
-    return () => {
-      isCurrent = false;
-    };
-  }, []);
 
   async function submit(event: SyntheticEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setWasSubmitted(true);
     setFailure(null);
-    if (!personId || Object.keys(validateNewPassword(values)).length > 0) return;
+    if (Object.keys(validateNewPassword(values)).length > 0) return;
 
     setIsSaving(true);
     try {
-      const response = await authService.resetPassword(Number(personId), {
+      const response = await authService.resetPassword(account.person.id, {
         password: values.password,
       });
       setSuccess(response.message);
@@ -111,13 +92,7 @@ export function ResetPasswordDialog({ onClose }: DialogProps): React.JSX.Element
             <Button color="inherit" disabled={isSaving} onClick={onClose}>
               Cancelar
             </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              loading={isSaving}
-              loadingPosition="start"
-              disabled={accounts === null || accounts.length === 0}
-            >
+            <Button type="submit" variant="contained" loading={isSaving} loadingPosition="start">
               {isSaving ? 'Salvando...' : 'Redefinir senha'}
             </Button>
           </>
@@ -131,38 +106,12 @@ export function ResetPasswordDialog({ onClose }: DialogProps): React.JSX.Element
       ) : (
         <Stack spacing={2}>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Defina uma nova senha para alguém que possui acesso ao sistema.
+            Defina uma nova senha para {account.person.name} ({account.email}).
           </Typography>
-          {accountsFailure ? <Alert severity="error">{accountsFailure}</Alert> : null}
-          <FormSelect
-            label="Pessoa"
-            required
-            name="personId"
-            error={personError !== undefined}
-            helperText={personError}
-            value={personId}
-            onChange={(event) => {
-              setPersonId(event.target.value);
-            }}
-            disabled={accounts === null || accounts.length === 0 || isSaving}
-          >
-            <option value="">
-              {accounts === null
-                ? 'Carregando pessoas...'
-                : accounts.length === 0
-                  ? 'Nenhuma credencial cadastrada'
-                  : 'Escolha uma pessoa'}
-            </option>
-            {accounts?.map((account) => (
-              <option key={account.person.id} value={account.person.id}>
-                {account.person.name} — {account.email}
-              </option>
-            ))}
-          </FormSelect>
           <NewPasswordFields
             values={values}
             errors={errors}
-            disabled={isSaving || accounts === null || accounts.length === 0}
+            disabled={isSaving}
             onChange={setValues}
           />
         </Stack>

@@ -33,22 +33,12 @@ function renderHeader(permissions: Permission[]): void {
 }
 
 describe('AppHeader', () => {
-  it('não oferece alteração de senha para quem não gerencia contas', async () => {
-    const user = userEvent.setup();
-    renderHeader(['event:read']);
-
-    await user.click(screen.getByRole('button', { name: /Maria Silva/i }));
-    expect(screen.queryByRole('menuitem', { name: 'Redefinir senha' })).not.toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Sair' })).toBeInTheDocument();
-  });
-
-  it('oferece a redefinição de senha somente a quem gerencia contas', async () => {
+  it('mantém somente a saída no menu do usuário', async () => {
     const user = userEvent.setup();
     renderHeader(['account:manage']);
 
     await user.click(screen.getByRole('button', { name: /Maria Silva/i }));
-    await user.click(screen.getByRole('menuitem', { name: 'Redefinir senha' }));
-
-    expect(screen.getByRole('dialog', { name: 'Redefinir senha' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Redefinir senha' })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Sair' })).toBeInTheDocument();
   });
 });

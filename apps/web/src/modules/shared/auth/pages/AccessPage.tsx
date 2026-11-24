@@ -29,6 +29,7 @@ import { canHaveAccess, roleGuide } from '../../person/domain/roles.js';
 import { personService } from '../../person/services/person-service.js';
 import { ChangeRoleDialog } from '../components/ChangeRoleDialog.js';
 import { GrantAccessDialog } from '../components/GrantAccessDialog.js';
+import { ResetPasswordDialog } from '../components/PasswordDialogs.js';
 import { useAuth } from '../context/use-auth.js';
 import { authService } from '../services/auth-service.js';
 
@@ -44,7 +45,10 @@ function lastLoginText(lastLoginAt: string | null): string {
   return lastLoginAt === null ? 'Nunca entrou' : lastLoginFormat.format(new Date(lastLoginAt));
 }
 
-type OpenDialog = { kind: 'grant' } | { kind: 'role'; account: UserAccountListItemResponse };
+type OpenDialog =
+  | { kind: 'grant' }
+  | { kind: 'role'; account: UserAccountListItemResponse }
+  | { kind: 'password'; account: UserAccountListItemResponse };
 
 /** Who logs in and with which role. Only the coordination sees it (`account:manage`). */
 export function AccessPage(): React.JSX.Element {
@@ -121,6 +125,9 @@ export function AccessPage(): React.JSX.Element {
           onChangeRole={(account) => {
             setDialog({ kind: 'role', account });
           }}
+          onResetPassword={(account) => {
+            setDialog({ kind: 'password', account });
+          }}
         />
       )}
 
@@ -143,6 +150,14 @@ export function AccessPage(): React.JSX.Element {
           }}
         />
       ) : null}
+      {dialog?.kind === 'password' ? (
+        <ResetPasswordDialog
+          account={dialog.account}
+          onClose={() => {
+            setDialog(null);
+          }}
+        />
+      ) : null}
     </>
   );
 }
@@ -156,6 +171,7 @@ interface AccountListProps {
   onChangePage: (page: number) => void;
   onChangePageSize: (pageSize: PageSize) => void;
   onChangeRole: (account: UserAccountListItemResponse) => void;
+  onResetPassword: (account: UserAccountListItemResponse) => void;
 }
 
 function AccountList({
@@ -167,13 +183,14 @@ function AccountList({
   onChangePage,
   onChangePageSize,
   onChangeRole,
+  onResetPassword,
 }: AccountListProps): React.JSX.Element {
   const pageWindow = paginate(accounts, page, pageSize);
 
   return (
     <>
       <RecordList
-        columns="minmax(0, 1.3fr) 10rem minmax(0, 1.5fr) 9rem 8.5rem"
+        columns="minmax(0, 1.3fr) 10rem minmax(0, 1.5fr) 9rem 15rem"
         headers={['Nome', 'Papel', 'E-mail', 'Último acesso', '']}
       >
         {pageWindow.items.map((account) => {
@@ -195,6 +212,15 @@ function AccountList({
                   {account.email} · {lastLoginText(account.lastLoginAt)}
                 </Box>
                 <Box component="span" sx={RECORD_ACTIONS_SX}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => {
+                      onResetPassword(account);
+                    }}
+                  >
+                    Redefinir senha
+                  </Button>
                   {/* Changing one's own role could leave the NGO without a coordinator. */}
                   <Button
                     size="small"

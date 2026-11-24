@@ -28,6 +28,7 @@ export const RECORD_META_SX: SxProps<Theme> = {
 
 export const RECORD_ACTIONS_SX: SxProps<Theme> = {
   display: 'flex',
+  gap: 1,
   gridColumn: { xs: '1 / -1', md: 'auto' },
   justifyContent: { md: 'flex-end' },
   mt: { xs: 1, md: 0 },

@@ -12,41 +12,31 @@ vi.mock('../services/auth-service.js', () => ({
   },
 }));
 
-const listAccounts = vi.mocked(authService.listAccounts);
 const resetPassword = vi.mocked(authService.resetPassword);
+
+const mariaAccount = {
+  id: 1,
+  person: { id: 7, name: 'Maria Silva' },
+  role: { id: 2, description: 'Secretário' },
+  email: 'maria@ecos.org',
+  lastLoginAt: null,
+};
 
 describe('PasswordDialogs', () => {
   beforeEach(() => {
-    listAccounts.mockResolvedValue([
-      {
-        id: 1,
-        person: { id: 7, name: 'Maria Silva' },
-        role: { id: 2, description: 'Secretário' },
-        email: 'maria@ecos.org',
-        lastLoginAt: null,
-      },
-      {
-        id: 2,
-        person: { id: 9, name: 'João Santos' },
-        role: { id: 3, description: 'Cuidador' },
-        email: 'joao@ecos.org',
-        lastLoginAt: null,
-      },
-    ]);
     resetPassword.mockResolvedValue({ message: 'Senha redefinida com sucesso' });
   });
 
-  it('lista as credenciais e deixa a coordenação redefinir uma senha', async () => {
+  it('redefine a senha da conta selecionada', async () => {
     const user = userEvent.setup();
-    render(<ResetPasswordDialog onClose={vi.fn()} />);
+    render(<ResetPasswordDialog account={mariaAccount} onClose={vi.fn()} />);
 
-    const person = await screen.findByRole('combobox', { name: 'Pessoa' });
-    await user.selectOptions(person, '9');
+    expect(screen.getByText(/Maria Silva \(maria@ecos\.org\)/)).toBeInTheDocument();
     await user.type(screen.getByLabelText('Nova senha *'), 'senha-temporaria');
     await user.type(screen.getByLabelText('Confirmar nova senha *'), 'senha-temporaria');
     await user.click(screen.getByRole('button', { name: 'Redefinir senha' }));
 
-    expect(resetPassword).toHaveBeenCalledWith(9, { password: 'senha-temporaria' });
+    expect(resetPassword).toHaveBeenCalledWith(7, { password: 'senha-temporaria' });
     expect(await screen.findByText('Senha redefinida com sucesso')).toBeInTheDocument();
   });
 });
