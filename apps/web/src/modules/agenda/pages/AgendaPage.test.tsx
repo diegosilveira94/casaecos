@@ -37,7 +37,10 @@ vi.mock('../../shared/home/services/home-service.js', () => ({
   homeService: { listPeople: vi.fn() },
 }));
 vi.mock('../../shared/person/services/person-service.js', () => ({
-  personService: { listByRole: vi.fn() },
+  personService: {
+    listByRole: vi.fn(),
+    list: vi.fn().mockResolvedValue([]),
+  },
 }));
 
 const listAll = vi.mocked(eventService.listAll);
@@ -230,6 +233,20 @@ describe('AgendaPage', () => {
     });
   });
 
+  it('devolve o foco ao fechar o envio da agenda', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const button = await screen.findByRole('button', { name: 'Enviar agenda' });
+    await user.click(button);
+
+    await screen.findByRole('dialog', { name: 'Enviar agenda pelo WhatsApp' });
+    await user.keyboard('{Escape}');
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(button).toHaveFocus();
+  });
+
   it('mostra "Enviar agenda" só para quem lê pessoas', async () => {
     renderPage();
     expect(await screen.findByRole('button', { name: 'Enviar agenda' })).toBeInTheDocument();
@@ -408,7 +425,7 @@ describe('AgendaPage', () => {
 
     await user.click(await within(dayList()).findByRole('button', { name: /Consulta pediátrica/ }));
 
-    const dialog = screen.getByRole('dialog', { name: 'Consulta pediátrica' });
+    const dialog = await screen.findByRole('dialog', { name: 'Consulta pediátrica' });
     expect(within(dialog).getByText('Rua das Flores, 100')).toBeInTheDocument();
     expect(within(dialog).getByText('Levar a carteirinha de vacinação.')).toBeInTheDocument();
     expect(within(dialog).getByText(/· Responsável/)).toBeInTheDocument();
@@ -428,7 +445,7 @@ describe('AgendaPage', () => {
       await within(dayList()).findByRole('button', { name: /Sessão com psicóloga/ }),
     );
 
-    const dialog = screen.getByRole('dialog', { name: 'Sessão com psicóloga' });
+    const dialog = await screen.findByRole('dialog', { name: 'Sessão com psicóloga' });
     expect(within(dialog).queryByText('Endereço')).not.toBeInTheDocument();
     expect(within(dialog).queryByText('Descrição')).not.toBeInTheDocument();
     expect(within(dialog).getByText('Nenhuma pessoa envolvida')).toBeInTheDocument();
@@ -441,16 +458,16 @@ describe('AgendaPage', () => {
     const openNewForm = async (user: ReturnType<typeof userEvent.setup>): Promise<HTMLElement> => {
       await within(dayList()).findByText('Consulta pediátrica');
       await user.click(screen.getByRole('button', { name: 'Novo Compromisso' }));
-      return screen.getByRole('dialog', { name: 'Novo compromisso' });
+      return screen.findByRole('dialog', { name: 'Novo compromisso' });
     };
 
     const openEditForm = async (user: ReturnType<typeof userEvent.setup>): Promise<HTMLElement> => {
       await user.click(
         await within(dayList()).findByRole('button', { name: /Consulta pediátrica/ }),
       );
-      const details = screen.getByRole('dialog', { name: 'Consulta pediátrica' });
+      const details = await screen.findByRole('dialog', { name: 'Consulta pediátrica' });
       await user.click(within(details).getByRole('button', { name: 'Editar' }));
-      return screen.getByRole('dialog', { name: 'Editar compromisso' });
+      return screen.findByRole('dialog', { name: 'Editar compromisso' });
     };
 
     it('cria o compromisso com as pessoas e mostra o dia dele na agenda', async () => {
@@ -532,6 +549,7 @@ describe('AgendaPage', () => {
       let form = await openNewForm(user);
 
       await user.click(within(form).getByRole('button', { name: 'Cancelar' }));
+      expect(screen.getByRole('button', { name: 'Novo Compromisso' })).toHaveFocus();
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
       form = await openNewForm(user);
@@ -684,7 +702,7 @@ describe('AgendaPage', () => {
         await within(dayList()).findByRole('button', { name: /Consulta pediátrica/ }),
       );
 
-      const details = screen.getByRole('dialog', { name: 'Consulta pediátrica' });
+      const details = await screen.findByRole('dialog', { name: 'Consulta pediátrica' });
       expect(within(details).queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument();
     });
   });
@@ -716,10 +734,14 @@ describe('AgendaPage', () => {
       renderPage();
 
       await user.click(await screen.findByRole('button', { name: '+1 compromisso' }));
-      const day = screen.getByRole('dialog', { name: 'Hoje · quarta-feira, 30 de setembro' });
+      const day = await screen.findByRole('dialog', {
+        name: 'Hoje · quarta-feira, 30 de setembro',
+      });
       await user.click(within(day).getByRole('button', { name: /Sessão com psicóloga/ }));
 
-      expect(screen.getByRole('dialog', { name: 'Sessão com psicóloga' })).toBeInTheDocument();
+      expect(
+        await screen.findByRole('dialog', { name: 'Sessão com psicóloga' }),
+      ).toBeInTheDocument();
       expect(screen.queryByRole('dialog', { name: /30 de setembro/ })).not.toBeInTheDocument();
     });
 
@@ -730,7 +752,7 @@ describe('AgendaPage', () => {
       const grid = await screen.findByRole('group', { name: 'Dias de Setembro 2026' });
       await user.click(await within(grid).findByRole('button', { name: /Reunião na escola/ }));
 
-      expect(screen.getByRole('dialog', { name: 'Reunião na escola' })).toBeInTheDocument();
+      expect(await screen.findByRole('dialog', { name: 'Reunião na escola' })).toBeInTheDocument();
     });
 
     it('mostra a grade semanal por horário e abre um dia pelo cabeçalho', async () => {

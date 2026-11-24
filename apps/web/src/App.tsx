@@ -1,15 +1,42 @@
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router';
+import { Typography } from '@mui/material';
 
 import { AgendaPage } from './modules/agenda/pages/AgendaPage.js';
 import { LoginPage } from './modules/shared/auth/pages/LoginPage.js';
-import { AccessPage } from './modules/shared/auth/pages/AccessPage.js';
 import { ProtectedRoute } from './modules/shared/auth/routes/ProtectedRoute.js';
 import { RequirePermission } from './modules/shared/auth/routes/RequirePermission.js';
-import { HomeDetailPage } from './modules/shared/home/pages/HomeDetailPage.js';
-import { HomesPage } from './modules/shared/home/pages/HomesPage.js';
 import { AppLayout } from './modules/shared/layout/AppLayout.js';
-import { PeoplePage } from './modules/shared/person/pages/PeoplePage.js';
-import { SettingsLayout } from './modules/shared/settings/pages/SettingsLayout.js';
+
+const AccessPage = lazy(() =>
+  import('./modules/shared/auth/pages/AccessPage.js').then((module) => ({
+    default: module.AccessPage,
+  })),
+);
+
+const HomeDetailPage = lazy(() =>
+  import('./modules/shared/home/pages/HomeDetailPage.js').then((module) => ({
+    default: module.HomeDetailPage,
+  })),
+);
+
+const HomesPage = lazy(() =>
+  import('./modules/shared/home/pages/HomesPage.js').then((module) => ({
+    default: module.HomesPage,
+  })),
+);
+
+const PeoplePage = lazy(() =>
+  import('./modules/shared/person/pages/PeoplePage.js').then((module) => ({
+    default: module.PeoplePage,
+  })),
+);
+
+const SettingsLayout = lazy(() =>
+  import('./modules/shared/settings/pages/SettingsLayout.js').then((module) => ({
+    default: module.SettingsLayout,
+  })),
+);
 
 export function App(): React.JSX.Element {
   return (
@@ -22,7 +49,9 @@ export function App(): React.JSX.Element {
             path="/settings"
             element={
               <RequirePermission permission="person:read">
-                <SettingsLayout />
+                <Suspense fallback={<Typography role="status">Carregando...</Typography>}>
+                  <SettingsLayout />
+                </Suspense>
               </RequirePermission>
             }
           >
