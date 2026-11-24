@@ -1,0 +1,22 @@
+name: CI                      # nome que aparece na aba Actions
+
+on:                           # QUANDO rodar
+  push:
+    branches: [main]          # alguém deu push/merge na main
+  pull_request:
+    branches: [main]          # alguém abriu PR apontando pra main
+
+jobs:
+  test:                       # nome do job (você escolhe)
+    runs-on: ubuntu-latest    # máquina Linux zerada, emprestada pelo GitHub
+
+    steps:
+      - uses: actions/checkout@v4      # 1. a VM começa vazia: baixa seu repo
+      - uses: actions/setup-node@v4    # 2. instala o Node
+        with:
+          node-version: 22             #    o seu package.json exige >=22
+          cache: npm                   #    guarda o node_modules entre execuções (fica mais rápido)
+      - run: npm ci                    # 3. instala as dependências exatamente como no package-lock
+      - run: cp .env.example .env      # 4. cria um .env (o .env real não vai pro Git)
+      - run: npm run db:generate -w @casaecos/api   # 5. gera o Prisma Client
+      - run: npm test                  # 6. roda os testes. Se falhar, a pipeline fica vermelha
