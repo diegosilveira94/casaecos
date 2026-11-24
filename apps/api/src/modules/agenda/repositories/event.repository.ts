@@ -199,7 +199,18 @@ export class PrismaEventRepository implements EventRepository {
   }
 
   async create(data: CreateEventData): Promise<Event> {
-    return toEvent(await prisma.event.create({ data, select: eventSelection }));
+    const { id } = await prisma.event.create({
+      data,
+      select: { id: true },
+    });
+
+    const event = await this.findById(id);
+
+    if (!event) {
+      throw new Error('Created event could not be found');
+    }
+
+    return event;
   }
 
   // `deletedAt: null` in the where: an event removed after the service loaded it

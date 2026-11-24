@@ -847,12 +847,6 @@ os frames de criação e edição de compromisso.
   (`GET /people?roleId=4`), além da equipe da casa: motorista atende qualquer casa e
   não precisa de vínculo em `home_person`. "Responsável" continua só com a equipe
   vinculada à casa, então secretária e coordenação sem vínculo não aparecem ali.
-- **Dívida: `POST /agenda/events` dispara o aviso de depreciação do `pg`** ("client
-  is already executing a query"). O `event.create` com `select` de relações roda numa
-  transação implícita e o Prisma carrega as relações em paralelo no mesmo client — o
-  mesmo problema da #79. Vem desde a ECOS-6 (reproduzido na `main`) e não quebra nada
-  hoje, mas vira erro no `pg@9`. Saída provável: criar devolvendo só o `id` e ler com
-  `findById`.
 - Vínculo org-wide para pessoal não ligado a uma casa específica (ex:
   `person_organization`) só será modelado se surgir uma segunda ONG.
 - **Dívida: `home.controller.ts` (ECOS-11) valida com `schema.parse()` dentro do
