@@ -249,4 +249,54 @@ describe('HomeService', () => {
     await expect(service.listPeople(1, coordinationScope)).resolves.toMatchObject([{ id: 2 }]);
     await expect(service.listHomes(2)).resolves.toMatchObject([{ id: 1 }]);
   });
+
+
+  it('não permite atualizar uma casa inexistente', async () => {
+    await expect(
+      service.update(99, { name: 'Casa Horizonte' }),
+    ).rejects.toMatchObject({
+      status: 404,
+      message: 'Casa não encontrada',
+    });
+
+    expect(repository.updatedData).toBeNull();
+  });
+
+  it('não permite atualizar uma casa com responsável inexistente', async () => {
+    repository.personAvailable = false;
+
+    await expect(
+      service.update(1, { responsibleId: 99 }),
+    ).rejects.toMatchObject({
+      status: 400,
+      message: 'Responsável informado não existe',
+    });
+
+    expect(repository.updatedData).toBeNull();
+  });
+
+  it('não permite vincular uma pessoa a uma casa inexistente', async () => {
+    await expect(
+      service.linkPerson(99, 2),
+    ).rejects.toMatchObject({
+      status: 404,
+      message: 'Casa não encontrada',
+    });
+
+    expect(repository.linkCreated).toBeNull();
+  });
+
+  it('não permite vincular uma pessoa inexistente', async () => {
+    repository.personAvailable = false;
+
+    await expect(
+      service.linkPerson(1, 99),
+    ).rejects.toMatchObject({
+      status: 404,
+      message: 'Pessoa não encontrada',
+    });
+
+    expect(repository.linkCreated).toBeNull();
+  });
+
 });
