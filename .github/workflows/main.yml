@@ -1,29 +1,28 @@
-name: CI                      # nome que aparece na aba Actions
+name: CI                                 # nome que aparece na aba Actions
 
-on:                           # QUANDO rodar
+on:                                      # QUANDO rodar
   push:
-    branches: [main]          # alguém deu push/merge na main
+    branches: [main]                     # alguém deu push/merge na main
   pull_request:
-    branches: [main]          # alguém abriu PR apontando pra main
+    branches: [main]                     # alguém abriu PR apontando pra main
 
 jobs:
-  test:                       # nome do job (você escolhe)
-    runs-on: ubuntu-latest    # máquina Linux zerada, emprestada pelo GitHub
-
+  test:                                  # nome do job (você escolhe)
+    runs-on: ubuntu-latest               # máquina Linux zerada, emprestada pelo GitHub
     steps:
-      - uses: actions/checkout@v4      # 1. a VM começa vazia: baixa seu repo
-      - uses: actions/setup-node@v4    # 2. instala o Node
+      - uses: actions/checkout@v4        # 1. a VM começa vazia: baixa seu repo
+      - uses: actions/setup-node@v4      # 2. instala o Node
         with:
-          node-version: 22             #    o seu package.json exige >=22
-          cache: npm                   #    guarda o node_modules entre execuções (fica mais rápido)
-      - run: npm ci                    # 3. instala as dependências exatamente como no package-lock
-      - run: cp .env.example .env      # 4. cria um .env (o .env real não vai pro Git)
+          node-version: 22               #    o package.json exige >=22
+          cache: npm                     #    guarda o cache do npm entre execuções
+      - run: npm ci                      # 3. instala as dependências exatamente como no package-lock
+      - run: cp .env.example .env        # 4. cria um .env (o .env real não vai pro Git)
       - run: npm run db:generate -w @casaecos/api   # 5. gera o Prisma Client
-      - run: npm test                  # 6. roda os testes. Se falhar, a pipeline fica vermelha
+      - run: npm test                    # 6. roda os testes; se falhar, a pipeline fica vermelha
 
-  deploy:
+  deploy-web:                            # frontend -> Vercel
     needs: test                          # só roda se os testes passarem
-    if: github.event_name == 'push'      # deploy só quando entra na main, não em PR
+    if: github.event_name == 'push'      # só quando entra na main, não em PR
     runs-on: ubuntu-latest
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -36,3 +35,14 @@ jobs:
       - run: npx vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+  deploy-api:                            # API -> Render
+    needs: test                          # só roda se os testes passarem
+    if: github.event_name == 'push'      # só quando entra na main, não em PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: JorgeLNJunior/render-deploy@v1.5.0
+        with:
+          service_id: ${{ secrets.RENDER_SERVICE_ID }}
+          api_key: ${{ secrets.RENDER_API_KEY }}
+          wait_deploy: true              # espera o Render terminar; se o deploy falhar, o job fica vermelho
