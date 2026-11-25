@@ -855,9 +855,6 @@ os frames de criação e edição de compromisso.
   `findById`.
 - Vínculo org-wide para pessoal não ligado a uma casa específica (ex:
   `person_organization`) só será modelado se surgir uma segunda ONG.
-- **Dívida: `home.controller.ts` (ECOS-11) valida com `schema.parse()` dentro do
-  controller** e remonta os opcionais campo a campo — o mesmo caso que a ECOS-22
-  resolveu no `person`. Alinhar ao `RequestValidator` com `.exactOptional()`.
 - **Sem refresh token** (decisão da própria ECOS-13). Se 8h virar atrito na prática,
   aí sim vira card.
 - **Recuperação de senha por e-mail ainda não existe.** O login mostra "Esqueceu a
