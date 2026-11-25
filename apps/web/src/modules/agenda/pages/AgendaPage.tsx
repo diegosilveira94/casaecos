@@ -1,5 +1,5 @@
 import { Box, Button, Paper, Stack, Typography } from '@mui/material';
-import { useCallback, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useMemo, useState } from 'react';
 
 import type { EventResponse } from '@casaecos/shared-types';
 
@@ -11,12 +11,8 @@ import { useAuth } from '../../shared/auth/context/use-auth.js';
 import { useHomeSelection } from '../../shared/home/context/use-home-selection.js';
 import { AgendaNavigation } from '../components/AgendaNavigation.js';
 import { DayEvents } from '../components/DayEvents.js';
-import { DayEventsDialog } from '../components/DayEventsDialog.js';
-import { EventDetailsDialog } from '../components/EventDetailsDialog.js';
-import { EventFormDialog } from '../components/EventFormDialog.js';
 import { FiltersMenu } from '../components/FiltersMenu.js';
 import { MonthGrid } from '../components/MonthGrid.js';
-import { SendAgendaDialog } from '../components/SendAgendaDialog.js';
 import { TimeGrid } from '../components/TimeGrid.js';
 import { UpcomingEventsPanel } from '../components/UpcomingEventsPanel.js';
 import { WeekEventList } from '../components/WeekEventList.js';
@@ -33,6 +29,30 @@ import { groupEventsByDay } from '../domain/event-format.js';
 import { useAgendaEvents, type AgendaFilters } from '../hooks/use-agenda-events.js';
 import { useEventTypes } from '../hooks/use-event-types.js';
 import { useUpcomingEvents } from '../hooks/use-upcoming-events.js';
+
+const DayEventsDialog = lazy(() =>
+  import('../components/DayEventsDialog.js').then((module) => ({
+    default: module.DayEventsDialog,
+  })),
+);
+
+const EventDetailsDialog = lazy(() =>
+  import('../components/EventDetailsDialog.js').then((module) => ({
+    default: module.EventDetailsDialog,
+  })),
+);
+
+const EventFormDialog = lazy(() =>
+  import('../components/EventFormDialog.js').then((module) => ({
+    default: module.EventFormDialog,
+  })),
+);
+
+const SendAgendaDialog = lazy(() =>
+  import('../components/SendAgendaDialog.js').then((module) => ({
+    default: module.SendAgendaDialog,
+  })),
+);
 
 const NO_EVENTS: EventResponse[] = [];
 
@@ -313,52 +333,54 @@ export function AgendaPage(): React.JSX.Element {
         </Box>
       </Box>
 
-      {openDay ? (
-        <DayEventsDialog
-          day={openDay}
-          today={today}
-          events={eventsOf(openDay)}
-          onOpenEvent={openEventDetails}
-          onClose={closeDay}
-        />
-      ) : null}
-      {openEvent ? (
-        <EventDetailsDialog
-          event={openEvent}
-          today={today}
-          onEdit={
-            canWriteEvents
-              ? () => {
-                  setFormTarget({ event: openEvent });
-                  setOpenEvent(null);
-                }
-              : undefined
-          }
-          onClose={closeEvent}
-        />
-      ) : null}
-      {formTarget ? (
-        <EventFormDialog
-          event={formTarget.event}
-          initialDay={selectedDay}
-          eventTypes={eventTypes}
-          onSaved={showSavedEvent}
-          onDeleted={() => {
-            reloadEvents();
-            closeForm();
-          }}
-          onStored={reloadEvents}
-          onClose={closeForm}
-        />
-      ) : null}
-      {isSendOpen ? (
-        <SendAgendaDialog
-          today={today}
-          onClose={() => {
-            setIsSendOpen(false);
-          }}
-        />
-      ) : null}
+      <Suspense fallback={<Typography role="status">Carregando...</Typography>}>
+        {openDay ? (
+          <DayEventsDialog
+            day={openDay}
+            today={today}
+            events={eventsOf(openDay)}
+            onOpenEvent={openEventDetails}
+            onClose={closeDay}
+          />
+        ) : null}
+        {openEvent ? (
+          <EventDetailsDialog
+            event={openEvent}
+            today={today}
+            onEdit={
+              canWriteEvents
+                ? () => {
+                    setFormTarget({ event: openEvent });
+                    setOpenEvent(null);
+                  }
+                : undefined
+            }
+            onClose={closeEvent}
+          />
+        ) : null}
+        {formTarget ? (
+          <EventFormDialog
+            event={formTarget.event}
+            initialDay={selectedDay}
+            eventTypes={eventTypes}
+            onSaved={showSavedEvent}
+            onDeleted={() => {
+              reloadEvents();
+              closeForm();
+            }}
+            onStored={reloadEvents}
+            onClose={closeForm}
+          />
+        ) : null}
+        {isSendOpen ? (
+          <SendAgendaDialog
+            today={today}
+            onClose={() => {
+              setIsSendOpen(false);
+            }}
+          />
+        ) : null}
+      </Suspense>
     </>
   );
 }
